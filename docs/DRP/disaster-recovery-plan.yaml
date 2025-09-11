@@ -1,0 +1,26 @@
+backup_strategy:
+  frequency:
+    - full: "daily 02:00 UTC"
+    - incremental: "every 6 hours"
+    - transaction_log: "continuous"
+  retention:
+    daily: 7d
+    weekly: 4w
+    monthly: 12m
+  storage:
+    primary: Supabase managed
+    secondary: AWS S3 cross-region
+    tertiary: Google Cloud Storage
+
+recovery_objectives:
+  rpo: 1h
+  rto: 4h
+
+failover_procedure:
+  - health_check_failure
+  - alert_oncall_engineer
+  - verify_backup_integrity
+  - initiate_recovery
+  - dns_switchover
+  - validation_tests
+
