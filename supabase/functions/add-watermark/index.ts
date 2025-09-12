@@ -10,6 +10,10 @@ async function addWatermarkToImage(imageBuffer: ArrayBuffer, opts: { text: strin
   if (!width || !height) {
     throw new Error('Unable to read image dimensions')
   }
+  // Dimension guard (prevent resource exhaustion)
+  if (width > 8000 || height > 8000) {
+    throw new Error('Image dimensions too large (max 8000x8000)')
+  }
 
   // Create watermark SVG
   const fontSize = Math.min(width, height) / 8
@@ -55,7 +59,7 @@ serve(async (req) => {
     
     const formData = await req.formData()
     const imageFile = formData.get('image') as File | null
-    const watermarkText = formData.get('text') as string ?? 'SAMPLE'
+    const watermarkTextRaw = (formData.get('text') as string) ?? 'SAMPLE'
     
     if (!imageFile) {
       return new Response(JSON.stringify({ error: 'image is required' }), { 
@@ -64,15 +68,21 @@ serve(async (req) => {
       })
     }
 
-    // Validate image type
+    // Validate image type and size
     if (!imageFile.type.startsWith('image/')) {
       return new Response(JSON.stringify({ error: 'File must be an image' }), { 
         status: 400,
         headers: { 'content-type': 'application/json' }
       })
     }
+    // Reject oversized uploads (e.g., > 10MB)
+    if (typeof imageFile.size === 'number' && imageFile.size > 10 * 1024 * 1024) {
+      return new Response(JSON.stringify({ error: 'File too large (max 10MB)' }), { status: 413, headers: { 'content-type': 'application/json' } })
+    }
 
     const imageBuffer = await imageFile.arrayBuffer()
+    // Basic XML escape for SVG text injection safety
+    const watermarkText = watermarkTextRaw.replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&apos;'} as any)[c])
     const watermarkedImage = await addWatermarkToImage(imageBuffer, {
       text: watermarkText,
       opacity: 0.4,
@@ -112,4 +122,3 @@ serve(async (req) => {
     })
   }
 })
-

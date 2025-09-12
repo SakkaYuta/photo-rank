@@ -9,21 +9,18 @@ serve(async (req) => {
     const supabase = getSupabaseAdmin()
     
     // Check if user is admin
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('display_name, role')
-      .eq('user_id', user.id)
+    // Check admin privilege strictly by users.role
+    const { data: urow, error: uerr } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
       .single()
-    
-    if (profileError || !profile) {
-      return new Response(JSON.stringify({ error: 'User profile not found' }), { 
-        status: 404, 
-        headers: { 'content-type': 'application/json' } 
-      })
+
+    if (uerr || !urow) {
+      return new Response(JSON.stringify({ error: 'User not found' }), { status: 404, headers: { 'content-type': 'application/json' } })
     }
-    
-    const isAdmin = profile.role === 'admin' || 
-                   (profile.display_name && profile.display_name.toLowerCase().includes('admin'))
+
+    const isAdmin = urow.role === 'admin'
     
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: 'Admin privileges required' }), { 
@@ -97,4 +94,3 @@ serve(async (req) => {
     })
   }
 })
-

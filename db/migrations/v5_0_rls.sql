@@ -29,6 +29,10 @@ ALTER TABLE public.manufacturing_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.partner_notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.partner_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.price_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payouts_v31 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.organizers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.publishing_approvals ENABLE ROW LEVEL SECURITY;
 
 -- Helper: admin check
 CREATE OR REPLACE FUNCTION public.is_admin(p_user uuid)
@@ -149,7 +153,50 @@ CREATE POLICY phistory_insert ON public.price_history
   );
 
 -- mark migration
+-- payouts_v31 policies
+DROP POLICY IF EXISTS payouts_view ON public.payouts_v31;
+CREATE POLICY payouts_view ON public.payouts_v31
+  FOR SELECT USING (
+    (recipient_type = 'creator' AND recipient_id = auth.uid())
+    OR public.is_admin(auth.uid())
+  );
+
+-- sales policies (creator sees own sales without organizer, organizer sees own org sales)
+DROP POLICY IF EXISTS sales_view ON public.sales;
+CREATE POLICY sales_view ON public.sales
+  FOR SELECT USING (
+    (creator_id = auth.uid()) OR public.is_admin(auth.uid())
+  );
+
+-- organizers policies (owner/admin only write, public can view approved names if needed)
+DROP POLICY IF EXISTS organizers_view ON public.organizers;
+CREATE POLICY organizers_view ON public.organizers
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS organizers_write ON public.organizers;
+CREATE POLICY organizers_write ON public.organizers
+  FOR ALL USING (
+    public.is_admin(auth.uid())
+  ) WITH CHECK (public.is_admin(auth.uid()));
+
+-- publishing_approvals policies (organizer and admin manage, creator can read own)
+DROP POLICY IF EXISTS papprovals_view ON public.publishing_approvals;
+CREATE POLICY papprovals_view ON public.publishing_approvals
+  FOR SELECT USING (
+    public.is_admin(auth.uid()) OR EXISTS (
+      SELECT 1 FROM public.works w WHERE w.id = public.publishing_approvals.work_id AND w.creator_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS papprovals_write ON public.publishing_approvals;
+CREATE POLICY papprovals_write ON public.publishing_approvals
+  FOR UPDATE USING (
+    public.is_admin(auth.uid())
+  ) WITH CHECK (public.is_admin(auth.uid()));
+
+-- NOTE: tune organizer ownership mapping as your organizer membership model solidifies.
+
+-- mark migration
 INSERT INTO public.schema_migrations(version, checksum)
 VALUES ('v5.0_rls', 'local')
 ON CONFLICT (version) DO NOTHING;
-

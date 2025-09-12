@@ -22,8 +22,8 @@ serve(async (req) => {
     const user = await authenticateUser(req)
     const { orderId, productData } = await req.json()
 
-    if (!orderId || !productData?.product_type) {
-      return new Response(JSON.stringify({ error: 'Missing required fields: orderId, productData.product_type' }), { 
+    if (!orderId || !productData?.product_type || !productData?.workId) {
+      return new Response(JSON.stringify({ error: 'Missing required fields: orderId, productData.product_type, productData.workId' }), { 
         status: 400,
         headers: { 'content-type': 'application/json' }
       })
@@ -57,9 +57,10 @@ serve(async (req) => {
 
     const { data: candidates, error: candError } = await supabase
       .from('factory_products')
-      .select('id, partner_id, base_cost, lead_time_days')
+      .select('id, partner_id, base_cost, lead_time_days, manufacturing_partners!inner(status)')
       .eq('product_type', matchInput.product_type)
       .eq('is_active', true)
+      .eq('manufacturing_partners.status', 'approved')
 
     if (candError) {
       return new Response(JSON.stringify({ error: candError.message }), { status: 500, headers: { 'content-type': 'application/json' } })
