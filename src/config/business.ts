@@ -1,15 +1,11 @@
 export const BUSINESS_CONFIG = {
   fees: {
-    platform_rate: 0.15, // 15%
-    organizer_default_rate: 0.10, // 残額から10%
-    payment_processing: 0.036, // 3.6%
-    bank_transfer_fee: 250, // 円
+    platform_rate: 0.30, // 30%（v3.1確定）
+    bank_transfer_fee: 250, // 円（v3.1確定）
   },
   payouts: {
-    minimum_amount: 5000, // 円
-    processing_day: 25, // 締め日
-    payment_day: 10, // 翌月支払日
-    hold_period_days: 7, // 返金対応期間
+    minimum_amount: 5000, // 円（v3.1確定）
+    schedule: 'EOM+2M', // 月末締め・翌々月末払い（表現用）
   },
   inventory: {
     default_max_sales: null as number | null, // 無制限
@@ -17,26 +13,9 @@ export const BUSINESS_CONFIG = {
     limited_edition_threshold: 100,
   },
   rate_limits: {
-    purchase: { count: 10, window: 3600 },
-    vote: { count: 100, window: 86400 },
-    gift: { count: 50, window: 3600 },
     upload: { count: 20, window: 86400 },
     api_general: { count: 1000, window: 3600 },
-  },
-  dynamic_pricing: {
-    time_modifiers: {
-      peak: { hours: [19, 20, 21], multiplier: 1.1 },
-      off_peak: { hours: [3, 4, 5], multiplier: 0.95 },
-    },
-    event_boost: 1.2,
-    new_user_discount: 0.85,
-    bulk_discount: {
-      3: 0.95,
-      5: 0.9,
-      10: 0.85,
-    } as Record<number, number>,
   },
 } as const
 
 export type BusinessConfig = typeof BUSINESS_CONFIG
-

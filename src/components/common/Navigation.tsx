@@ -3,16 +3,25 @@ type NavItem = {
   label: string
 }
 
-export function Navigation({ current, onChange, isAdmin = false }: { current: string, onChange: (key: string) => void, isAdmin?: boolean }) {
+export function Navigation({ current, onChange, isAdmin = false, isPartner = false }: { 
+  current: string, 
+  onChange: (key: string) => void, 
+  isAdmin?: boolean,
+  isPartner?: boolean
+}) {
   const items: NavItem[] = [
     { key: 'trending', label: 'トレンド' },
-    { key: 'events', label: 'イベント' },
     { key: 'search', label: 'クリエイター検索' },
     { key: 'collection', label: 'コレクション' },
     { key: 'create', label: '作品作成' },
     { key: 'myworks', label: 'マイ作品' },
     { key: 'orders', label: 'グッズ注文履歴' },
     ...(isAdmin ? [{ key: 'admin', label: '管理' } as NavItem] : []),
+    ...(isPartner ? [
+      { key: 'partner-dashboard', label: 'パートナー' },
+      { key: 'partner-products', label: '商品管理' },
+      { key: 'partner-orders', label: '受注管理' }
+    ] as NavItem[] : []),
   ]
   return (
     <nav className="sticky top-[53px] z-10 border-b border-gray-200 bg-white/80 backdrop-blur dark:border-gray-800 dark:bg-gray-900/70">

@@ -30,17 +30,26 @@ npm run dev
 - ビジネス設定: `src/config/business.ts`
 - 技術設定: `src/config/technical.ts`
 
-## データベース（DDL/RLS/関数雛形）
-- DDL: `db/ddl/v0_5_schema.sql`
-- RLSポリシー: `db/ddl/v0_5_rls.sql`
-- 関数: `db/ddl/v0_5_functions.sql`
+## データベース（マイグレーション）
+- v5.0 追加: `db/migrations/v5_0_marketplace.sql`
+- v3.1 追加: `db/migrations/v3_1_differential.sql`
 
-Supabase SQLエディタや`supabase/db`に取り込んで実行してください（権限や拡張はプロジェクト設定に依存します）。
+Supabase CLI でマイグレーションを適用してください。
+
+## 要件定義
+- v5.0（最終・マーケットプレイス型）: `docs/requirements_v5.0.md`
+- v3.1（旧・API依存型）: `docs/requirements_v3.1.md`
+
+## 実装ガイド（v3.1）
+- アプリ層と差分マイグレーション: `docs/implementation_guide_v3.1.md`
 
 ## Edge Functions（骨組み）
 - `supabase/functions/create-payment-intent/`
 - `supabase/functions/stripe-webhook/`
 - `supabase/functions/acquire-work-lock/`
+- `supabase/functions/add-watermark/`
+- `supabase/functions/manufacturing-order/`
+- `supabase/functions/process-payouts/`
 
 開発プロジェクトのEdge Functionsとして導入し、Stripe秘密鍵やWebhook署名検証を実装してください。
 
@@ -59,7 +68,6 @@ Supabase SQLエディタや`supabase/db`に取り込んで実行してくださ�
 
 ## 主要機能（最小実装）
 - トレンド一覧表示（`TrendingView`）
-- イベント一覧（`EventList`）
 - クリエイター検索（`CreatorSearch`）
 - コレクション表示（購入履歴結合）（`Collection`）
 - 作品作成＋簡易エディタ（`CreateWork`/`PhotoEditor`）
