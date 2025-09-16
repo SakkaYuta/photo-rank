@@ -11,15 +11,17 @@
 -- 1. 基本データ設定
 setup_owner_user_id.sql
 
--- 2. テーブル構造確認（必須）
-debug_purchases_table_structure.sql
+-- 2. テーブル構造確認（推奨）
+debug_purchases_table_structure_minimal.sql
 
--- 3. 最優先セキュリティ修正（実害防止）
-security_final_critical_patches_corrected.sql
+-- 3. 最優先セキュリティ修正（完全安全版）
+security_final_critical_patches_safe.sql
 
--- 4. インデックス最適化（パフォーマンス・安定性）
+-- 4. インデックス最適化（パフォーマンス・安定性）  
 security_index_cleanup.sql
 ```
+
+⚠️ **重要**: created_atカラムエラーも修正した完全安全版を使用してください
 
 ### 2. 手動設定（Supabaseコンソール）
 ```sql
