@@ -11,10 +11,13 @@
 -- 1. 基本データ設定
 setup_owner_user_id.sql
 
--- 2. 最優先セキュリティ修正（実害防止）
-security_final_critical_patches.sql
+-- 2. テーブル構造確認（必須）
+debug_purchases_table_structure.sql
 
--- 3. インデックス最適化（パフォーマンス・安定性）
+-- 3. 最優先セキュリティ修正（実害防止）
+security_final_critical_patches_corrected.sql
+
+-- 4. インデックス最適化（パフォーマンス・安定性）
 security_index_cleanup.sql
 ```
 
