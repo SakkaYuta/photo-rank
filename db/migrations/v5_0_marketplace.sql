@@ -34,6 +34,23 @@ CREATE TABLE IF NOT EXISTS public.factory_products (
 );
 CREATE INDEX IF NOT EXISTS idx_factory_products_partner ON public.factory_products(partner_id, is_active);
 
+-- Manufacturing orders (ensure table exists, then extend if present)
+CREATE TABLE IF NOT EXISTS public.manufacturing_orders (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id text NOT NULL,
+  partner_id uuid REFERENCES public.manufacturing_partners(id),
+  partner_order_id text,
+  request_payload jsonb,
+  response_payload jsonb,
+  status text DEFAULT 'submitted' CHECK (status IN ('submitted','accepted','in_production','shipped','cancelled','failed')),
+  assigned_at timestamptz,
+  shipped_at timestamptz,
+  tracking_number text,
+  creator_user_id uuid REFERENCES public.users(id),
+  work_id uuid REFERENCES public.works(id),
+  created_at timestamptz DEFAULT now()
+);
+
 -- Manufacturing orders (extend existing if present)
 DO $$ BEGIN
   IF NOT EXISTS (
@@ -133,4 +150,3 @@ END $$;
 INSERT INTO public.schema_migrations(version, checksum)
 VALUES ('v5.0_marketplace', 'local')
 ON CONFLICT (version) DO NOTHING;
-

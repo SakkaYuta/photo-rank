@@ -31,6 +31,17 @@ serve(async (req) => {
 
     const today = new Date().toISOString().slice(0, 10)
 
+    // Rate limit for admin payout processing (10/day)
+    const { data: canProceed } = await supabase.rpc('check_rate_limit', {
+      p_user_id: user.id,
+      p_action: 'process_payouts',
+      p_limit: 10,
+      p_window_minutes: 24*60
+    })
+    if (canProceed === false) {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), { status: 429, headers: { 'content-type': 'application/json' } })
+    }
+
     const { data: payouts, error } = await supabase
       .from('payouts_v31')
       .select('*')

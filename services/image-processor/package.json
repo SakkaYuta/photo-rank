@@ -1,0 +1,44 @@
+{
+  "name": "image-processor-service",
+  "version": "1.0.0",
+  "description": "画像処理マイクロサービス - Sharp + Express",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "build": "echo 'No build needed for Node.js'",
+    "test": "jest",
+    "docker:build": "docker build -t image-processor .",
+    "docker:run": "docker run -p 3001:3001 --env-file .env image-processor"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "sharp": "^0.32.6",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "jsonwebtoken": "^9.0.2",
+    "axios": "^1.6.0",
+    "compression": "^1.7.4",
+    "rate-limiter-flexible": "^5.0.3",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "image-processing",
+    "sharp",
+    "microservice",
+    "docker",
+    "manufacturing"
+  ],
+  "author": "PhotoRank Team",
+  "license": "MIT"
+}

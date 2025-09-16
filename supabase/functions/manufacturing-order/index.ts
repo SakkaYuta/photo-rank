@@ -46,6 +46,18 @@ serve(async (req) => {
       }
     }
 
+    // 入力検証
+    const qty = Number(productData.quantity ?? 1)
+    const deadline = Number(productData.deadline_days ?? 7)
+    const maxPrice = productData.max_price != null ? Number(productData.max_price) : null
+    const errors: string[] = []
+    if (!Number.isFinite(qty) || qty < 1 || qty > 1000) errors.push('Quantity must be between 1 and 1000')
+    if (!Number.isFinite(deadline) || deadline < 1 || deadline > 365) errors.push('Deadline must be between 1 and 365 days')
+    if (maxPrice != null && (!Number.isFinite(maxPrice) || maxPrice < 0 || maxPrice > 1_000_000)) errors.push('Max price exceeds limit')
+    if (errors.length) {
+      return new Response(JSON.stringify({ error: errors.join(', ') }), { status: 400, headers: { 'content-type': 'application/json' } })
+    }
+
     // 内部マッチング
     const matchInput: MatchInput = {
       product_type: productData.product_type,
@@ -78,6 +90,16 @@ serve(async (req) => {
     const selected = scored[0]
     if (!selected) {
       return new Response(JSON.stringify({ error: 'No factory available for given constraints' }), { status: 404, headers: { 'content-type': 'application/json' } })
+    }
+
+    // レートリミット（1時間100回）
+    const { data: canProceed } = await supabase.rpc('check_rate_limit_safe', {
+      p_user_id: user.id,
+      p_action: 'manufacturing_order',
+      p_limit: 100
+    })
+    if (canProceed === false) {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), { status: 429, headers: { 'content-type': 'application/json' } })
     }
 
     // 製造オーダー作成

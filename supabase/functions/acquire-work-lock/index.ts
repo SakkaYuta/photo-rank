@@ -13,6 +13,18 @@ serve(async (req) => {
     if (!workId) return new Response('Bad Request: workId is required', { status: 400 })
     
     const supabase = getSupabaseAdmin()
+    
+    // Rate limit work locks (60/hour)
+    const { data: canProceed } = await supabase.rpc('check_rate_limit', {
+      p_user_id: user.id,
+      p_action: 'acquire_work_lock',
+      p_limit: 60,
+      p_window_minutes: 60
+    })
+    if (canProceed === false) {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), { status: 429, headers: { 'content-type': 'application/json' } })
+    }
+
     const { data, error } = await supabase.rpc('acquire_work_lock', { p_work_id: workId, p_user_id: user.id })
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: { 'content-type': 'application/json' } })
     return new Response(JSON.stringify({ locked: Boolean(data) }), { headers: { 'content-type': 'application/json' } })

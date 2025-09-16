@@ -80,9 +80,29 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'File too large (max 10MB)' }), { status: 413, headers: { 'content-type': 'application/json' } })
     }
 
+    // MIME allowlist + simple magic number check
+    const ALLOWED_MIMES = ['image/jpeg','image/png','image/webp']
+    if (!ALLOWED_MIMES.includes(imageFile.type)) {
+      return new Response(JSON.stringify({ error: 'Invalid file type' }), { status: 400, headers: { 'content-type': 'application/json' } })
+    }
+    const head = new Uint8Array(await imageFile.slice(0, 4).arrayBuffer())
+    const isJpeg = head[0] === 0xFF && head[1] === 0xD8
+    const isPng  = head[0] === 0x89 && head[1] === 0x50
+    const isWebp = head[0] === 0x52 && head[1] === 0x49 && head[2] === 0x46 && head[3] === 0x46
+    if (!(isJpeg || isPng || isWebp)) {
+      return new Response(JSON.stringify({ error: 'Invalid file signature' }), { status: 400, headers: { 'content-type': 'application/json' } })
+    }
+
     const imageBuffer = await imageFile.arrayBuffer()
-    // Basic XML escape for SVG text injection safety
-    const watermarkText = watermarkTextRaw.replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&apos;'} as any)[c])
+    // Basic XML escape for SVG text injection safety (correct mapping)
+    const xmlEscapeMap: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&apos;'
+    }
+    const watermarkText = watermarkTextRaw.replace(/[&<>"']/g, (c) => xmlEscapeMap[c])
     const watermarkedImage = await addWatermarkToImage(imageBuffer, {
       text: watermarkText,
       opacity: 0.4,
@@ -90,6 +110,17 @@ serve(async (req) => {
     })
 
     const supabase = getSupabaseAdmin()
+
+    // Rate limit (50 per hour)
+    const { data: canProceed } = await supabase.rpc('check_rate_limit', {
+      p_user_id: user.id,
+      p_action: 'add_watermark',
+      p_limit: 50,
+      p_window_minutes: 60
+    })
+    if (canProceed === false) {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), { status: 429, headers: { 'content-type': 'application/json' } })
+    }
 
     const fileName = `watermarked/${user.id}/${Date.now()}.png`
     const { data, error } = await supabase.storage
@@ -122,3 +153,4 @@ serve(async (req) => {
     })
   }
 })
+

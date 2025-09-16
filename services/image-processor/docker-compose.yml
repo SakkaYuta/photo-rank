@@ -1,0 +1,145 @@
+version: '3.8'
+
+services:
+  image-processor:
+    build: .
+    container_name: photorank-image-processor
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      # サーバー設定
+      - NODE_ENV=production
+      - PORT=3001
+      
+      # CORS設定（本番環境に合わせて調整）
+      - ALLOWED_ORIGINS=http://localhost:3000,https://photo-rank.vercel.app
+      
+      # JWT設定（セキュリティ上、外部から注入）
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=24h
+      
+      # Supabase設定
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      
+      # 管理者API Key
+      - ADMIN_API_KEY=${ADMIN_API_KEY}
+      
+      # 画像処理設定
+      - MAX_FILE_SIZE=52428800  # 50MB
+      - MAX_WIDTH=4000
+      - MAX_HEIGHT=4000
+      - DEFAULT_QUALITY=80
+      
+      # 透かし設定
+      - WATERMARK_TEXT=PhotoRank
+      - WATERMARK_OPACITY=0.5
+      - WATERMARK_FONT_SIZE=48
+      - WATERMARK_COLOR=#ffffff
+      
+      # Rate Limiting設定
+      - RATE_LIMIT_WINDOW_MS=3600000  # 1時間
+      - RATE_LIMIT_MAX_REQUESTS=100
+      
+      # セキュリティ設定
+      - ENABLE_HTTPS_ONLY=false
+      - CSP_ENABLED=true
+      - TRUST_PROXY=true
+      - CORP_POLICY=cross-origin
+      
+      # ログ設定
+      - LOG_LEVEL=info
+      - LOG_FORMAT=combined
+      - ENABLE_ACCESS_LOG=true
+      - ENABLE_ERROR_LOG=true
+      
+      # パフォーマンス設定
+      - ENABLE_COMPRESSION=true
+      - COMPRESSION_LEVEL=6
+      
+      # ヘルスチェック設定
+      - HEALTH_CHECK_TIMEOUT=3000
+      - HEALTH_CHECK_INTERVAL=30000
+      - HEALTH_CHECK_START_PERIOD=5000
+      - HEALTH_CHECK_RETRIES=3
+      - DOCKER_HEALTHCHECK=true
+      
+    healthcheck:
+      test: ["CMD", "node", "src/healthcheck.js", "--quick"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+      
+    volumes:
+      # ログ永続化（オプション）
+      - ./logs:/app/logs
+      
+    networks:
+      - photorank-network
+      
+    # リソース制限
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+          
+    # セキュリティ設定
+    security_opt:
+      - no-new-privileges:true
+    read_only: false  # Sharp処理で一時ファイルが必要
+    user: "1001:1001"
+
+  # 開発用Redis（Rate limiting用、オプション）
+  redis:
+    image: redis:7-alpine
+    container_name: photorank-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - photorank-network
+    profiles:
+      - redis
+
+  # 開発用Nginx（リバースプロキシ、オプション）
+  nginx:
+    image: nginx:alpine
+    container_name: photorank-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/ssl/certs:ro
+    depends_on:
+      - image-processor
+    networks:
+      - photorank-network
+    profiles:
+      - nginx
+
+networks:
+  photorank-network:
+    driver: bridge
+    name: photorank-network
+
+volumes:
+  redis-data:
+    driver: local
+
+# 使用例:
+# 基本起動: docker-compose up
+# Redis付き: docker-compose --profile redis up
+# Nginx付き: docker-compose --profile nginx up
+# 全部: docker-compose --profile redis --profile nginx up

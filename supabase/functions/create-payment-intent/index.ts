@@ -14,12 +14,26 @@ serve(async (req) => {
     
     const body = await req.json()
     const { workId } = body
-    if (!workId) return new Response('Bad Request: workId is required', { status: 400 })
+    if (!workId || typeof workId !== 'string' || workId.length < 8) {
+      return new Response('Bad Request: workId is required', { status: 400 })
+    }
     
     const supabase = getSupabaseAdmin()
+    
+    // Rate limit payment intents (20/hour)
+    const { data: canProceed } = await supabase.rpc('check_rate_limit', {
+      p_user_id: user.id,
+      p_action: 'create_payment_intent',
+      p_limit: 20,
+      p_window_minutes: 60
+    })
+    if (canProceed === false) {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), { status: 429, headers: { 'content-type': 'application/json' } })
+    }
+
     const { data: work, error } = await supabase
       .from('works')
-      .select('id, price, title, creator_id')
+      .select('id, price, title, creator_id, is_published')
       .eq('id', workId)
       .single()
     if (error || !work) return new Response('Work not found', { status: 404 })
@@ -27,6 +41,13 @@ serve(async (req) => {
     // Prevent self-purchase
     if (work.creator_id === user.id) {
       return new Response('Cannot purchase your own work', { status: 400 })
+    }
+    // Basic publishing/price validation
+    if (work.is_published !== true) {
+      return new Response('Work not available for purchase', { status: 400 })
+    }
+    if (!Number.isInteger(work.price) || work.price <= 0) {
+      return new Response('Invalid price', { status: 400 })
     }
 
     const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
