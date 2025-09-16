@@ -5,8 +5,10 @@
 ### 実行順序（Supabase SQLエディタ）
 
 1. **setup_owner_user_id.sql** - 製造パートナー所有者設定
-2. **security_patches_critical.sql** - 高優先度セキュリティ修正
-3. **security_patches_recommended.sql** - 中優先度セキュリティ修正
+2. **security_patches_critical_fixed.sql** - 高優先度セキュリティ修正（修正版）
+3. **security_patches_recommended_fixed.sql** - 中優先度セキュリティ修正（修正版）
+
+⚠️ **重要**: creator_user_id エラーを修正したため、必ず「_fixed」版を使用してください
 
 ### 高優先度修正（CRITICAL）
 
