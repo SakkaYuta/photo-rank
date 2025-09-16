@@ -11,10 +11,11 @@ import { AdminDashboard } from './pages/AdminDashboard'
 import { PartnerDashboard } from './pages/partner/PartnerDashboard'
 import { PartnerProducts } from './pages/partner/PartnerProducts'
 import { PartnerOrders } from './pages/partner/PartnerOrders'
+import { FactoryPicker } from './pages/creator/FactoryPicker'
 import { useAuth } from './hooks/useAuth'
 import { usePartnerAuth } from './hooks/usePartnerAuth'
 
-type ViewKey = 'trending' | 'search' | 'collection' | 'create' | 'myworks' | 'orders' | 'admin' | 'partner-dashboard' | 'partner-products' | 'partner-orders'
+type ViewKey = 'trending' | 'search' | 'collection' | 'create' | 'myworks' | 'orders' | 'admin' | 'partner-dashboard' | 'partner-products' | 'partner-orders' | 'factory-picker'
 
 function App() {
   const [view, setView] = useState<ViewKey>('trending')
@@ -31,6 +32,7 @@ function App() {
         onChange={(k) => setView(k as ViewKey)} 
         isAdmin={isAdmin} 
         isPartner={isPartner}
+        hasProfile={Boolean(profile)}
       />
       <main className="mx-auto max-w-6xl">
         {view === 'trending' && <TrendingView />}
@@ -43,6 +45,7 @@ function App() {
         {view === 'partner-dashboard' && isPartner && <PartnerDashboard />}
         {view === 'partner-products' && isPartner && <PartnerProducts />}
         {view === 'partner-orders' && isPartner && <PartnerOrders />}
+        {view === 'factory-picker' && profile && <FactoryPicker />}
       </main>
     </div>
   )

@@ -1,6 +1,7 @@
 export type ManufacturingPartner = {
   id: string
   name: string
+  owner_user_id?: string
   company_name?: string | null
   contact_email: string
   contact_phone?: string | null
@@ -9,8 +10,10 @@ export type ManufacturingPartner = {
   description?: string | null
   capabilities?: Record<string, any> | null
   status: 'pending' | 'approved' | 'suspended'
-  avg_rating: number
-  ratings_count: number
+  is_active?: boolean
+  is_featured?: boolean
+  average_rating?: number
+  total_orders?: number
   created_at: string
   updated_at: string
 }
@@ -21,7 +24,8 @@ export type FactoryProduct = {
   product_type: string
   base_cost: number
   lead_time_days: number
-  min_order_qty: number
+  minimum_quantity: number
+  maximum_quantity: number
   options?: Record<string, any> | null
   is_active: boolean
   created_at: string

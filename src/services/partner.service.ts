@@ -8,7 +8,7 @@ export async function getCurrentPartnerProfile(): Promise<ManufacturingPartner |
   const { data, error } = await supabase
     .from('manufacturing_partners')
     .select('*')
-    .eq('contact_email', user.email)
+    .eq('owner_user_id', user.id)
     .single()
   
   if (error) {

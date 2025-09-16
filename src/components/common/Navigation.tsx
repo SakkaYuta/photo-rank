@@ -3,11 +3,12 @@ type NavItem = {
   label: string
 }
 
-export function Navigation({ current, onChange, isAdmin = false, isPartner = false }: { 
+export function Navigation({ current, onChange, isAdmin = false, isPartner = false, hasProfile = false }: { 
   current: string, 
   onChange: (key: string) => void, 
   isAdmin?: boolean,
-  isPartner?: boolean
+  isPartner?: boolean,
+  hasProfile?: boolean
 }) {
   const items: NavItem[] = [
     { key: 'trending', label: 'トレンド' },
@@ -15,6 +16,7 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
     { key: 'collection', label: 'コレクション' },
     { key: 'create', label: '作品作成' },
     { key: 'myworks', label: 'マイ作品' },
+    ...(hasProfile ? [{ key: 'factory-picker', label: '工場比較' }] : []),
     { key: 'orders', label: 'グッズ注文履歴' },
     ...(isAdmin ? [{ key: 'admin', label: '管理' } as NavItem] : []),
     ...(isPartner ? [
