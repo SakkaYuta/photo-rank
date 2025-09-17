@@ -1,76 +1,378 @@
-// Skeleton for Supabase Edge Function: stripe-webhook
-// Verify signature, parse event, and persist purchases/status.
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import Stripe from 'https://esm.sh/stripe@13.10.0?target=deno'
-import { getSupabaseAdmin } from '../_shared/client.ts'
-import { logWebhookError } from '../_shared/monitoring.ts'
+// 既存スキーマ完全整合版 - RPC呼び出し統一
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
+import Stripe from 'https://esm.sh/stripe@13.10.0?target=deno';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 serve(async (req) => {
-  if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 })
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  const signature = req.headers.get('stripe-signature');
+  let rawBody: string = '';
+  
   try {
-    const sig = req.headers.get('stripe-signature')
-    const payload = await req.text()
-    const secret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
-    const key = Deno.env.get('STRIPE_SECRET_KEY')
-    if (!secret || !key) return new Response('Webhook secret missing', { status: 500 })
-    const stripe = new Stripe(key, { apiVersion: '2023-10-16', httpClient: Stripe.createFetchHttpClient() })
+    rawBody = await req.text();
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: 'Failed to read request body' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
 
-    let event
+  if (!signature) {
+    // 署名なしのリクエストをログ
     try {
-      event = stripe.webhooks.constructEvent(payload, sig!, secret)
-    } catch (err) {
-      return new Response(`Webhook Error: ${String(err)}`, { status: 400 })
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      );
+      await supabase.from('stripe_webhook_events').insert({
+        id: crypto.randomUUID(),
+        stripe_event_id: 'no_signature_' + Date.now(),
+        type: 'invalid_request',
+        payload: { raw_body: rawBody.substring(0, 5000) },
+        processed: false,
+        error: 'Missing stripe-signature header',
+        created_at: new Date().toISOString(),
+      });
+    } catch (logErr) {
+      console.error('Failed to log missing signature:', logErr);
+    }
+    
+    return new Response(
+      JSON.stringify({ error: 'Missing stripe-signature header' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  let event: Stripe.Event | null = null;
+  let supabase: any = null;
+
+  try {
+    // 環境変数の取得
+    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!stripeSecretKey || !stripeWebhookSecret || !supabaseUrl || !supabaseKey) {
+      throw new Error('Missing required environment variables');
     }
 
-    const supabase = getSupabaseAdmin()
-    // log event
-    await supabase.from('webhook_events').insert({ event_id: event.id, event_type: event.type, payload: event.data })
+    // クライアントの初期化
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: '2023-10-16',
+      httpClient: Stripe.createFetchHttpClient(),
+    });
+    
+    supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Stripe署名の検証
+    event = stripe.webhooks.constructEvent(
+      rawBody,
+      signature,
+      stripeWebhookSecret
+    );
+
+    console.log(`Received Stripe event: ${event.type} - ${event.id}`);
+
+    // イベントをupsertで記録（冪等性確保）
+    const webhookEvent = {
+      stripe_event_id: event.id,
+      type: event.type,
+      payload: event.data.object,
+      processed: false,
+      idempotency_key: `stripe_${event.id}`,
+      created_at: new Date().toISOString(),
+    };
+
+    const { data: upsertedEvent, error: upsertError } = await supabase
+      .from('stripe_webhook_events')
+      .upsert(webhookEvent, { 
+        onConflict: 'stripe_event_id',
+        ignoreDuplicates: false 
+      })
+      .select()
+      .single();
+
+    if (upsertError) {
+      console.error('Failed to upsert event:', upsertError);
+      throw new Error(`Event logging failed: ${upsertError.message}`);
+    }
+
+    // すでに処理済みの場合はスキップ
+    if (upsertedEvent.processed) {
+      console.log(`Event ${event.id} already processed, skipping`);
+      return new Response(
+        JSON.stringify({ received: true, skipped: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // イベントタイプごとの処理
+    let processingResult: any = {};
+    
     switch (event.type) {
-      case 'payment_intent.succeeded': {
-        const pi = event.data.object as Stripe.PaymentIntent
-        const workId = (pi.metadata as any)?.work_id
-        const userId = (pi.metadata as any)?.user_id
-        if (workId && userId) {
-          const { error: pErr } = await supabase.from('purchases').insert({
-            user_id: userId,
-            work_id: workId,
-            price: pi.amount_received ?? pi.amount,
-            status: 'paid',
-            currency: pi.currency,
-            stripe_payment_intent_id: pi.id,
-            purchased_at: new Date().toISOString(),
-          } as any)
-          if (pErr && !String(pErr.message || '').includes('duplicate')) {
-            console.error('purchase insert error', pErr)
-          }
-          const { error: cErr } = await supabase.rpc('confirm_work_sale', { p_work_id: workId, p_amount: pi.amount })
-          if (cErr) console.error('confirm_work_sale error', cErr)
-        }
-        break
-      }
-      case 'payment_intent.payment_failed': {
-        const pi = event.data.object as Stripe.PaymentIntent
-        const workId = (pi.metadata as any)?.work_id
-        if (workId) await supabase.rpc('release_work_lock', { p_work_id: workId })
-        break
-      }
-      case 'charge.refunded': {
-        const ch = event.data.object as Stripe.Charge
-        const { error } = await supabase
-          .from('purchases')
-          .update({ status: 'refunded' })
-          .eq('stripe_payment_intent_id', String(ch.payment_intent))
-        if (error) console.error('refund update error', error)
-        break
-      }
+      case 'payment_intent.succeeded':
+        processingResult = await handlePaymentIntentSucceeded(
+          supabase,
+          event.data.object as Stripe.PaymentIntent
+        );
+        break;
+
+      case 'payment_intent.payment_failed':
+        processingResult = await handlePaymentIntentFailed(
+          supabase,
+          event.data.object as Stripe.PaymentIntent
+        );
+        break;
+
+      case 'payment_intent.canceled':
+        processingResult = await handlePaymentIntentCanceled(
+          supabase,
+          event.data.object as Stripe.PaymentIntent
+        );
+        break;
+
+      case 'charge.refunded':
+        processingResult = await handleChargeRefunded(
+          supabase,
+          event.data.object as Stripe.Charge
+        );
+        break;
+
       default:
-        // ignore
-        break
+        console.log(`Unhandled event type: ${event.type}`);
+        processingResult = { unhandled: true };
     }
-    return new Response('ok', { status: 200 })
-  } catch (e) {
-    try { await logWebhookError(e as Error) } catch {}
-    return new Response(String(e), { status: 400 })
+
+    // 処理完了を記録
+    await supabase
+      .from('stripe_webhook_events')
+      .update({
+        processed: true,
+        processed_at: new Date().toISOString(),
+      })
+      .eq('stripe_event_id', event.id);
+
+    return new Response(
+      JSON.stringify({ 
+        received: true, 
+        type: event.type,
+        result: processingResult 
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (err: any) {
+    console.error('Webhook processing error:', err);
+    
+    // エラーログの記録を試行
+    try {
+      if (!supabase) {
+        supabase = createClient(
+          Deno.env.get('SUPABASE_URL')!,
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        );
+      }
+
+      if (event?.id) {
+        // イベントIDが判明している場合は更新
+        await supabase
+          .from('stripe_webhook_events')
+          .update({
+            processed: false,
+            error: err?.message ?? 'Unknown error',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('stripe_event_id', event.id);
+      } else {
+        // 署名検証前のエラーは新規挿入
+        await supabase.from('stripe_webhook_events').insert({
+          id: crypto.randomUUID(),
+          stripe_event_id: 'error_' + Date.now(),
+          type: 'validation_error',
+          payload: { 
+            raw_body: rawBody.substring(0, 5000),
+            signature_header: signature?.substring(0, 100)
+          },
+          processed: false,
+          error: err?.message ?? 'Unknown error',
+          created_at: new Date().toISOString(),
+        });
+      }
+    } catch (logErr) {
+      console.error('Failed to log webhook error:', logErr);
+    }
+
+    return new Response(
+      JSON.stringify({ error: err?.message || 'Invalid payload' }),
+      { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
   }
 });
+
+// ===== 決済成功処理 =====
+async function handlePaymentIntentSucceeded(
+  supabase: any,
+  paymentIntent: Stripe.PaymentIntent
+): Promise<any> {
+  const { user_id, work_id, order_id } = paymentIntent.metadata;
+  
+  if (!user_id || !work_id) {
+    throw new Error('Missing required metadata in payment intent');
+  }
+
+  // トランザクション的な処理（RPC関数を使用）
+  const { data, error } = await supabase.rpc('complete_purchase_transaction', {
+    p_payment_intent_id: paymentIntent.id,
+    p_user_id: user_id,
+    p_work_id: work_id,
+    p_order_id: order_id,
+    p_amount: paymentIntent.amount,
+    p_currency: paymentIntent.currency,
+  });
+
+  if (error) {
+    throw new Error(`Transaction failed: ${error.message}`);
+  }
+
+  // 製造発注がある場合は通知をキューに追加
+  if (order_id) {
+    const { data: order } = await supabase
+      .from('manufacturing_orders')
+      .select('partner_id')
+      .eq('id', order_id)
+      .single();
+
+    if (order?.partner_id) {
+      // 通知をキューに追加（別ワーカーが処理）
+      await supabase
+        .from('partner_notifications')
+        .insert({
+          partner_id: order.partner_id,
+          notification_type: 'payment_received',
+          payload: {
+            order_id,
+            order_number: data?.order_number,
+            amount: paymentIntent.amount / 100,
+            currency: paymentIntent.currency,
+          },
+          status: 'pending',
+          priority: 'high',
+          created_at: new Date().toISOString(),
+        });
+    }
+  }
+
+  return { 
+    success: true, 
+    purchase_id: data?.purchase_id,
+    order_updated: !!order_id 
+  };
+}
+
+// ===== 決済失敗処理（RPC使用） =====
+async function handlePaymentIntentFailed(
+  supabase: any,
+  paymentIntent: Stripe.PaymentIntent
+): Promise<any> {
+  const { user_id, work_id } = paymentIntent.metadata;
+  
+  if (!user_id || !work_id) {
+    return { success: false, error: 'Missing metadata' };
+  }
+
+  // 在庫ロックを解放（RPC関数を使用）
+  const { data, error } = await supabase.rpc('release_work_lock', {
+    p_work_id: work_id,
+  });
+
+  // 失敗ログを記録
+  await supabase
+    .from('payment_failures')
+    .insert({
+      user_id,
+      work_id,
+      payment_intent_id: paymentIntent.id,
+      error_code: paymentIntent.last_payment_error?.code,
+      error_message: paymentIntent.last_payment_error?.message,
+      amount: paymentIntent.amount,
+      created_at: new Date().toISOString(),
+    });
+
+  return { 
+    success: true, 
+    lock_released: !error,
+    error_code: paymentIntent.last_payment_error?.code 
+  };
+}
+
+// ===== 決済キャンセル処理（RPC使用） =====
+async function handlePaymentIntentCanceled(
+  supabase: any,
+  paymentIntent: Stripe.PaymentIntent
+): Promise<any> {
+  const { user_id, work_id } = paymentIntent.metadata;
+  
+  if (user_id && work_id) {
+    // 在庫ロックを解放（RPC関数を使用）
+    const { error } = await supabase.rpc('release_work_lock', {
+      p_work_id: work_id,
+    });
+    
+    return { success: true, lock_released: !error };
+  }
+
+  return { success: true };
+}
+
+// ===== 返金処理（修正版） =====
+async function handleChargeRefunded(
+  supabase: any,
+  charge: Stripe.Charge
+): Promise<any> {
+  const paymentIntentId = charge.payment_intent as string;
+  
+  // 購入履歴を返金済みに更新
+  const { data: purchase } = await supabase
+    .from('purchases')
+    .update({
+      status: 'refunded',
+      refunded_at: new Date().toISOString(),
+      refund_amount: charge.amount_refunded,
+    })
+    .eq('stripe_payment_intent_id', paymentIntentId)
+    .select()
+    .single();
+
+  if (purchase) {
+    // 在庫を復元（RPC関数使用）
+    await supabase.rpc('restore_work_availability', {
+      p_work_id: purchase.work_id,
+      p_quantity: 1,
+    });
+
+    // 関連する製造発注をキャンセル（整合性確保）
+    await supabase
+      .from('manufacturing_orders')
+      .update({
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+      })
+      .eq('work_id', purchase.work_id)
+      .in('status', ['submitted', 'accepted', 'in_production']);
+  }
+
+  return { success: true, purchase_refunded: !!purchase };
+}
+

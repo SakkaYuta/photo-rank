@@ -1,7 +1,6 @@
 import * as React from 'react'
 import { cn } from '../../lib/cn'
 
-type DivProps = React.HTMLAttributes<HTMLDivElement>
 type TableProps = React.TableHTMLAttributes<HTMLTableElement>
 type SectionProps = React.HTMLAttributes<HTMLTableSectionElement>
 type RowProps = React.HTMLAttributes<HTMLTableRowElement> & { hoverable?: boolean }

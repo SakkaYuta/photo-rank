@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { usePartnerAuth } from '../../hooks/usePartnerAuth'
 import { getPartnerProducts, createFactoryProduct, updateFactoryProduct, deleteFactoryProduct } from '../../services/partner.service'
 import { LoadingSpinner } from '../../components/common/LoadingSpinner'
-import { Table } from '../../components/ui/Table'
-import { Badge } from '../../components/ui/Badge'
-import { Button } from '../../components/ui/Button'
+import { Table } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import type { FactoryProduct } from '../../types'
 import { Plus, Edit3, Trash2, Eye, EyeOff } from 'lucide-react'
 
@@ -64,7 +64,7 @@ export function PartnerProducts() {
       product_type: product.product_type,
       base_cost: product.base_cost,
       lead_time_days: product.lead_time_days,
-      min_order_qty: product.min_order_qty,
+      min_order_qty: (product as any).minimum_quantity ?? 1,
       is_active: product.is_active
     })
     setShowForm(true)
@@ -77,12 +77,22 @@ export function PartnerProducts() {
     setSubmitting(true)
     try {
       if (editingProduct) {
-        await updateFactoryProduct(editingProduct.id, formData)
+        await updateFactoryProduct(editingProduct.id, {
+          product_type: formData.product_type,
+          base_cost: formData.base_cost,
+          lead_time_days: formData.lead_time_days,
+          minimum_quantity: formData.min_order_qty,
+        } as any)
       } else {
         await createFactoryProduct({
-          ...formData,
-          partner_id: partner.id
-        })
+          partner_id: partner.id,
+          product_type: formData.product_type,
+          base_cost: formData.base_cost,
+          lead_time_days: formData.lead_time_days,
+          minimum_quantity: formData.min_order_qty,
+          maximum_quantity: Math.max(formData.min_order_qty, 1000),
+          is_active: formData.is_active,
+        } as any)
       }
       
       await fetchProducts()
@@ -176,7 +186,7 @@ export function PartnerProducts() {
                       <Table.Cell className="font-medium">{product.product_type}</Table.Cell>
                       <Table.Cell>¥{product.base_cost.toLocaleString()}</Table.Cell>
                       <Table.Cell>{product.lead_time_days}日</Table.Cell>
-                      <Table.Cell>{product.min_order_qty}個</Table.Cell>
+                      <Table.Cell>{(product as any).minimum_quantity ?? 1}個</Table.Cell>
                       <Table.Cell>
                         <Badge variant={product.is_active ? 'success' : 'default'}>
                           {product.is_active ? '有効' : '無効'}

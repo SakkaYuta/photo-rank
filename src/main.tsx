@@ -4,6 +4,7 @@ import './index.css'
 import App from './App'
 import * as Sentry from '@sentry/react'
 import { initSentry } from './lib/monitoring'
+import './utils/globalErrorHandler'
 
 initSentry()
 

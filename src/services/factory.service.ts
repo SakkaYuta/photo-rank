@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/services/supabaseClient'
 import type {
   FactoryProduct,
   ManufacturingOrder,
@@ -317,4 +317,3 @@ const extractPartnerFeatures = (
 
   return features
 }
-

@@ -58,13 +58,3 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: String(e) }), { status: 400, headers: { 'content-type': 'application/json' } })
   }
 });
-    // Rate limit release actions (120/hour)
-    const { data: canProceed } = await supabase.rpc('check_rate_limit', {
-      p_user_id: user.id,
-      p_action: 'release_work_lock',
-      p_limit: 120,
-      p_window_minutes: 60
-    })
-    if (canProceed === false) {
-      return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), { status: 429, headers: { 'content-type': 'application/json' } })
-    }

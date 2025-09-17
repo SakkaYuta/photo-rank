@@ -1,9 +1,14 @@
 /** @type {import('tailwindcss').Config} */
+const optional = (name) => {
+  try { return require(name) } catch { return () => ({}) }
+}
+
 export default {
   content: [
     "./index.html",
     "./src/**/*.{ts,tsx}"
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -83,10 +88,9 @@ export default {
         xl: '0 12px 48px rgba(0, 0, 0, 0.20)',
       },
     }
-  }
   },
   plugins: [
-    require('@tailwindcss/forms'),
-    require('@tailwindcss/typography')
+    optional('@tailwindcss/forms'),
+    optional('@tailwindcss/typography')
   ]
 }

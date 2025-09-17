@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useMemo, memo } from 'react'
 import { usePartnerAuth } from '../../hooks/usePartnerAuth'
 import { getPartnerStats } from '../../services/partner.service'
+import { useOptimizedQuery } from '../../hooks/useOptimizedQuery'
 import { LoadingSpinner } from '../../components/common/LoadingSpinner'
 import { PartnerReviews } from '../../components/partner/PartnerReviews'
-import { Star, Package } from 'lucide-react'
-import { Card } from '../../components/ui/Card'
-import { Badge } from '../../components/ui/Badge'
+import { Star, Package, Bell, CheckCircle, AlertCircle, Clock, RotateCcw } from 'lucide-react'
+import { NotificationService } from '../../services/notification.service'
+import { Card } from '../../components/ui/card'
+import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
-import { supabase } from '../../lib/supabase'
+import { supabase } from '../../services/supabaseClient'
 
 type PartnerStats = {
   activeProducts: number
@@ -18,19 +20,41 @@ type PartnerStats = {
   totalReviews: number
 }
 
+type NotificationStats = {
+  total_24h: number
+  sent_24h: number
+  failed_24h: number
+  pending_24h: number
+  retry_24h: number
+}
+
+type PartnerNotification = {
+  id: string
+  notification_type: string
+  status: 'pending' | 'sent' | 'failed' | 'retry'
+  attempts: number
+  sent_at?: string
+  error_message?: string
+  created_at: string
+  payload: any
+}
+
 export function PartnerDashboard() {
   const { partner } = usePartnerAuth()
   const [stats, setStats] = useState<PartnerStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [recentOrders, setRecentOrders] = useState<any[]>([])
   const [ordersLoading, setOrdersLoading] = useState(true)
+  const [notifications, setNotifications] = useState<PartnerNotification[]>([])
+  const [notificationStats, setNotificationStats] = useState<NotificationStats | null>(null)
+  const [notificationsLoading, setNotificationsLoading] = useState(true)
 
   useEffect(() => {
     if (!partner) return
 
     async function fetchStats() {
       try {
-        const data = await getPartnerStats(partner.id)
+        const data = await getPartnerStats(partner!.id)
         setStats(data)
       } catch (error) {
         console.error('Failed to fetch partner stats:', error)
@@ -48,7 +72,7 @@ export function PartnerDashboard() {
             factory_products(product_name, product_type),
             manufacturing_partners(name)
           `)
-          .eq('partner_id', partner.id)
+          .eq('partner_id', partner!.id)
           .order('created_at', { ascending: false })
           .limit(5)
 
@@ -62,8 +86,37 @@ export function PartnerDashboard() {
       }
     }
 
+    async function fetchNotifications() {
+      try {
+        const data = await NotificationService.getPartnerNotifications(partner!.id, 10)
+        setNotifications(data || [])
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error)
+      } finally {
+        setNotificationsLoading(false)
+      }
+    }
+
+    async function fetchNotificationStats() {
+      try {
+        const s = await NotificationService.getNotificationStats(partner!.id)
+        // 表示仕様に合わせる場合はここで 24h のロジックへ変換
+        setNotificationStats({
+          total_24h: s.total,
+          sent_24h: s.sent,
+          failed_24h: s.failed,
+          pending_24h: s.pending,
+          retry_24h: s.retry,
+        })
+      } catch (error) {
+        console.error('Failed to fetch notification stats:', error)
+      }
+    }
+
     fetchStats()
     fetchRecentOrders()
+    fetchNotifications()
+    fetchNotificationStats()
   }, [partner])
 
   if (!partner) {
@@ -169,7 +222,7 @@ export function PartnerDashboard() {
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -249,6 +302,35 @@ export function PartnerDashboard() {
               </div>
             </div>
           </div>
+
+          {/* Notification Stats Card */}
+          {notificationStats && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center">
+                    <Bell className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    通知 (24h)
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                      {notificationStats.total_24h}
+                    </p>
+                    <div className="flex text-xs">
+                      <span className="text-green-600">✓{notificationStats.sent_24h}</span>
+                      {notificationStats.failed_24h > 0 && (
+                        <span className="text-red-600 ml-1">✗{notificationStats.failed_24h}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -329,6 +411,96 @@ export function PartnerDashboard() {
               >
                 最初の発注を作成
               </Button>
+            </div>
+          )}
+        </Card.Body>
+      </Card>
+
+      {/* Notifications Section */}
+      <Card>
+        <Card.Header>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bell className="w-5 h-5" />
+              <h2 className="text-xl font-semibold">通知履歴</h2>
+            </div>
+            {notificationStats && (
+              <div className="flex gap-2">
+                <Badge variant="secondary">
+                  24時間: {notificationStats.total_24h}件
+                </Badge>
+                <Badge variant="success">
+                  成功: {notificationStats.sent_24h}件
+                </Badge>
+                {notificationStats.failed_24h > 0 && (
+                  <Badge variant="error">
+                    失敗: {notificationStats.failed_24h}件
+                  </Badge>
+                )}
+              </div>
+            )}
+          </div>
+        </Card.Header>
+        <Card.Body>
+          {notificationsLoading ? (
+            <div className="text-center py-4">
+              <span className="text-gray-500">読み込み中...</span>
+            </div>
+          ) : notifications.length > 0 ? (
+            <div className="space-y-3">
+              {notifications.map(notification => (
+                <div key={notification.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium">
+                        {notification.notification_type === 'order_created' && '新規注文'}
+                        {notification.notification_type === 'order_updated' && '注文更新'}
+                        {notification.notification_type === 'order_cancelled' && '注文キャンセル'}
+                        {notification.notification_type === 'payment_received' && '支払い受領'}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        {new Date(notification.created_at).toLocaleDateString('ja-JP')}
+                      </span>
+                    </div>
+                    {notification.error_message && (
+                      <p className="text-sm text-red-600">{notification.error_message}</p>
+                    )}
+                    <p className="text-sm text-gray-600">
+                      試行回数: {notification.attempts}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {notification.status === 'sent' && (
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                    )}
+                    {notification.status === 'failed' && (
+                      <AlertCircle className="w-5 h-5 text-red-500" />
+                    )}
+                    {notification.status === 'pending' && (
+                      <Clock className="w-5 h-5 text-yellow-500" />
+                    )}
+                    {notification.status === 'retry' && (
+                      <RotateCcw className="w-5 h-5 text-blue-500" />
+                    )}
+                    <Badge variant={
+                      notification.status === 'sent' ? 'success' :
+                      notification.status === 'failed' ? 'error' :
+                      notification.status === 'pending' ? 'warning' :
+                      'secondary'
+                    }>
+                      {notification.status === 'sent' && '送信済み'}
+                      {notification.status === 'failed' && '失敗'}
+                      {notification.status === 'pending' && '保留中'}
+                      {notification.status === 'retry' && 'リトライ中'}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Bell className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600 dark:text-gray-400">通知履歴はまだありません</p>
             </div>
           )}
         </Card.Body>

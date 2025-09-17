@@ -18,7 +18,7 @@ Tabs.List = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn('inline-flex h-10 items-center justify-start rounded-lg bg-gray-100 p-1 gap-1', className)} {...props} />
 )
 
-Tabs.Trigger = ({ value, children, className }: { value: string; children: React.ReactNode; className?: string }) => {
+Tabs.Trigger = ({ value, children, className, ...props }: { value: string; children: React.ReactNode; className?: string } & React.ButtonHTMLAttributes<HTMLButtonElement>) => {
   const { activeTab, setActiveTab } = useContext(TabsContext)
   const isActive = activeTab === value
   return (
@@ -31,6 +31,7 @@ Tabs.Trigger = ({ value, children, className }: { value: string; children: React
         isActive ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-700 hover:text-gray-900',
         className,
       )}
+      {...props}
     >
       {children}
     </button>
@@ -42,4 +43,3 @@ Tabs.Content = ({ value, children, className }: { value: string; children: React
   if (activeTab !== value) return null
   return <div className={cn('mt-4', className)}>{children}</div>
 }
-

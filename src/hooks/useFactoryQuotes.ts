@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getFactoryQuotes, createManufacturingOrder } from '@/services/factory.service'
 import type { FactoryQuote } from '@/services/factory.service'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/services/supabaseClient'
 
 /**
  * 工場見積もり取得のカスタムフック
@@ -119,4 +119,3 @@ export const useManufacturingOrder = () => {
 
   return { placeOrder, processing, orderResult }
 }
-

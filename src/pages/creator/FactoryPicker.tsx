@@ -108,7 +108,7 @@ export const FactoryPicker: React.FC = () => {
                   この工場で決定
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => setSelectedFactory(null)}
                   className="w-full"
                 >

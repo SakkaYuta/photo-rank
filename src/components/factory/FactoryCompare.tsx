@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
-import { Card } from '../../components/ui/Card'
-import { Button } from '../../components/ui/Button'
-import { Badge } from '../../components/ui/Badge'
+import { Card } from '../../components/ui/card'
+import { Button } from '../../components/ui/button'
+import { Badge } from '../../components/ui/badge'
 import { Star, Clock, Package, TrendingUp, AlertCircle, CheckCircle, Truck, Award } from 'lucide-react'
 
 type Factory = {
@@ -95,14 +95,15 @@ export const FactoryCompare: React.FC = () => {
     return [...factories].sort((a, b) => {
       switch (sortBy) {
         case 'price':
-          return a.price - b.price
+          return a.price - b.price;
         case 'leadTime':
-          return a.leadTime - b.leadTime
+          return a.leadTime - b.leadTime;
         case 'rating':
-          return b.rating - a.rating
+          return b.rating - a.rating;
         case 'score':
+          return b.score - a.score;
         default:
-          return b.score - a.score
+          return b.score - a.score;
       }
     })
   }, [sortBy])
@@ -294,4 +295,3 @@ export const FactoryCompare: React.FC = () => {
 }
 
 export default FactoryCompare
-

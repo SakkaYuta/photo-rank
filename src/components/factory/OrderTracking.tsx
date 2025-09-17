@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle, Circle, Package, Truck } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/services/supabaseClient'
 
 export const OrderTracking = ({ orderId }: { orderId: string }) => {
   const [order, setOrder] = useState<any>(null)

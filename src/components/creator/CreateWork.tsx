@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { PhotoEditor } from './PhotoEditor'
-import { Button } from '../ui/Button'
-import { Input } from '../ui/Input'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
 import { createWork } from '../../services/work.service'
 import { supabase } from '../../services/supabaseClient'
 

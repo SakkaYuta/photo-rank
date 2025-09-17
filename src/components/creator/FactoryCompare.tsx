@@ -104,21 +104,20 @@ export const FactoryCompare: React.FC<FactoryCompareProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label>商品タイプ</Label>
-              <Select
+              <select
                 value={request.product_type}
-                onValueChange={(value) => setRequest(prev => ({ ...prev, product_type: value }))}
+                onChange={(e) => setRequest(prev => ({ ...prev, product_type: e.target.value }))}
+                className="flex h-10 w-full items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-950 focus:ring-offset-2 dark:border-gray-800 dark:bg-gray-950 dark:ring-offset-gray-950 dark:placeholder:text-gray-400 dark:focus:ring-blue-300"
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="商品を選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  {productTypes.map(type => (
-                    <SelectItem key={type} value={type}>
-                      {type.charAt(0).toUpperCase() + type.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <option value="" disabled>
+                  商品を選択
+                </option>
+                {productTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">
@@ -204,7 +203,7 @@ export const FactoryCompare: React.FC<FactoryCompareProps> = ({
                           スコア {factory.match_score}
                         </Badge>
                         {factory.is_featured && (
-                          <Badge variant="outline">おすすめ</Badge>
+                          <Badge variant="primary">おすすめ</Badge>
                         )}
                       </div>
                       

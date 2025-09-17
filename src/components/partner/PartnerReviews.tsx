@@ -219,7 +219,7 @@ export function PartnerReviews({ partnerId, manufacturingOrderId }: PartnerRevie
                 {editingReview ? '更新' : '投稿'}
               </Button>
               <Button 
-                variant="outline" 
+                variant="ghost" 
                 onClick={() => {
                   setShowReviewForm(false)
                   setEditingReview(null)
@@ -296,7 +296,7 @@ export function PartnerReviews({ partnerId, manufacturingOrderId }: PartnerRevie
 
                 {review.manufacturing_order_id && (
                   <div className="mt-3 pl-13">
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="default" className="text-xs">
                       注文ID: {review.manufacturing_order_id.slice(-8)}
                     </Badge>
                   </div>
