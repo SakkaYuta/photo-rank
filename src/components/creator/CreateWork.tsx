@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { PhotoEditor } from './PhotoEditor'
+import { Button } from '../ui/Button'
+import { Input } from '../ui/Input'
 import { createWork } from '../../services/work.service'
 import { supabase } from '../../services/supabaseClient'
 
@@ -41,15 +43,15 @@ export function CreateWork() {
       <div className="card space-y-3">
         <label className="block">
           <span className="mb-1 block text-sm font-medium">タイトル</span>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full rounded-md border border-gray-300 bg-white p-2 outline-none focus:ring-2 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900" />
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} />
         </label>
         <label className="block">
           <span className="mb-1 block text-sm font-medium">価格 (円)</span>
-          <input type="number" min={0} value={price} onChange={(e) => setPrice(parseInt(e.target.value || '0'))} className="w-full rounded-md border border-gray-300 bg-white p-2 outline-none focus:ring-2 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900" />
+          <Input type="number" min={0} value={price} onChange={(e) => setPrice(parseInt(e.target.value || '0'))} />
         </label>
         <label className="block">
           <span className="mb-1 block text-sm font-medium">画像URL</span>
-          <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className="w-full rounded-md border border-gray-300 bg-white p-2 outline-none focus:ring-2 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900" />
+          <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
         </label>
       </div>
 
@@ -61,10 +63,11 @@ export function CreateWork() {
       />
 
       <div className="flex justify-end gap-2">
-        <button className="btn btn-primary" onClick={onSubmit} disabled={busy || !title}>公開する</button>
+        <Button onClick={onSubmit} disabled={busy || !title}>
+          公開する
+        </Button>
       </div>
       {message && <div className="text-sm text-gray-600">{message}</div>}
     </div>
   )
 }
-

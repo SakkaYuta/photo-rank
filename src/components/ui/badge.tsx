@@ -1,27 +1,57 @@
-import * as React from "react"
+import * as React from 'react'
+import { cn } from '../../lib/cn'
 
-interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: "default" | "secondary" | "destructive" | "outline"
+type BadgeVariant =
+  | 'pending'
+  | 'active'
+  | 'approved'
+  | 'rejected'
+  | 'suspended'
+  | 'default'
+  | 'primary'
+  | 'secondary'
+  | 'success'
+  | 'warning'
+  | 'error'
+
+const badgeVariants: Record<BadgeVariant, string> = {
+  pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  active: 'bg-green-100 text-green-800 border-green-200',
+  approved: 'bg-green-100 text-green-800 border-green-200',
+  rejected: 'bg-red-100 text-red-800 border-red-200',
+  suspended: 'bg-gray-100 text-gray-800 border-gray-200',
+  default: 'bg-gray-100 text-gray-800 border-gray-200',
+  primary: 'bg-primary-100 text-primary-800 border-primary-200',
+  secondary: 'bg-secondary-100 text-secondary-800 border-secondary-200',
+  success: 'bg-green-100 text-green-800 border-green-200',
+  warning: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  error: 'bg-red-100 text-red-800 border-red-200',
 }
 
-const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
-  ({ className, variant = "default", ...props }, ref) => {
-    const variantClasses = {
-      default: "border-transparent bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800",
-      secondary: "border-transparent bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700",
-      destructive: "border-transparent bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800",
-      outline: "text-gray-950 dark:text-gray-50 border border-gray-200 dark:border-gray-800"
-    }
+type BadgeProps = React.HTMLAttributes<HTMLSpanElement> & {
+  variant?: BadgeVariant
+  size?: 'sm' | 'md' | 'lg'
+}
 
-    return (
-      <div
-        ref={ref}
-        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-950 focus:ring-offset-2 dark:focus:ring-blue-300 ${variantClasses[variant]} ${className || ''}`}
-        {...props}
-      />
-    )
+export const Badge: React.FC<BadgeProps> = ({ variant = 'default', className, children, size = 'sm', ...props }) => {
+  const sizeClasses = {
+    sm: 'px-2.5 py-0.5 text-xs',
+    md: 'px-3 py-1 text-sm',
+    lg: 'px-4 py-1.5 text-base',
   }
-)
-Badge.displayName = "Badge"
 
-export { Badge }
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full font-medium border',
+        badgeVariants[variant] || badgeVariants.default,
+        sizeClasses[size],
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </span>
+  )
+}
+

@@ -26,7 +26,7 @@ export function CreatorSearch() {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="クリエイター名で検索"
-        className="mb-4 w-full rounded-md border border-gray-300 bg-white p-2 outline-none focus:ring-2 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900"
+        className="mb-4 w-full rounded-md border border-gray-300 bg-white p-2 outline-none focus:ring-2 focus:ring-primary-500 dark:border-gray-700 dark:bg-gray-900"
       />
       <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         {items.map(u => (
@@ -42,4 +42,3 @@ export function CreatorSearch() {
     </div>
   )
 }
-

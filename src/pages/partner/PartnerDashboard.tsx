@@ -3,7 +3,11 @@ import { usePartnerAuth } from '../../hooks/usePartnerAuth'
 import { getPartnerStats } from '../../services/partner.service'
 import { LoadingSpinner } from '../../components/common/LoadingSpinner'
 import { PartnerReviews } from '../../components/partner/PartnerReviews'
-import { Star } from 'lucide-react'
+import { Star, Package } from 'lucide-react'
+import { Card } from '../../components/ui/Card'
+import { Badge } from '../../components/ui/Badge'
+import { Button } from '../../components/ui/button'
+import { supabase } from '../../lib/supabase'
 
 type PartnerStats = {
   activeProducts: number
@@ -18,10 +22,12 @@ export function PartnerDashboard() {
   const { partner } = usePartnerAuth()
   const [stats, setStats] = useState<PartnerStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [recentOrders, setRecentOrders] = useState<any[]>([])
+  const [ordersLoading, setOrdersLoading] = useState(true)
 
   useEffect(() => {
     if (!partner) return
-    
+
     async function fetchStats() {
       try {
         const data = await getPartnerStats(partner.id)
@@ -32,8 +38,32 @@ export function PartnerDashboard() {
         setLoading(false)
       }
     }
-    
+
+    async function fetchRecentOrders() {
+      try {
+        const { data, error } = await supabase
+          .from('manufacturing_orders')
+          .select(`
+            *,
+            factory_products(product_name, product_type),
+            manufacturing_partners(name)
+          `)
+          .eq('partner_id', partner.id)
+          .order('created_at', { ascending: false })
+          .limit(5)
+
+        if (data) {
+          setRecentOrders(data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch recent orders:', error)
+      } finally {
+        setOrdersLoading(false)
+      }
+    }
+
     fetchStats()
+    fetchRecentOrders()
   }, [partner])
 
   if (!partner) {
@@ -99,57 +129,43 @@ export function PartnerDashboard() {
       </div>
 
       {/* Partner Info Card */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <h2 className="text-xl font-semibold mb-4">パートナー情報</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              会社名
-            </label>
-            <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">
-              {partner.company_name || partner.name}
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              連絡先メール
-            </label>
-            <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">
-              {partner.contact_email}
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              平均評価
-            </label>
-            <div className="mt-1 flex items-center gap-1">
-              <div className="flex items-center">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    className={`w-4 h-4 ${
-                      star <= Math.round(stats?.averageRating || 0)
-                        ? 'fill-yellow-400 text-yellow-400' 
-                        : 'text-gray-300'
-                    }`}
-                  />
-                ))}
+      <Card>
+        <Card.Header>
+          <h2 className="text-xl font-semibold">パートナー情報</h2>
+        </Card.Header>
+        <Card.Body>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">会社名</label>
+              <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{partner.company_name || partner.name}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">連絡先メール</label>
+              <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{partner.contact_email}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">平均評価</label>
+              <div className="mt-1 flex items-center gap-1">
+                <div className="flex items-center">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`w-4 h-4 ${star <= Math.round(stats?.averageRating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm text-gray-900 dark:text-gray-100">{stats?.averageRating?.toFixed(1) || '0.0'} ({stats?.totalReviews || 0}件)</span>
               </div>
-              <span className="text-sm text-gray-900 dark:text-gray-100">
-                {stats?.averageRating?.toFixed(1) || '0.0'} ({stats?.totalReviews || 0}件)
-              </span>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">ステータス</label>
+              <Badge variant={partner.status === 'approved' ? 'approved' : partner.status === 'pending' ? 'pending' : 'suspended'}>
+                {partner.status}
+              </Badge>
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              ステータス
-            </label>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-              承認済み
-            </span>
-          </div>
-        </div>
-      </div>
+        </Card.Body>
+      </Card>
 
       {/* Stats Cards */}
       {stats && (
@@ -237,20 +253,86 @@ export function PartnerDashboard() {
       )}
 
       {/* Quick Actions */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <h2 className="text-xl font-semibold mb-4">クイックアクション</h2>
-        <div className="flex flex-wrap gap-3">
-          <button className="btn btn-primary">
-            新しい商品を追加
-          </button>
-          <button className="btn btn-outline">
-            未処理の注文を確認
-          </button>
-          <button className="btn btn-outline">
-            レビューを確認
-          </button>
-        </div>
-      </div>
+      <Card>
+        <Card.Header>
+          <h2 className="text-xl font-semibold">クイックアクション</h2>
+        </Card.Header>
+        <Card.Body>
+          <div className="flex flex-wrap gap-3">
+            <button className="btn btn-primary">新しい商品を追加</button>
+            <button className="btn btn-outline">未処理の注文を確認</button>
+            <button className="btn btn-outline">レビューを確認</button>
+          </div>
+        </Card.Body>
+      </Card>
+
+      {/* Manufacturing Orders Section */}
+      <Card>
+        <Card.Header>
+          <h2 className="text-xl font-semibold">製造発注管理</h2>
+        </Card.Header>
+        <Card.Body>
+          {ordersLoading ? (
+            <div className="text-center py-4">
+              <span className="text-gray-500">読み込み中...</span>
+            </div>
+          ) : recentOrders.length > 0 ? (
+            <>
+              <div className="space-y-3">
+                {recentOrders.map(order => (
+                  <div key={order.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div>
+                      <p className="font-medium">{order.factory_products?.product_name || order.factory_products?.product_type}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {order.quantity}個 × ¥{order.unit_price?.toLocaleString() || 'N/A'}
+                      </p>
+                    </div>
+                    <Badge variant={
+                      order.status === 'shipped' ? 'success' :
+                      order.status === 'in_production' ? 'warning' :
+                      order.status === 'accepted' ? 'primary' :
+                      'secondary'
+                    }>
+                      {order.status === 'submitted' && '発注済み'}
+                      {order.status === 'accepted' && '受注確認'}
+                      {order.status === 'in_production' && '製造中'}
+                      {order.status === 'shipped' && '発送済み'}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                variant="primary"
+                className="mt-4 w-full"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('navigate', {
+                    detail: { view: 'factory-order' }
+                  }))
+                }}
+              >
+                <Package className="w-4 h-4 mr-2" />
+                新規製造発注
+              </Button>
+            </>
+          ) : (
+            <div className="text-center py-8">
+              <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600 dark:text-gray-400 mb-4">製造発注はまだありません</p>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('navigate', {
+                    detail: { view: 'factory-order' }
+                  }))
+                }}
+              >
+                最初の発注を作成
+              </Button>
+            </div>
+          )}
+        </Card.Body>
+      </Card>
 
       {/* Reviews Section */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">

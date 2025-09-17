@@ -16,7 +16,7 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
     { key: 'collection', label: 'コレクション' },
     { key: 'create', label: '作品作成' },
     { key: 'myworks', label: 'マイ作品' },
-    ...(hasProfile ? [{ key: 'factory-picker', label: '工場比較' }] : []),
+    ...(hasProfile ? [{ key: 'factory', label: '工場比較' }, { key: 'factory-order', label: '製造発注' }] : []),
     { key: 'orders', label: 'グッズ注文履歴' },
     ...(isAdmin ? [{ key: 'admin', label: '管理' } as NavItem] : []),
     ...(isPartner ? [

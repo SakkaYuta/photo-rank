@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react'
 import { usePartnerAuth } from '../../hooks/usePartnerAuth'
 import { getPartnerOrders, updateOrderStatus } from '../../services/partner.service'
 import { LoadingSpinner } from '../../components/common/LoadingSpinner'
+import { Table } from '../../components/ui/Table'
+import { Badge } from '../../components/ui/Badge'
+import { Tabs } from '../../components/ui/Tabs'
+import { Button } from '../../components/ui/Button'
 import type { ManufacturingOrder } from '../../types'
 import { Package, Truck, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 
@@ -125,8 +129,14 @@ export function PartnerOrders() {
     }
   }
 
+  const pendingOrders = orders.filter(o => o.status === 'submitted')
+  const processingOrders = orders.filter(o => o.status === 'accepted' || o.status === 'in_production')
+  const completedOrders = orders.filter(o => o.status === 'shipped')
   const filteredOrders = orders.filter(order => {
     if (filter === 'all') return true
+    if (filter === 'pending') return order.status === 'submitted'
+    if (filter === 'processing') return order.status === 'accepted' || order.status === 'in_production'
+    if (filter === 'completed') return order.status === 'shipped'
     return order.status === filter
   })
 
@@ -153,29 +163,19 @@ export function PartnerOrders() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="-mb-px flex space-x-8">
-          {[
-            { key: 'all', label: 'すべて', count: orders.length },
-            { key: 'submitted', label: '受注待ち', count: orders.filter(o => o.status === 'submitted').length },
-            { key: 'accepted', label: '受注済み', count: orders.filter(o => o.status === 'accepted').length },
-            { key: 'in_production', label: '製造中', count: orders.filter(o => o.status === 'in_production').length },
-            { key: 'shipped', label: '発送済み', count: orders.filter(o => o.status === 'shipped').length }
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setFilter(tab.key)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                filter === tab.key
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-              }`}
-            >
-              {tab.label} ({tab.count})
-            </button>
-          ))}
-        </nav>
-      </div>
+      <Tabs defaultValue="all">
+        <Tabs.List className="mb-2">
+          <Tabs.Trigger value="all" className="mr-1" onClick={() => setFilter('all')}>すべて</Tabs.Trigger>
+          <Tabs.Trigger value="pending" className="mr-1" onClick={() => setFilter('pending')}>
+            新規注文
+            {pendingOrders.length > 0 && (
+              <Badge variant="warning" size="sm" className="ml-2">{pendingOrders.length}</Badge>
+            )}
+          </Tabs.Trigger>
+          <Tabs.Trigger value="processing" className="mr-1" onClick={() => setFilter('processing')}>製造中</Tabs.Trigger>
+          <Tabs.Trigger value="completed" onClick={() => setFilter('completed')}>完了</Tabs.Trigger>
+        </Tabs.List>
+      </Tabs>
 
       {loading ? (
         <div className="flex justify-center">
@@ -189,107 +189,56 @@ export function PartnerOrders() {
                 <Package className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">注文がありません</h3>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {filter === 'all' ? '新しい注文をお待ちください' : `${statusLabels[filter as keyof typeof statusLabels]}の注文がありません`}
+                  {filter === 'all' ? '新しい注文をお待ちください' : `${statusLabels[(filter === 'pending' ? 'submitted' : filter === 'processing' ? 'accepted' : 'shipped') as keyof typeof statusLabels]}の注文がありません`}
                 </p>
               </div>
             </div>
           ) : (
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        注文ID
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        商品情報
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        ステータス
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        注文日
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        追跡番号
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        操作
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {filteredOrders.map((order) => (
-                      <tr key={order.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {order.order_id.slice(-8)}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900 dark:text-gray-100">
-                            {order.request_payload?.product_type || 'N/A'}
+              <Table>
+                <Table.Header>
+                  <Table.Row>
+                    <Table.Head>注文ID</Table.Head>
+                    <Table.Head>商品情報</Table.Head>
+                    <Table.Head>ステータス</Table.Head>
+                    <Table.Head>注文日</Table.Head>
+                    <Table.Head>追跡番号</Table.Head>
+                    <Table.Head className="text-right">操作</Table.Head>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
+                  {filteredOrders.map((order) => (
+                    <Table.Row key={order.id}>
+                      <Table.Cell className="font-medium">{order.order_id.slice(-8)}</Table.Cell>
+                      <Table.Cell>
+                        <div className="text-sm text-gray-900 dark:text-gray-100">{order.request_payload?.product_type || 'N/A'}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">数量: {order.request_payload?.quantity || 1}</div>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Badge variant={(order.status === 'submitted' ? 'pending' : order.status === 'shipped' ? 'success' : 'primary') as any}>
+                          {statusLabels[order.status]}
+                        </Badge>
+                      </Table.Cell>
+                      <Table.Cell className="text-sm text-gray-500 dark:text-gray-400">{new Date(order.created_at).toLocaleDateString('ja-JP')}</Table.Cell>
+                      <Table.Cell className="text-sm text-gray-500 dark:text-gray-400">{order.tracking_number || '-'}</Table.Cell>
+                      <Table.Cell className="text-right">
+                        {order.status === 'submitted' && (
+                          <div className="flex items-center gap-2 justify-end">
+                            <Button variant="success" size="sm" onClick={() => handleAcceptOrder(order)} disabled={updating}>受注</Button>
+                            <Button variant="danger" size="sm" onClick={() => handleCancelOrder(order)} disabled={updating}>拒否</Button>
                           </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            数量: {order.request_payload?.quantity || 1}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[order.status]}`}>
-                            {statusIcons[order.status]}
-                            {statusLabels[order.status]}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {new Date(order.created_at).toLocaleDateString('ja-JP')}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {order.tracking_number || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <div className="flex items-center gap-2">
-                            {order.status === 'submitted' && (
-                              <>
-                                <button
-                                  onClick={() => handleAcceptOrder(order)}
-                                  disabled={updating}
-                                  className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 font-medium"
-                                >
-                                  受注
-                                </button>
-                                <button
-                                  onClick={() => handleCancelOrder(order)}
-                                  disabled={updating}
-                                  className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium"
-                                >
-                                  拒否
-                                </button>
-                              </>
-                            )}
-                            {order.status === 'accepted' && (
-                              <button
-                                onClick={() => handleStartProduction(order)}
-                                disabled={updating}
-                                className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 font-medium"
-                              >
-                                製造開始
-                              </button>
-                            )}
-                            {order.status === 'in_production' && (
-                              <button
-                                onClick={() => setSelectedOrder(order)}
-                                disabled={updating}
-                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
-                              >
-                                発送
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        )}
+                        {order.status === 'accepted' && (
+                          <Button variant="secondary" size="sm" onClick={() => handleStartProduction(order)} disabled={updating}>製造開始</Button>
+                        )}
+                        {order.status === 'in_production' && (
+                          <Button variant="primary" size="sm" onClick={() => setSelectedOrder(order)} disabled={updating}>発送</Button>
+                        )}
+                      </Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table>
             </div>
           )}
 

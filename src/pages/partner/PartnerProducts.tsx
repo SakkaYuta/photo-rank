@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { usePartnerAuth } from '../../hooks/usePartnerAuth'
 import { getPartnerProducts, createFactoryProduct, updateFactoryProduct, deleteFactoryProduct } from '../../services/partner.service'
 import { LoadingSpinner } from '../../components/common/LoadingSpinner'
+import { Table } from '../../components/ui/Table'
+import { Badge } from '../../components/ui/Badge'
+import { Button } from '../../components/ui/Button'
 import type { FactoryProduct } from '../../types'
 import { Plus, Edit3, Trash2, Eye, EyeOff } from 'lucide-react'
 
@@ -156,84 +159,46 @@ export function PartnerProducts() {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        商品タイプ
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        基本価格
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        リードタイム
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        最小注文数
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        ステータス
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        操作
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {products.map((product) => (
-                      <tr key={product.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {product.product_type}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          ¥{product.base_cost.toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {product.lead_time_days}日
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {product.min_order_qty}個
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            product.is_active
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                              : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                          }`}>
-                            {product.is_active ? '有効' : '無効'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleToggleActive(product)}
-                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                              title={product.is_active ? '非表示にする' : '表示する'}
-                            >
-                              {product.is_active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                            <button
-                              onClick={() => handleEditProduct(product)}
-                              className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
-                              title="編集"
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(product)}
-                              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                              title="削除"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table>
+                <Table.Header>
+                  <Table.Row>
+                    <Table.Head>商品タイプ</Table.Head>
+                    <Table.Head>基本価格</Table.Head>
+                    <Table.Head>リードタイム</Table.Head>
+                    <Table.Head>最小注文数</Table.Head>
+                    <Table.Head>ステータス</Table.Head>
+                    <Table.Head className="text-right">操作</Table.Head>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
+                  {products.map((product) => (
+                    <Table.Row key={product.id}>
+                      <Table.Cell className="font-medium">{product.product_type}</Table.Cell>
+                      <Table.Cell>¥{product.base_cost.toLocaleString()}</Table.Cell>
+                      <Table.Cell>{product.lead_time_days}日</Table.Cell>
+                      <Table.Cell>{product.min_order_qty}個</Table.Cell>
+                      <Table.Cell>
+                        <Badge variant={product.is_active ? 'success' : 'default'}>
+                          {product.is_active ? '有効' : '無効'}
+                        </Badge>
+                      </Table.Cell>
+                      <Table.Cell className="text-right">
+                        <div className="flex items-center gap-2 justify-end">
+                          <Button variant="ghost" size="sm" onClick={() => handleToggleActive(product)} title={product.is_active ? '非表示にする' : '表示する'}>
+                            {product.is_active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleEditProduct(product)} title="編集">
+                            <Edit3 className="w-4 h-4" />
+                          </Button>
+                          <Button variant="danger" size="sm" onClick={() => handleDelete(product)} title="削除">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table>
             )}
           </div>
 
