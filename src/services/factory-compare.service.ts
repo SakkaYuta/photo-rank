@@ -1,5 +1,5 @@
-import { supabase } from '@/lib/supabase';
-import type { ManufacturingPartner, FactoryProduct } from '@/types/partner.types';
+import { supabase } from '../lib/supabase';
+import type { ManufacturingPartner, FactoryProduct } from '../types/partner.types';
 
 export interface FactoryComparisonRequest {
   product_type: string;

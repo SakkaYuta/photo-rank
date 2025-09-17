@@ -93,10 +93,11 @@ serve(async (req) => {
     }
 
     // レートリミット（1時間100回）
-    const { data: canProceed } = await supabase.rpc('check_rate_limit_safe', {
+    const { data: canProceed } = await supabase.rpc('check_rate_limit', {
       p_user_id: user.id,
       p_action: 'manufacturing_order',
-      p_limit: 100
+      p_limit: 100,
+      p_window_minutes: 60
     })
     if (canProceed === false) {
       return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), { status: 429, headers: { 'content-type': 'application/json' } })

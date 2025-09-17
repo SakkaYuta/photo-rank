@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react'
 import { usePartnerAuth } from '../../hooks/usePartnerAuth'
 import { getPartnerStats } from '../../services/partner.service'
 import { LoadingSpinner } from '../../components/common/LoadingSpinner'
+import { PartnerReviews } from '../../components/partner/PartnerReviews'
+import { Star } from 'lucide-react'
 
 type PartnerStats = {
   activeProducts: number
   totalOrders: number
   pendingOrders: number
   completedOrders: number
+  averageRating: number
+  totalReviews: number
 }
 
 export function PartnerDashboard() {
@@ -118,9 +122,23 @@ export function PartnerDashboard() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               平均評価
             </label>
-            <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">
-              {partner.avg_rating.toFixed(1)} / 5.0 ({partner.ratings_count}件)
-            </p>
+            <div className="mt-1 flex items-center gap-1">
+              <div className="flex items-center">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`w-4 h-4 ${
+                      star <= Math.round(stats?.averageRating || 0)
+                        ? 'fill-yellow-400 text-yellow-400' 
+                        : 'text-gray-300'
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="text-sm text-gray-900 dark:text-gray-100">
+                {stats?.averageRating?.toFixed(1) || '0.0'} ({stats?.totalReviews || 0}件)
+              </span>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -231,6 +249,13 @@ export function PartnerDashboard() {
           <button className="btn btn-outline">
             レビューを確認
           </button>
+        </div>
+      </div>
+
+      {/* Reviews Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="p-6">
+          <PartnerReviews partnerId={partner.id} />
         </div>
       </div>
     </div>

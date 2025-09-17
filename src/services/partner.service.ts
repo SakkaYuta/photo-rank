@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient'
-import type { ManufacturingPartner, FactoryProduct, ManufacturingOrder } from '../types'
+import type { ManufacturingPartner, FactoryProduct, ManufacturingOrder, PartnerReview } from '../types'
 
 export async function getCurrentPartnerProfile(): Promise<ManufacturingPartner | null> {
   const { data: { user } } = await supabase.auth.getUser()
@@ -102,7 +102,7 @@ export async function updateOrderStatus(
 }
 
 export async function getPartnerStats(partnerId: string) {
-  const [ordersResult, productsResult] = await Promise.all([
+  const [ordersResult, productsResult, reviewsResult] = await Promise.all([
     supabase
       .from('manufacturing_orders')
       .select('status')
@@ -111,23 +111,141 @@ export async function getPartnerStats(partnerId: string) {
       .from('factory_products')
       .select('id')
       .eq('partner_id', partnerId)
-      .eq('is_active', true)
+      .eq('is_active', true),
+    supabase
+      .from('partner_reviews')
+      .select('rating')
+      .eq('partner_id', partnerId)
   ])
 
   if (ordersResult.error) throw ordersResult.error
   if (productsResult.error) throw productsResult.error
+  if (reviewsResult.error) throw reviewsResult.error
 
   const orders = ordersResult.data || []
   const activeProducts = productsResult.data?.length || 0
+  const reviews = reviewsResult.data || []
 
   const totalOrders = orders.length
   const pendingOrders = orders.filter(o => o.status === 'accepted' || o.status === 'in_production').length
   const completedOrders = orders.filter(o => o.status === 'shipped').length
 
+  const averageRating = reviews.length > 0 
+    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
+    : 0
+
   return {
     activeProducts,
     totalOrders,
     pendingOrders,
-    completedOrders
+    completedOrders,
+    averageRating: Math.round(averageRating * 10) / 10,
+    totalReviews: reviews.length
   }
+}
+
+// ===== レビュー関連サービス =====
+
+export async function getPartnerReviews(partnerId: string): Promise<PartnerReview[]> {
+  const { data, error } = await supabase
+    .from('partner_reviews')
+    .select(`
+      *,
+      users!inner(
+        username,
+        avatar_url
+      )
+    `)
+    .eq('partner_id', partnerId)
+    .order('created_at', { ascending: false })
+  
+  if (error) throw error
+  return data as PartnerReview[]
+}
+
+export async function createPartnerReview(review: {
+  partner_id: string
+  manufacturing_order_id?: string
+  rating: number
+  comment?: string
+}): Promise<PartnerReview> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('認証が必要です')
+
+  const { data, error } = await supabase
+    .from('partner_reviews')
+    .insert({
+      ...review,
+      author_user_id: user.id
+    })
+    .select()
+    .single()
+  
+  if (error) throw error
+  return data as PartnerReview
+}
+
+export async function updatePartnerReview(
+  reviewId: string, 
+  updates: { rating?: number; comment?: string }
+): Promise<PartnerReview> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('認証が必要です')
+
+  const { data, error } = await supabase
+    .from('partner_reviews')
+    .update(updates)
+    .eq('id', reviewId)
+    .eq('author_user_id', user.id) // 自分のレビューのみ編集可能
+    .select()
+    .single()
+  
+  if (error) throw error
+  return data as PartnerReview
+}
+
+export async function deletePartnerReview(reviewId: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('認証が必要です')
+
+  const { error } = await supabase
+    .from('partner_reviews')
+    .delete()
+    .eq('id', reviewId)
+    .eq('author_user_id', user.id) // 自分のレビューのみ削除可能
+  
+  if (error) throw error
+}
+
+export async function canUserReviewPartner(
+  partnerId: string, 
+  manufacturingOrderId?: string
+): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+
+  // そのパートナーとの完了した注文があるかチェック
+  const { data: orders, error: ordersError } = await supabase
+    .from('manufacturing_orders')
+    .select('id')
+    .eq('partner_id', partnerId)
+    .eq('creator_user_id', user.id)
+    .eq('status', 'shipped')
+
+  if (ordersError || !orders?.length) return false
+
+  // 特定の注文に対してレビュー済みでないかチェック
+  if (manufacturingOrderId) {
+    const { data: existingReview } = await supabase
+      .from('partner_reviews')
+      .select('id')
+      .eq('partner_id', partnerId)
+      .eq('author_user_id', user.id)
+      .eq('manufacturing_order_id', manufacturingOrderId)
+      .maybeSingle()
+
+    return !existingReview
+  }
+
+  return true
 }

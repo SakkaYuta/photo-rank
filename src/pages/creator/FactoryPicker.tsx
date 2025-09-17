@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
-import { FactoryCompare } from '@/components/creator/FactoryCompare';
-import type { FactoryComparisonResult } from '@/services/factory-compare.service';
+import { FactoryCompare } from '../../components/creator/FactoryCompare';
+import type { FactoryComparisonResult } from '../../services/factory-compare.service';
 
 export const FactoryPicker: React.FC = () => {
-  const navigate = useNavigate();
   const [selectedFactory, setSelectedFactory] = useState<FactoryComparisonResult | null>(null);
 
   const handleFactorySelected = (factory: FactoryComparisonResult) => {
@@ -23,15 +21,11 @@ export const FactoryPicker: React.FC = () => {
     console.log('Selected factory:', selectedFactory);
     
     // 商品作成画面に戻る（選択した工場情報付き）
-    navigate('/create-product', { 
-      state: { 
-        selectedFactory: selectedFactory 
-      } 
-    });
+    alert('工場が選択されました: ' + selectedFactory.name);
   };
 
   const handleBack = () => {
-    navigate(-1);
+    console.log('Back button clicked');
   };
 
   const formatCurrency = (amount: number): string => {
