@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { User, Mail, Phone, Shield, Bell, MapPin, Camera, Trash2 } from 'lucide-react'
+import { User, Mail, Phone, Shield, Bell, MapPin, Camera, Trash2, Users, Key } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { ProfileService } from '../../services/profile.service'
 import { AddressService, type UserAddress } from '../../services/address.service'
+import { joinOrganizerWithCode } from '../../services/organizerService'
 import type { User as UserType, UserNotificationSettings, UserPrivacySettings } from '../../types/user.types'
 import { useToast } from '../../contexts/ToastContext'
 import Modal from '@/components/ui/Modal'
@@ -43,6 +44,11 @@ export function ProfileSettings() {
     name: '', postal_code: '', prefecture: '', city: '', address1: '', address2: '', phone: '', is_default: false
   })
 
+  // オーガナイザー招待コード
+  const [inviteCode, setInviteCode] = useState('')
+  const [joiningOrganizer, setJoiningOrganizer] = useState(false)
+  const [currentOrganizer, setCurrentOrganizer] = useState<string | null>(null)
+
   // 状態管理
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -61,6 +67,7 @@ export function ProfileSettings() {
 
       loadSettings()
       loadAddresses()
+      loadOrganizerInfo()
     }
   }, [profile])
 
@@ -221,6 +228,38 @@ export function ProfileSettings() {
       showToast({ message: error.message || '画像アップロードに失敗しました', variant: 'error' })
     } finally {
       setSaving(false)
+    }
+  }
+
+  const loadOrganizerInfo = async () => {
+    if (!profile) return
+
+    // TODO: オーガナイザー情報を取得する実装
+    // 現在のユーザーがオーガナイザーに所属しているかチェック
+    // setCurrentOrganizer(organizerName)
+  }
+
+  const handleJoinOrganizer = async () => {
+    if (!profile || !inviteCode.trim()) {
+      showToast({ message: '招待コードを入力してください', variant: 'error' })
+      return
+    }
+
+    try {
+      setJoiningOrganizer(true)
+      const result = await joinOrganizerWithCode(profile.id, inviteCode.trim())
+
+      if (result.success) {
+        setCurrentOrganizer(result.organizerName || 'オーガナイザー')
+        setInviteCode('')
+        showToast({ message: `${result.organizerName}に参加しました！`, variant: 'success' })
+      } else {
+        showToast({ message: result.message, variant: 'error' })
+      }
+    } catch (error: any) {
+      showToast({ message: error.message || 'オーガナイザーへの参加に失敗しました', variant: 'error' })
+    } finally {
+      setJoiningOrganizer(false)
     }
   }
 
@@ -478,6 +517,67 @@ export function ProfileSettings() {
           >
             {saving ? '更新中...' : 'プライバシー設定を更新'}
           </button>
+        </div>
+      </div>
+
+      {/* オーガナイザー参加 */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border">
+        <div className="flex items-center gap-2 mb-4">
+          <Users className="w-5 h-5" />
+          <h3 className="text-lg font-semibold">オーガナイザー参加</h3>
+        </div>
+
+        <div className="space-y-4">
+          {currentOrganizer ? (
+            <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="font-medium text-green-800">
+                  {currentOrganizer}に参加中
+                </span>
+              </div>
+              <p className="text-sm text-green-700 mt-1">
+                オーガナイザーの管理下でクリエイター活動ができます
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">招待コード</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                    className="flex-1 p-2 border rounded-md font-mono tracking-wider"
+                    placeholder="ABC123"
+                    maxLength={6}
+                  />
+                  <button
+                    onClick={handleJoinOrganizer}
+                    disabled={joiningOrganizer || !inviteCode.trim()}
+                    className="btn btn-primary whitespace-nowrap"
+                  >
+                    {joiningOrganizer ? '参加中...' : '参加する'}
+                  </button>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  オーガナイザーから受け取った6桁の招待コードを入力してください
+                </div>
+              </div>
+
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="text-sm text-blue-800">
+                  <strong>オーガナイザーに参加すると：</strong>
+                </div>
+                <ul className="text-xs text-blue-700 mt-1 ml-4 list-disc space-y-1">
+                  <li>作品の販売管理をサポートしてもらえます</li>
+                  <li>プロモーション活動のサポートが受けられます</li>
+                  <li>販売実績の管理と分析ができます</li>
+                </ul>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

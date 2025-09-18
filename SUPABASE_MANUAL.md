@@ -1,0 +1,331 @@
+# Supabase 手動デプロイメントマニュアル
+
+## 🔄 Database Schema Update (手動実行)
+
+### 1. Supabase プロジェクト接続
+```bash
+# Supabase CLI でプロジェクトにリンク
+npx supabase link --project-ref YOUR_PROJECT_REF
+```
+
+### 2. データベースマイグレーション実行
+```sql
+-- 1. Core Tables Migration (20240115_core_tables.sql)
+-- Supabase SQL Editor で実行:
+
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Users table (create or extend)
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email TEXT UNIQUE,
+  display_name TEXT,
+  bio TEXT,
+  avatar_url TEXT,
+  is_creator BOOLEAN DEFAULT false,
+  is_verified BOOLEAN DEFAULT false,
+  phone TEXT,
+  notification_settings JSONB,
+  privacy_settings JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Works table
+CREATE TABLE IF NOT EXISTS works (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  creator_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  price INTEGER NOT NULL,
+  image_url TEXT NOT NULL,
+  category TEXT,
+  tags TEXT[],
+  is_active BOOLEAN DEFAULT true,
+  factory_id TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Purchases table
+CREATE TABLE IF NOT EXISTS purchases (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  work_id UUID REFERENCES works(id) ON DELETE CASCADE,
+  price INTEGER NOT NULL,
+  purchased_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled')),
+  tracking_number TEXT,
+  shipped_at TIMESTAMP WITH TIME ZONE,
+  delivered_at TIMESTAMP WITH TIME ZONE,
+  stripe_payment_intent_id TEXT,
+  amount INTEGER,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Favorites and Cart tables
+CREATE TABLE IF NOT EXISTS favorites (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  work_id UUID REFERENCES works(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, work_id)
+);
+
+CREATE TABLE IF NOT EXISTS cart_items (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  work_id UUID REFERENCES works(id) ON DELETE CASCADE,
+  quantity INTEGER DEFAULT 1,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, work_id)
+);
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_works_creator_id ON works(creator_id);
+CREATE INDEX IF NOT EXISTS idx_purchases_user_id ON purchases(user_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
+CREATE INDEX IF NOT EXISTS idx_cart_items_user_id ON cart_items(user_id);
+
+-- Create trigger function
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply triggers
+CREATE TRIGGER update_works_updated_at BEFORE UPDATE ON works FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_cart_items_updated_at BEFORE UPDATE ON cart_items FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+```
+
+### 3. プロフィール機能テーブル追加
+```sql
+-- 2. Profile Tables Migration (20240118_add_profile_tables.sql)
+-- Supabase SQL Editor で実行:
+
+-- 通知設定テーブル
+CREATE TABLE IF NOT EXISTS user_notification_settings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  email_notifications BOOLEAN DEFAULT true,
+  order_updates BOOLEAN DEFAULT true,
+  marketing_emails BOOLEAN DEFAULT false,
+  push_notifications BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- プライバシー設定テーブル
+CREATE TABLE IF NOT EXISTS user_privacy_settings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  profile_visibility TEXT DEFAULT 'public' CHECK (profile_visibility IN ('public', 'private', 'friends')),
+  show_purchase_history BOOLEAN DEFAULT false,
+  show_favorites BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 注文ステータス履歴テーブル
+CREATE TABLE IF NOT EXISTS order_status_history (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  purchase_id UUID REFERENCES purchases(id) ON DELETE CASCADE,
+  status TEXT NOT NULL CHECK (status IN ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled')),
+  message TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 住所テーブル
+CREATE TABLE IF NOT EXISTS user_addresses (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  postal_code TEXT NOT NULL,
+  prefecture TEXT,
+  city TEXT,
+  address1 TEXT NOT NULL,
+  address2 TEXT,
+  phone TEXT,
+  is_default BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- インデックス作成
+CREATE INDEX IF NOT EXISTS idx_user_notification_settings_user_id ON user_notification_settings(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_privacy_settings_user_id ON user_privacy_settings(user_id);
+CREATE INDEX IF NOT EXISTS idx_order_status_history_purchase_id ON order_status_history(purchase_id);
+CREATE INDEX IF NOT EXISTS idx_user_addresses_user_id ON user_addresses(user_id);
+
+-- 更新日時トリガー
+CREATE TRIGGER update_user_notification_settings_updated_at BEFORE UPDATE ON user_notification_settings FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+CREATE TRIGGER update_user_privacy_settings_updated_at BEFORE UPDATE ON user_privacy_settings FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+```
+
+### 4. RLSポリシー設定
+```sql
+-- 3. RLS Policies (20240119_add_rls_policies.sql)
+-- Supabase SQL Editor で実行:
+
+-- Enable RLS on all tables
+ALTER TABLE works ENABLE ROW LEVEL SECURITY;
+ALTER TABLE purchases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE favorites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cart_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_notification_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_privacy_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE order_status_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_addresses ENABLE ROW LEVEL SECURITY;
+
+-- Works policies
+CREATE POLICY "Works are publicly visible" ON works
+  FOR SELECT USING (is_active = true);
+
+CREATE POLICY "Creators can manage their works" ON works
+  FOR ALL USING (auth.uid() = creator_id);
+
+-- Purchases policies
+CREATE POLICY "Users can view their own purchases" ON purchases
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- Notification settings policies
+CREATE POLICY "Users can manage their own notification settings" ON user_notification_settings
+  FOR ALL USING (auth.uid() = user_id);
+
+-- Privacy settings policies
+CREATE POLICY "Users can manage their own privacy settings" ON user_privacy_settings
+  FOR ALL USING (auth.uid() = user_id);
+
+-- Order status history policies
+CREATE POLICY "Users can view order status for their purchases" ON order_status_history
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM purchases
+      WHERE purchases.id = order_status_history.purchase_id
+      AND purchases.user_id = auth.uid()
+    )
+  );
+
+-- User addresses policies
+CREATE POLICY "Users can manage their own addresses" ON user_addresses
+  FOR ALL USING (auth.uid() = user_id);
+
+-- Favorites and cart policies
+CREATE POLICY "Users can manage their own favorites" ON favorites
+  FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can manage their own cart" ON cart_items
+  FOR ALL USING (auth.uid() = user_id);
+```
+
+### 5. ストレージ設定
+```sql
+-- Storage bucket for user content
+INSERT INTO storage.buckets (id, name, public) VALUES ('user-content', 'user-content', true) ON CONFLICT DO NOTHING;
+
+-- Storage policies
+CREATE POLICY "Users can upload their own avatar" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'user-content' AND
+    (storage.foldername(name))[1] = 'avatars' AND
+    auth.uid()::text = (storage.foldername(name))[2]
+  );
+
+CREATE POLICY "Public can view avatars" ON storage.objects
+  FOR SELECT USING (bucket_id = 'user-content' AND (storage.foldername(name))[1] = 'avatars');
+```
+
+## 🔧 Edge Functions Manual Deploy
+
+### Edge Function リスト (手動デプロイ)
+```bash
+# 各関数を個別にデプロイ
+npx supabase functions deploy create-payment-intent
+npx supabase functions deploy create-bulk-payment-intent
+npx supabase functions deploy stripe-webhook
+npx supabase functions deploy manufacturing-order
+npx supabase functions deploy notify-partner
+npx supabase functions deploy process-notification-queue
+```
+
+### Environment Secrets 設定
+```bash
+# Supabase Dashboard > Settings > Edge Functions > Environment Variables
+STRIPE_SECRET_KEY=sk_live_your-secret-key
+STRIPE_WEBHOOK_SECRET=whsec_your-webhook-secret
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+SMTP_PASS=your-sendgrid-api-key
+```
+
+## ✅ 手動検証チェックリスト
+
+### Database Tables
+- [ ] `users` テーブル (プロフィール拡張済み)
+- [ ] `works` テーブル (factory_id 追加済み)
+- [ ] `purchases` テーブル (追跡情報追加済み)
+- [ ] `user_notification_settings` テーブル
+- [ ] `user_privacy_settings` テーブル
+- [ ] `order_status_history` テーブル
+- [ ] `user_addresses` テーブル
+- [ ] `favorites` テーブル
+- [ ] `cart_items` テーブル
+
+### RLS Policies
+- [ ] 全テーブルでRLS有効化
+- [ ] ユーザーは自分のデータのみアクセス
+- [ ] 作品は公開設定に応じてアクセス制御
+- [ ] ストレージポリシー設定済み
+
+### Edge Functions
+- [ ] create-payment-intent (決済作成)
+- [ ] create-bulk-payment-intent (一括決済)
+- [ ] stripe-webhook (Stripe連携)
+- [ ] manufacturing-order (製造注文)
+- [ ] notify-partner (パートナー通知)
+
+### Storage
+- [ ] user-content バケット作成済み
+- [ ] アバターアップロードポリシー設定済み
+
+## 🔍 動作確認
+
+### 1. Database Query Test
+```sql
+-- ユーザーテーブル確認
+SELECT COUNT(*) FROM users;
+
+-- プロフィール設定テーブル確認
+SELECT COUNT(*) FROM user_notification_settings;
+SELECT COUNT(*) FROM user_privacy_settings;
+SELECT COUNT(*) FROM user_addresses;
+
+-- 注文関連テーブル確認
+SELECT COUNT(*) FROM purchases;
+SELECT COUNT(*) FROM order_status_history;
+```
+
+### 2. RLS Policy Test
+```sql
+-- RLS有効確認
+SELECT schemaname, tablename, rowsecurity
+FROM pg_tables
+WHERE rowsecurity = true;
+```
+
+### 3. Edge Functions Test
+Supabase Dashboard > Edge Functions で各関数の実行ログを確認
+
+## 📋 Manual Deployment Summary
+
+✅ **手動実行完了項目**:
+1. コアテーブル作成 (users, works, purchases, favorites, cart_items)
+2. プロフィール機能テーブル追加 (user_notification_settings, user_privacy_settings, user_addresses, order_status_history)
+3. RLSセキュリティポリシー設定
+4. ストレージバケット・ポリシー設定
+5. Edge Functions デプロイ
+6. Environment Secrets 設定
+
+次は Vercel 側の自動デプロイを実行します。

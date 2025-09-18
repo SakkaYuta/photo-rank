@@ -61,15 +61,42 @@ export async function deleteFactoryProduct(id: string): Promise<void> {
   if (error) throw error
 }
 
-export async function getPartnerOrders(partnerId: string): Promise<ManufacturingOrder[]> {
+export async function getPartnerOrders(partnerId: string): Promise<any[]> {
   const { data, error } = await supabase
     .from('manufacturing_orders')
-    .select('*')
+    .select(`
+      *,
+      factory_products(
+        id,
+        product_name,
+        product_type
+      ),
+      works(
+        id,
+        title,
+        image_url,
+        users(
+          id,
+          display_name,
+          avatar_url
+        ),
+        purchases(
+          id,
+          user_id,
+          purchased_at,
+          users(
+            id,
+            display_name,
+            avatar_url
+          )
+        )
+      )
+    `)
     .eq('partner_id', partnerId)
     .order('created_at', { ascending: false })
   
   if (error) throw error
-  return data as ManufacturingOrder[]
+  return (data || []) as any[]
 }
 
 export async function updateOrderStatus(

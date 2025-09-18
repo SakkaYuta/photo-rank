@@ -19,6 +19,7 @@ import { FactoryCompareContainer } from '@/components/factory/FactoryCompareCont
 import { useAuth } from './hooks/useAuth'
 import { usePartnerAuth } from './hooks/usePartnerAuth'
 import { useAdminAuth } from './hooks/useAdminAuth'
+import { useUserRole } from './hooks/useUserRole'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { NetworkErrorBoundary } from './components/NetworkErrorBoundary'
 import { SuspenseFallback } from './components/SuspenseFallback'
@@ -31,6 +32,7 @@ import { Terms } from './pages/legal/Terms'
 import { Privacy } from './pages/legal/Privacy'
 import { RefundPolicy } from './pages/legal/RefundPolicy'
 import { CommerceAct } from './pages/legal/CommerceAct'
+import RoleBasedRouter from './components/RoleBasedRouter'
 
 type ViewKey =
   | 'trending'
@@ -49,16 +51,20 @@ type ViewKey =
   | 'factory-picker'
   | 'factory'
   | 'factory-order'
+  | 'events'
+  | 'contests'
   | 'terms'
   | 'privacy'
   | 'refunds'
   | 'commerce'
+  | 'role-based'
 
 function App() {
-  const [view, setView] = useState<ViewKey>('trending')
+  const [view, setView] = useState<ViewKey>('role-based')
   const { profile } = useAuth()
   const { partner } = usePartnerAuth()
   const { isAdmin, isAdminOrModerator, adminUser } = useAdminAuth()
+  const { userType } = useUserRole()
   const isPartner = Boolean(partner && partner.status === 'approved')
 
   // 工場発注ビュー用の状態
@@ -116,10 +122,16 @@ function App() {
                 isAdmin={isAdmin}
                 isPartner={isPartner}
                 hasProfile={Boolean(profile)}
+                userType={userType}
               />
             </PartialErrorBoundary>
 
             <main className="mx-auto max-w-6xl">
+              {view === 'role-based' && (
+                <PartialErrorBoundary name="ロールベースルーティング">
+                  <RoleBasedRouter />
+                </PartialErrorBoundary>
+              )}
               {view === 'trending' && (
                 <PartialErrorBoundary name="トレンド表示">
                   <TrendingView />
@@ -224,6 +236,22 @@ function App() {
               {view === 'commerce' && (
                 <PartialErrorBoundary name="特定商取引法に基づく表示">
                   <CommerceAct />
+                </PartialErrorBoundary>
+              )}
+              {view === 'events' && (
+                <PartialErrorBoundary name="イベント管理">
+                  <div className="p-6">
+                    <h1 className="text-2xl font-bold mb-4">イベント管理</h1>
+                    <p className="text-gray-600">イベント管理機能は開発中です。</p>
+                  </div>
+                </PartialErrorBoundary>
+              )}
+              {view === 'contests' && (
+                <PartialErrorBoundary name="コンテスト管理">
+                  <div className="p-6">
+                    <h1 className="text-2xl font-bold mb-4">コンテスト管理</h1>
+                    <p className="text-gray-600">コンテスト管理機能は開発中です。</p>
+                  </div>
                 </PartialErrorBoundary>
               )}
             </main>

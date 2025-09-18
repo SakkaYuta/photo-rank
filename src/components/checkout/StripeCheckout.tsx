@@ -4,7 +4,8 @@ import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js'
 import { Loader2 } from 'lucide-react'
 import { releaseWorkLock } from '../../services/payment.service'
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string)
+const pk = (import.meta as any).env?.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined
+const stripePromise = pk ? loadStripe(pk) : null
 
 type Props = {
   clientSecret: string
@@ -71,10 +72,12 @@ export function StripeCheckout(props: Props) {
     clientSecret: props.clientSecret,
     appearance: { theme: 'stripe' },
   }
-  return (
-    <Elements stripe={stripePromise!} options={options}>
-      <CheckoutForm {...props} />
-    </Elements>
-  )
+  if (!stripePromise) {
+    return (
+      <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+        Stripeの公開鍵が未設定です。`.env` に `VITE_STRIPE_PUBLISHABLE_KEY` を設定してください。
+      </div>
+    )
+  }
+  return <Elements stripe={stripePromise} options={options}><CheckoutForm {...props} /></Elements>
 }
-

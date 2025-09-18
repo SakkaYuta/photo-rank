@@ -11,7 +11,8 @@ import { PurchaseSuccessModal } from '../ui/SuccessModal'
 import { AddressService, type UserAddress } from '@/services/address.service'
 import { Analytics } from '@/services/analytics.service'
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
+const pk = (import.meta as any).env?.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined
+const stripePromise = pk ? loadStripe(pk) : null
 
 // 工場グループコンポーネント
 const FactoryGroupCard: React.FC<{
@@ -437,14 +438,20 @@ export const CartView: React.FC = () => {
           </p>
         </div>
 
-        <Elements stripe={stripePromise}>
-          <CheckoutForm
-            cartItems={items}
-            shippingCalculation={shippingCalculation}
-            onSuccess={() => setShowCheckout(false)}
-            onCancel={() => setShowCheckout(false)}
-          />
-        </Elements>
+        {stripePromise ? (
+          <Elements stripe={stripePromise}>
+            <CheckoutForm
+              cartItems={items}
+              shippingCalculation={shippingCalculation}
+              onSuccess={() => setShowCheckout(false)}
+              onCancel={() => setShowCheckout(false)}
+            />
+          </Elements>
+        ) : (
+          <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+            Stripeの公開鍵が未設定です。`.env` に `VITE_STRIPE_PUBLISHABLE_KEY` を設定してください。
+          </div>
+        )}
       </div>
     )
   }

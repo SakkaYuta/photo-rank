@@ -1,18 +1,130 @@
 import { supabase } from './supabaseClient'
 import type { User } from '../types'
+import type { UserType } from '../types/user'
 
-export async function signInWithGoogle() {
-  const { data, error } = await supabase.auth.signInWithOAuth({ provider: 'google' })
+export async function signInWithGoogle(userType: UserType = 'general') {
+  // ログイン時に選択されたユーザータイプをローカルストレージに保存
+  localStorage.setItem('pendingUserType', userType);
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin
+    }
+  })
   if (error) throw error
   return data
 }
 
+// 認証後のユーザープロフィール設定
+export async function setupUserProfileAfterAuth() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  // ローカルストレージからユーザータイプを取得
+  const pendingUserType = localStorage.getItem('pendingUserType') as UserType || 'general'
+  localStorage.removeItem('pendingUserType')
+
+  try {
+    // 既存のユーザープロフィールを確認
+    const { data: existingUser, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+
+    if (fetchError && fetchError.code === 'PGRST116') {
+      // ユーザーが存在しない場合、新規作成
+      const { data: newUser, error: createError } = await supabase
+        .from('users')
+        .insert({
+          id: user.id,
+          email: user.email,
+          display_name: user.user_metadata?.display_name || user.email?.split('@')[0],
+          user_type: pendingUserType,
+          is_creator: pendingUserType === 'creator',
+          is_factory: pendingUserType === 'factory'
+        })
+        .select()
+        .single()
+
+      if (createError) throw createError
+      return newUser
+    } else if (fetchError) {
+      throw fetchError
+    } else {
+      // ユーザーが既に存在する場合、ユーザータイプを更新（既存ユーザーが別のタイプでログインした場合）
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('users')
+        .update({
+          user_type: pendingUserType,
+          is_creator: pendingUserType === 'creator',
+          is_factory: pendingUserType === 'factory'
+        })
+        .eq('id', user.id)
+        .select()
+        .single()
+
+      if (updateError) throw updateError
+      return updatedUser
+    }
+  } catch (error) {
+    console.error('Error setting up user profile:', error)
+    throw error
+  }
+}
+
 export async function signOut() {
+  // デモユーザーの場合
+  const demoUser = getDemoUser()
+  if (demoUser) {
+    return signOutDemo()
+  }
+
   const { error } = await supabase.auth.signOut()
   if (error) throw error
 }
 
+// デモモード用のログイン機能
+export async function signInWithDemo(userType: UserType = 'general') {
+  // デモユーザー情報をローカルストレージに保存
+  const demoUser = {
+    id: `demo-${userType}-${Date.now()}`,
+    email: `demo-${userType}@example.com`,
+    display_name: `デモ${userType === 'general' ? 'ユーザー' : userType === 'creator' ? 'クリエイター' : userType === 'factory' ? '工場' : 'オーガナイザー'}`,
+    user_type: userType,
+    is_creator: userType === 'creator',
+    is_factory: userType === 'factory',
+    is_demo: true
+  }
+
+  localStorage.setItem('demoUser', JSON.stringify(demoUser))
+
+  // ページをリロードして状態を更新
+  window.location.reload()
+
+  return { user: demoUser }
+}
+
+// デモユーザーをログアウト
+export async function signOutDemo() {
+  localStorage.removeItem('demoUser')
+  window.location.reload()
+}
+
+// デモユーザーの取得
+export function getDemoUser() {
+  const demoUserStr = localStorage.getItem('demoUser')
+  return demoUserStr ? JSON.parse(demoUserStr) : null
+}
+
 export async function getCurrentUserProfile(): Promise<User | null> {
+  // デモモードの確認
+  const demoUser = getDemoUser()
+  if (demoUser) {
+    return demoUser as User
+  }
+
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   const { data, error } = await supabase

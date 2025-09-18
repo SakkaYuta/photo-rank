@@ -3,30 +3,78 @@ type NavItem = {
   label: string
 }
 
-export function Navigation({ current, onChange, isAdmin = false, isPartner = false, hasProfile = false }: { 
-  current: string, 
-  onChange: (key: string) => void, 
+export function Navigation({ current, onChange, isAdmin = false, isPartner = false, hasProfile = false, userType = 'general' }: {
+  current: string,
+  onChange: (key: string) => void,
   isAdmin?: boolean,
   isPartner?: boolean,
-  hasProfile?: boolean
+  hasProfile?: boolean,
+  userType?: string
 }) {
-  const items: NavItem[] = [
-    { key: 'trending', label: 'トレンド' },
-    { key: 'search', label: 'クリエイター検索' },
-    { key: 'collection', label: 'コレクション' },
-    { key: 'favorites', label: 'お気に入り' },
-    { key: 'cart', label: 'カート' },
+  // 未登録ユーザー向けの基本ナビゲーション
+  const publicItems: NavItem[] = [
+    // クリエイターページ仕様変更に伴いトレンド/検索タブを削除
+  ]
+
+  // 一般ユーザー向けのナビゲーション
+  const generalUserItems: NavItem[] = [
+    { key: 'role-based', label: 'ダッシュボード' },
+  ]
+
+  // クリエイター向けのナビゲーション
+  const creatorItems: NavItem[] = [
+    { key: 'role-based', label: 'ダッシュボード' },
     { key: 'create', label: '作品作成' },
     { key: 'myworks', label: 'マイ作品' },
-    ...(hasProfile ? [{ key: 'factory', label: '工場比較' }, { key: 'factory-order', label: '製造発注' }] : []),
-    { key: 'orders', label: 'グッズ注文履歴' },
-    ...(hasProfile ? [{ key: 'profile', label: 'プロフィール設定' }] : []),
+    // 仕様変更により工場比較/製造発注タブを削除
+  ]
+
+  // 工場・印刷業者向けのナビゲーション
+  const factoryItems: NavItem[] = [
+    { key: 'role-based', label: 'ダッシュボード' },
+    { key: 'partner-orders', label: '受注管理' },
+    { key: 'partner-products', label: '商品管理' },
+  ]
+
+  // オーガナイザー向けのナビゲーション
+  const organizerItems: NavItem[] = [
+    { key: 'role-based', label: 'ダッシュボード' },
+    { key: 'events', label: 'イベント管理' },
+    { key: 'contests', label: 'コンテスト管理' },
+  ]
+
+  // 管理者・パートナー向けの追加ナビゲーション
+  const adminItems: NavItem[] = [
     ...(isAdmin ? [{ key: 'admin', label: '管理' } as NavItem] : []),
     ...(isPartner ? [
       { key: 'partner-dashboard', label: 'パートナー' },
       { key: 'partner-products', label: '商品管理' },
       { key: 'partner-orders', label: '受注管理' }
     ] as NavItem[] : []),
+  ]
+
+  // ユーザータイプに基づいてナビゲーション項目を選択
+  const getUserItems = (): NavItem[] => {
+    if (!hasProfile) return []
+
+    switch (userType) {
+      case 'creator':
+        return creatorItems
+      case 'factory':
+        return factoryItems
+      case 'organizer':
+        return organizerItems
+      case 'general':
+      default:
+        return generalUserItems
+    }
+  }
+
+  // 最終的なナビゲーション項目を構築
+  const items: NavItem[] = [
+    ...publicItems,
+    ...getUserItems(),
+    ...adminItems,
   ]
   return (
     <nav className="sticky top-[53px] z-10 border-b border-gray-200 bg-white/80 backdrop-blur dark:border-gray-800 dark:bg-gray-900/70">
