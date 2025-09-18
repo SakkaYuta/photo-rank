@@ -3,6 +3,7 @@ import { Card } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { Star, Clock, Package, TrendingUp, AlertCircle, CheckCircle, Truck, Award } from 'lucide-react'
+import { TrustBadges } from '@/components/common/TrustBadges'
 
 type Factory = {
   id: number
@@ -174,12 +175,15 @@ export const FactoryCompare: React.FC = () => {
                   <div className="flex items-start gap-3">
                     <div className="text-3xl">{factory.logo}</div>
                     <div>
-                      <h3 className="font-semibold text-lg">{factory.name}</h3>
-                      <p className="text-sm text-gray-600">{factory.location}</p>
+                      <h3 className="font-semibold text-lg jp-text line-clamp-2">{factory.name}</h3>
+                      <p className="text-sm text-gray-600 jp-text">{factory.location}</p>
                       <div className="flex items-center gap-1 mt-1">
                         <Star className="w-4 h-4 text-yellow-400 fill-current" />
                         <span className="font-semibold">{factory.rating}</span>
                         <span className="text-sm text-gray-500">({factory.reviews}件)</span>
+                      </div>
+                      <div className="mt-2">
+                        <TrustBadges />
                       </div>
                     </div>
                   </div>

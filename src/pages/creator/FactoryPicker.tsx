@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { FactoryCompare } from '../../components/creator/FactoryCompare';
+import { TrustBadges } from '@/components/common/TrustBadges'
 import type { FactoryComparisonResult } from '../../services/factory-compare.service';
 
 export const FactoryPicker: React.FC = () => {
@@ -50,6 +51,8 @@ export const FactoryPicker: React.FC = () => {
         </Button>
         <h1 className="text-2xl font-bold">製造工場の選択</h1>
       </div>
+
+      <TrustBadges className="ml-10" />
 
       {/* 選択済み工場の表示 */}
       {selectedFactory && (

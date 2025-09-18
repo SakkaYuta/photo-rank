@@ -23,7 +23,11 @@ Table.Body = ({ className, ...props }: SectionProps) => (
 
 Table.Row = ({ className, hoverable = true, ...props }: RowProps) => (
   <tr
-    className={cn('border-b border-gray-200 transition-colors', hoverable && 'hover:bg-gray-50', className)}
+    className={cn(
+      'border-b border-gray-200 transition-colors',
+      hoverable && 'hover:bg-gray-50 dark:hover:bg-gray-800',
+      className
+    )}
     {...props}
   />
 )
@@ -42,4 +46,3 @@ Table.Head = ({ className, ...props }: ThProps) => (
 Table.Cell = ({ className, ...props }: TdProps) => (
   <td className={cn('p-4 align-middle [&:has([role=checkbox])]:pr-0', className)} {...props} />
 )
-

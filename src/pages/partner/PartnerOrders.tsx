@@ -8,6 +8,7 @@ import { Tabs } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import type { ManufacturingOrder } from '../../types'
 import { Package, Truck, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 
 const statusColors = {
   submitted: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
@@ -184,7 +185,7 @@ export function PartnerOrders() {
       ) : (
         <>
           {filteredOrders.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 transition-base">
               <div className="text-center">
                 <Package className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">注文がありません</h3>
@@ -194,7 +195,7 @@ export function PartnerOrders() {
               </div>
             </div>
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden transition-base">
               <Table>
                 <Table.Header>
                   <Table.Row>
@@ -224,15 +225,15 @@ export function PartnerOrders() {
                       <Table.Cell className="text-right">
                         {order.status === 'submitted' && (
                           <div className="flex items-center gap-2 justify-end">
-                            <Button variant="success" size="sm" onClick={() => handleAcceptOrder(order)} disabled={updating}>受注</Button>
-                            <Button variant="danger" size="sm" onClick={() => handleCancelOrder(order)} disabled={updating}>拒否</Button>
+                            <Button variant="success" size="sm" className="transition-base hover-lift" onClick={() => handleAcceptOrder(order)} disabled={updating}>受注</Button>
+                            <Button variant="danger" size="sm" className="transition-base hover-lift" onClick={() => handleCancelOrder(order)} disabled={updating}>拒否</Button>
                           </div>
                         )}
                         {order.status === 'accepted' && (
-                          <Button variant="secondary" size="sm" onClick={() => handleStartProduction(order)} disabled={updating}>製造開始</Button>
+                          <Button variant="secondary" size="sm" className="transition-base hover-lift" onClick={() => handleStartProduction(order)} disabled={updating}>製造開始</Button>
                         )}
                         {order.status === 'in_production' && (
-                          <Button variant="primary" size="sm" onClick={() => setSelectedOrder(order)} disabled={updating}>発送</Button>
+                          <Button variant="primary" size="sm" className="transition-base hover-lift" onClick={() => setSelectedOrder(order)} disabled={updating}>発送</Button>
                         )}
                       </Table.Cell>
                     </Table.Row>
@@ -258,14 +259,14 @@ export function PartnerOrders() {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor="tracking_number" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       追跡番号 *
                     </label>
-                    <input
+                    <Input
+                      id="tracking_number"
                       type="text"
                       value={trackingNumber}
                       onChange={(e) => setTrackingNumber(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                       placeholder="追跡番号を入力してください"
                     />
                   </div>

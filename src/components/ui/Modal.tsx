@@ -9,6 +9,8 @@ interface ModalProps {
   children: React.ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl'
   className?: string
+  initialFocusSelector?: string
+  initialFocusRef?: React.RefObject<HTMLElement>
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -17,7 +19,9 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   children,
   size = 'md',
-  className
+  className,
+  initialFocusSelector,
+  initialFocusRef
 }) => {
   const sizeClasses = {
     sm: 'max-w-sm',
@@ -25,6 +29,7 @@ export const Modal: React.FC<ModalProps> = ({
     lg: 'max-w-lg',
     xl: 'max-w-xl'
   }
+  const panelRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
     if (isOpen) {
@@ -38,13 +43,69 @@ export const Modal: React.FC<ModalProps> = ({
     }
   }, [isOpen])
 
+  React.useEffect(() => {
+    if (!isOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isOpen, onClose])
+
+  // Simple focus trap within the modal panel
+  React.useEffect(() => {
+    if (!isOpen) return
+    const panel = panelRef.current
+    if (!panel) return
+    const focusables = panel.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+    )
+    const preferred =
+      initialFocusRef?.current ||
+      (initialFocusSelector ? panel.querySelector<HTMLElement>(initialFocusSelector) || undefined : undefined) ||
+      panel.querySelector<HTMLElement>('[data-autofocus],[data-close]') ||
+      undefined
+    const first = focusables[0]
+    const last = focusables[focusables.length - 1]
+    if (preferred) preferred.focus()
+    else if (first) first.focus()
+    else panel.focus()
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return
+      if (focusables.length === 0) {
+        e.preventDefault()
+        panel.focus()
+        return
+      }
+      const active = document.activeElement as HTMLElement | null
+      if (e.shiftKey) {
+        if (active === first || active === panel) {
+          e.preventDefault()
+          ;(last || first)?.focus()
+        }
+      } else {
+        if (active === last) {
+          e.preventDefault()
+          ;(first || last)?.focus()
+        }
+      }
+    }
+
+    panel.addEventListener('keydown', handleKeyDown)
+    return () => panel.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen])
+
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 dark:bg-black/70 transition-opacity"
+        className="fixed inset-0 bg-black/50 dark:bg-black/70 transition-opacity fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -56,13 +117,15 @@ export const Modal: React.FC<ModalProps> = ({
           'bg-white dark:bg-gray-800',
           'border border-gray-200 dark:border-gray-700',
           'rounded-xl shadow-lg',
-          'transition-colors duration-200',
+          'transition-colors duration-200 fade-in',
           sizeClasses[size],
           className
         )}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
+        ref={panelRef}
+        tabIndex={-1}
       >
         {/* Header */}
         {title && (
@@ -84,6 +147,8 @@ export const Modal: React.FC<ModalProps> = ({
                 'focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400'
               )}
               aria-label="閉じる"
+              data-close
+              data-autofocus
             >
               <X className="w-5 h-5" />
             </button>
@@ -103,6 +168,8 @@ export const Modal: React.FC<ModalProps> = ({
               'focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400'
             )}
             aria-label="閉じる"
+            data-close
+            data-autofocus
           >
             <X className="w-5 h-5" />
           </button>

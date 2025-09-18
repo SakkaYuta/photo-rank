@@ -11,6 +11,7 @@ export type Work = {
   frame_type?: string | null
   is_published: boolean
   created_at: string
+  factory_id?: string | null
 }
 
 export type Purchase = {

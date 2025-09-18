@@ -15,7 +15,14 @@ export const Tabs = ({ defaultValue, children, className }: { defaultValue: stri
 }
 
 Tabs.List = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('inline-flex h-10 items-center justify-start rounded-lg bg-gray-100 p-1 gap-1', className)} {...props} />
+  <div
+    className={cn(
+      'inline-flex h-10 items-center justify-start rounded-lg p-1 gap-1',
+      'bg-gray-100 dark:bg-gray-800',
+      className
+    )}
+    {...props}
+  />
 )
 
 Tabs.Trigger = ({ value, children, className, ...props }: { value: string; children: React.ReactNode; className?: string } & React.ButtonHTMLAttributes<HTMLButtonElement>) => {
@@ -25,10 +32,12 @@ Tabs.Trigger = ({ value, children, className, ...props }: { value: string; child
     <button
       onClick={() => setActiveTab(value)}
       className={cn(
-        'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-white transition-all',
+        'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-all',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2',
         'disabled:pointer-events-none disabled:opacity-50',
-        isActive ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-700 hover:text-gray-900',
+        isActive
+          ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-900 dark:text-gray-100'
+          : 'text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100 hover:bg-white/70 dark:hover:bg-gray-700/70',
         className,
       )}
       {...props}

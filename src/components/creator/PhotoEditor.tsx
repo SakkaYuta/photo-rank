@@ -11,7 +11,7 @@ export function PhotoEditor({ imageUrl, filterType, frameType, onChange }: Props
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div className="card">
-        <img src={imageUrl} className="h-80 w-full rounded-md object-cover" />
+        <img src={imageUrl} alt="編集対象の画像" className="h-80 w-full rounded-md object-cover" />
       </div>
       <div className="card space-y-4">
         <div>
@@ -38,4 +38,3 @@ export function PhotoEditor({ imageUrl, filterType, frameType, onChange }: Props
     </div>
   )
 }
-

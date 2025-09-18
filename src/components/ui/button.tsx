@@ -15,15 +15,22 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-primary-600 dark:bg-primary-500 text-white hover:bg-primary-700 dark:hover:bg-primary-600 shadow-soft hover:shadow-medium',
-        secondary: 'bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 border-2 border-primary-200 dark:border-primary-700 hover:bg-primary-50 dark:hover:bg-gray-700',
-        success: 'bg-green-500 dark:bg-green-600 text-white hover:bg-green-600 dark:hover:bg-green-700 shadow-soft',
-        danger: 'bg-red-500 dark:bg-red-600 text-white hover:bg-red-600 dark:hover:bg-red-700 shadow-soft',
-        ghost: 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 text-gray-700 dark:text-gray-300',
-        link: 'text-primary-600 dark:text-primary-400 underline-offset-4 hover:underline',
+        // Design system: Printful×SUZURI×Etsy
+        primary:
+          'bg-primary-500 text-white hover:bg-primary-600 active:bg-primary-700 shadow-soft hover:shadow-medium',
+        secondary:
+          'bg-white text-primary-600 border-2 border-primary-200 hover:bg-primary-50 active:bg-primary-100',
+        success:
+          'bg-success text-white hover:bg-green-600 active:bg-green-700 shadow-soft hover:shadow-medium',
+        danger:
+          'bg-error text-white hover:bg-red-600 active:bg-red-700 shadow-soft hover:shadow-medium',
+        ghost:
+          'text-gray-600 hover:text-gray-900 hover:bg-gray-100 active:bg-gray-200',
+        link:
+          'text-primary-600 dark:text-primary-400 underline-offset-4 hover:underline',
       },
       size: {
-        sm: 'h-9 px-3 text-sm',
+        sm: 'h-9 px-4 text-sm',
         md: 'h-11 px-6',
         lg: 'h-13 px-8 text-lg',
         icon: 'h-10 w-10',

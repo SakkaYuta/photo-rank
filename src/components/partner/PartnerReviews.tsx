@@ -259,7 +259,7 @@ export function PartnerReviews({ partnerId, manufacturingOrderId }: PartnerRevie
                       )}
                     </div>
                     <div>
-                      <p className="font-medium">{review.users?.username || '匿名ユーザー'}</p>
+                      <p className="font-medium jp-text">{review.users?.username || '匿名ユーザー'}</p>
                       <div className="flex items-center gap-2">
                         {renderStars(review.rating)}
                         <span className="text-sm text-gray-600">
@@ -290,7 +290,7 @@ export function PartnerReviews({ partnerId, manufacturingOrderId }: PartnerRevie
 
                 {review.comment && (
                   <div className="mt-3 pl-13">
-                    <p className="text-gray-700">{review.comment}</p>
+                    <p className="text-gray-700 jp-text line-clamp-3">{review.comment}</p>
                   </div>
                 )}
 

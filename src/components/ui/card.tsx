@@ -10,9 +10,9 @@ export const Card = ({ className, ...props }: DivProps & { hoverable?: boolean }
       className={cn(
         'bg-white dark:bg-gray-800',
         'border border-gray-200 dark:border-gray-700',
-        'rounded-xl shadow-soft',
-        'transition-colors duration-200',
-        hoverable && 'hover:shadow-large transition-shadow duration-300',
+        'rounded-xl shadow-soft overflow-hidden',
+        'transition-all duration-300',
+        hoverable && 'hover:shadow-large hover:scale-[1.01]',
         className
       )}
       {...rest}
@@ -87,4 +87,3 @@ export const CardFooter = ({ className, ...props }: DivProps) => (
     className
   )} {...props} />
 )
-

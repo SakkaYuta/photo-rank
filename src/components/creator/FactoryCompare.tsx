@@ -7,6 +7,8 @@ import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Loader2, Star, Clock, DollarSign, Award } from 'lucide-react';
 import { FactoryCompareService, type FactoryComparisonRequest, type FactoryComparisonResult } from '../../services/factory-compare.service';
+import { PricingSlider } from '@/components/common/PricingSlider'
+import { TrustBadges } from '@/components/common/TrustBadges'
 
 interface FactoryCompareProps {
   onFactorySelected?: (factory: FactoryComparisonResult) => void;
@@ -164,6 +166,20 @@ export const FactoryCompare: React.FC<FactoryCompareProps> = ({
             </div>
           </div>
 
+          {/* 数量ガイド（目安） */}
+          <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3">
+            <div className="mb-2 text-xs text-gray-500 dark:text-gray-400">数量の目安（単価イメージ）</div>
+            <PricingSlider
+              basePrice={Math.max(500, (request.creator_profit || 1000))}
+              min={1}
+              max={200}
+              step={1}
+              value={request.quantity}
+              onChangeQty={(q) => setRequest(prev => ({ ...prev, quantity: q }))}
+              discountCurve={true}
+            />
+          </div>
+
           <div className="flex gap-2">
             <Button onClick={handleSearch} disabled={loading} className="flex-1">
               {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
@@ -219,9 +235,11 @@ export const FactoryCompare: React.FC<FactoryCompareProps> = ({
                         </span>
                       </div>
 
-                      <p className="text-sm text-gray-600 mb-3">
+                      <p className="text-sm text-gray-600 mb-3 jp-text">
                         {factory.description || '製造パートナーです'}
                       </p>
+
+                      <TrustBadges />
                     </div>
 
                     <div className="text-right">

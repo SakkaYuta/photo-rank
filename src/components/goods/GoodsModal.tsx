@@ -5,6 +5,8 @@ import type { Work } from '../../types'
 import { useState } from 'react'
 import { createGoodsOrder } from '../../services/goods.service'
 import { supabase } from '../../services/supabaseClient'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 
 export function GoodsModal({ work, onClose }: { work: Work, onClose: () => void }) {
   const [goods, setGoods] = useState(GOODS_TYPES[0].id as string)
@@ -46,21 +48,22 @@ export function GoodsModal({ work, onClose }: { work: Work, onClose: () => void 
         </div>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <img src={work.thumbnail_url || work.image_url} className="h-16 w-16 rounded object-cover" />
+            <img src={work.thumbnail_url || work.image_url} alt={work.title} className="h-16 w-16 rounded object-cover" />
             <div>
               <p className="font-medium">{work.title}</p>
             </div>
           </div>
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium">グッズ種別</span>
-            <select value={goods} onChange={(e) => setGoods(e.target.value)} className="w-full rounded-md border border-gray-300 bg-white p-2 dark:border-gray-700 dark:bg-gray-900">
+          <div>
+            <label htmlFor="goods_type" className="mb-1 block text-sm font-medium">グッズ種別</label>
+            <Select id="goods_type" value={goods} onChange={(e) => setGoods(e.target.value)} aria-label="グッズ種別を選択">
               {GOODS_TYPES.map(g => <option key={g.id} value={g.id}>{g.label} (+{formatJPY(g.basePrice)})</option>)}
-            </select>
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium">数量</span>
-            <input type="number" min={1} value={qty} onChange={(e) => setQty(Math.max(1, parseInt(e.target.value || '1')))} className="w-full rounded-md border border-gray-300 bg-white p-2 dark:border-gray-700 dark:bg-gray-900" />
-          </label>
+            </Select>
+          </div>
+          <div>
+            <label htmlFor="quantity" className="mb-1 block text-sm font-medium">数量</label>
+            <Input id="quantity" type="number" min={1} value={qty} onChange={(e) => setQty(Math.max(1, parseInt(e.target.value || '1')))} aria-invalid={qty < 1} />
+            {qty < 1 && <p className="mt-1 text-xs text-red-600" role="alert">数量は1以上で入力してください</p>}
+          </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">合計</span>
             <span className="text-lg font-semibold">{formatJPY(total)}</span>
@@ -74,4 +77,3 @@ export function GoodsModal({ work, onClose }: { work: Work, onClose: () => void 
     </div>
   )
 }
-

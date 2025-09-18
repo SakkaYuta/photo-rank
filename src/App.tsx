@@ -7,6 +7,8 @@ import { Collection } from './components/buyer/Collection'
 import { CreateWork } from './components/creator/CreateWork'
 import { MyWorks } from './components/creator/MyWorks'
 import { OrderHistory } from './components/goods/OrderHistory'
+import { Favorites } from './components/buyer/Favorites'
+import { CartView } from './components/buyer/CartView'
 import { AdminDashboard } from './pages/AdminDashboard'
 import { PartnerDashboard } from './pages/partner/PartnerDashboard'
 import { PartnerProducts } from './pages/partner/PartnerProducts'
@@ -20,11 +22,16 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { NetworkErrorBoundary } from './components/NetworkErrorBoundary'
 import { SuspenseFallback } from './components/SuspenseFallback'
 import { PartialErrorBoundary } from './components/PartialErrorBoundary'
+import { ToastProvider } from './contexts/ToastContext'
+import { CartProvider } from './contexts/CartContext'
+import { FavoritesProvider } from './contexts/FavoritesContext'
 
 type ViewKey =
   | 'trending'
   | 'search'
   | 'collection'
+  | 'favorites'
+  | 'cart'
   | 'create'
   | 'myworks'
   | 'orders'
@@ -83,6 +90,9 @@ function App() {
     >
       <NetworkErrorBoundary>
         <Suspense fallback={<SuspenseFallback />}>
+          <ToastProvider>
+            <CartProvider>
+              <FavoritesProvider>
           <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
             <PartialErrorBoundary name="ヘッダー">
               <Header />
@@ -112,6 +122,16 @@ function App() {
               {view === 'collection' && (
                 <PartialErrorBoundary name="コレクション">
                   <Collection />
+                </PartialErrorBoundary>
+              )}
+              {view === 'favorites' && (
+                <PartialErrorBoundary name="お気に入り">
+                  <Favorites />
+                </PartialErrorBoundary>
+              )}
+              {view === 'cart' && (
+                <PartialErrorBoundary name="ショッピングカート">
+                  <CartView />
                 </PartialErrorBoundary>
               )}
               {view === 'create' && (
@@ -172,6 +192,9 @@ function App() {
               )}
             </main>
           </div>
+              </FavoritesProvider>
+            </CartProvider>
+          </ToastProvider>
         </Suspense>
       </NetworkErrorBoundary>
     </ErrorBoundary>

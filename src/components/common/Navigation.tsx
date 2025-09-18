@@ -14,6 +14,8 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
     { key: 'trending', label: 'トレンド' },
     { key: 'search', label: 'クリエイター検索' },
     { key: 'collection', label: 'コレクション' },
+    { key: 'favorites', label: 'お気に入り' },
+    { key: 'cart', label: 'カート' },
     { key: 'create', label: '作品作成' },
     { key: 'myworks', label: 'マイ作品' },
     ...(hasProfile ? [{ key: 'factory', label: '工場比較' }, { key: 'factory-order', label: '製造発注' }] : []),

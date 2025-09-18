@@ -1,0 +1,477 @@
+import React, { useState, useMemo } from 'react'
+import { useCart, type CartItem } from '../../contexts/CartContext'
+import { useToast } from '../../contexts/ToastContext'
+import { purchaseService } from '../../services/purchase.service'
+import { ShippingService, type ShippingCalculation, type FactoryGroup } from '../../services/shipping.service'
+import { formatJPY } from '../../utils/helpers'
+import { Trash2, Plus, Minus, ShoppingBag, CreditCard, Truck, Package } from 'lucide-react'
+import { loadStripe } from '@stripe/stripe-js'
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
+import { PurchaseSuccessModal } from '../ui/SuccessModal'
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
+
+// 工場グループコンポーネント
+const FactoryGroupCard: React.FC<{
+  group: FactoryGroup
+  onUpdateQty: (id: string, qty: number) => void
+  onRemove: (id: string) => void
+}> = ({ group, onUpdateQty, onRemove }) => (
+  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+    {/* 工場ヘッダー */}
+    <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Package className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+          <h3 className="font-medium text-gray-900 dark:text-gray-100">
+            {group.factoryName || '工場情報なし'}
+          </h3>
+        </div>
+        <div className="flex items-center gap-4 text-sm">
+          <span className="text-gray-600 dark:text-gray-400">
+            商品小計: {formatJPY(group.subtotal)}
+          </span>
+          <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+            <Truck className="w-4 h-4" />
+            <span>送料: {formatJPY(group.shippingCost)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* 商品リスト */}
+    <div className="p-4 space-y-3">
+      {group.items.map(item => (
+        <CartItemCard
+          key={item.id}
+          item={item}
+          onUpdateQty={onUpdateQty}
+          onRemove={onRemove}
+          showFactory={false}
+        />
+      ))}
+    </div>
+
+    {/* グループ合計 */}
+    <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 border-t border-gray-200 dark:border-gray-600">
+      <div className="flex justify-between items-center">
+        <span className="text-sm text-gray-600 dark:text-gray-400">
+          このグループの合計
+        </span>
+        <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">
+          {formatJPY(group.total)}
+        </span>
+      </div>
+    </div>
+  </div>
+)
+
+// カートアイテムコンポーネント
+const CartItemCard: React.FC<{
+  item: CartItem
+  onUpdateQty: (id: string, qty: number) => void
+  onRemove: (id: string) => void
+  showFactory?: boolean
+}> = ({ item, onUpdateQty, onRemove, showFactory = true }) => (
+  <div className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+    {item.imageUrl && (
+      <img
+        src={item.imageUrl}
+        alt={item.title}
+        className="w-16 h-16 rounded object-cover"
+      />
+    )}
+
+    <div className="flex-1">
+      <h3 className="font-medium text-gray-900 dark:text-gray-100 jp-text line-clamp-2">
+        {item.title}
+      </h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        {formatJPY(item.price)}
+      </p>
+    </div>
+
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => onUpdateQty(item.id, item.qty - 1)}
+        disabled={item.qty <= 1}
+        className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        aria-label="数量を減らす"
+      >
+        <Minus className="w-4 h-4" />
+      </button>
+
+      <span className="w-8 text-center font-medium">
+        {item.qty}
+      </span>
+
+      <button
+        onClick={() => onUpdateQty(item.id, item.qty + 1)}
+        className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+        aria-label="数量を増やす"
+      >
+        <Plus className="w-4 h-4" />
+      </button>
+    </div>
+
+    <div className="text-right">
+      <p className="font-semibold text-gray-900 dark:text-gray-100">
+        {formatJPY(item.price * item.qty)}
+      </p>
+      {showFactory && item.factoryId && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          工場ID: {item.factoryId}
+        </p>
+      )}
+    </div>
+
+    <button
+      onClick={() => onRemove(item.id)}
+      className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+      aria-label="カートから削除"
+    >
+      <Trash2 className="w-4 h-4" />
+    </button>
+  </div>
+)
+
+// 決済フォームコンポーネント
+const CheckoutForm: React.FC<{
+  cartItems: CartItem[]
+  shippingCalculation: ShippingCalculation
+  onSuccess: () => void
+  onCancel: () => void
+}> = ({ cartItems, shippingCalculation, onSuccess, onCancel }) => {
+  const stripe = useStripe()
+  const elements = useElements()
+  const { clearCart } = useCart()
+  const { showToast } = useToast()
+  const [processing, setProcessing] = useState(false)
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+
+    if (!stripe || !elements) {
+      showToast({ message: '決済システムの準備ができていません', variant: 'error' })
+      return
+    }
+
+    setProcessing(true)
+
+    try {
+      // 一括決済を開始
+      const workIds = cartItems.map(item => item.id)
+      const result = await purchaseService.initiateBulkPurchase(workIds)
+
+      if (result.status === 'failed') {
+        showToast({ message: result.error || '決済の開始に失敗しました', variant: 'error' })
+        return
+      }
+
+      if (result.status !== 'requires_payment' || !result.clientSecret) {
+        showToast({ message: '決済の準備に失敗しました', variant: 'error' })
+        return
+      }
+
+      // 失敗した商品がある場合は警告表示
+      if (result.failedItems && result.failedItems.length > 0) {
+        const failedTitles = result.failedItems
+          .map(f => cartItems.find(c => c.id === f.workId)?.title || f.workId)
+          .join(', ')
+        showToast({ message: `一部の商品が購入できません: ${failedTitles}`, variant: 'warning' })
+      }
+
+      const cardElement = elements.getElement(CardElement)
+      if (!cardElement) {
+        showToast({ message: 'カード情報の取得に失敗しました', variant: 'error' })
+        return
+      }
+
+      // Stripe決済を確認
+      const { error, paymentIntent } = await stripe.confirmCardPayment(result.clientSecret, {
+        payment_method: {
+          card: cardElement,
+        }
+      })
+
+      if (error) {
+        showToast({ message: error.message || '決済に失敗しました', variant: 'error' })
+        return
+      }
+
+      if (paymentIntent?.status === 'succeeded') {
+        // 購入完了確認
+        const completionResult = await purchaseService.checkBulkPurchaseCompletion(paymentIntent.id)
+
+        if (completionResult.status === 'completed') {
+          clearCart()
+          showToast({ message: 'ご購入ありがとうございます！', variant: 'success' })
+          onSuccess()
+        } else {
+          showToast({ message: '購入処理を確認中です...', variant: 'default' })
+          // バックグラウンドで確認を続行
+          setTimeout(() => {
+            purchaseService.checkBulkPurchaseCompletion(paymentIntent.id, 5, 3000)
+              .then(result => {
+                if (result.status === 'completed') {
+                  clearCart()
+                  showToast({ message: 'ご購入ありがとうございます！', variant: 'success' })
+                  onSuccess()
+                }
+              })
+          }, 1000)
+        }
+      }
+    } catch (error) {
+      console.error('Checkout error:', error)
+      showToast({ message: '決済処理中にエラーが発生しました', variant: 'error' })
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  const cardElementOptions = {
+    style: {
+      base: {
+        fontSize: '16px',
+        color: '#424770',
+        '::placeholder': {
+          color: '#aab7c4',
+        },
+      },
+    },
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          カード情報
+        </label>
+        <div className="p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800">
+          <CardElement options={cardElementOptions} />
+        </div>
+      </div>
+
+      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-3">
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-600 dark:text-gray-400">商品点数</span>
+          <span className="font-medium">{shippingCalculation.totalItems}点</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-600 dark:text-gray-400">商品小計</span>
+          <span className="font-medium">{formatJPY(shippingCalculation.totalSubtotal)}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
+            <Truck className="w-4 h-4" />
+            送料合計
+          </span>
+          <span className="font-medium">{formatJPY(shippingCalculation.totalShipping)}</span>
+        </div>
+        <div className="border-t border-gray-200 dark:border-gray-600 pt-2">
+          <div className="flex justify-between items-center">
+            <span className="text-lg font-semibold">合計金額</span>
+            <span className="text-xl font-bold text-primary-600">
+              {formatJPY(shippingCalculation.grandTotal)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 py-3 px-4 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+        >
+          キャンセル
+        </button>
+        <button
+          type="submit"
+          disabled={!stripe || processing}
+          className="flex-1 py-3 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+        >
+          {processing ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              処理中...
+            </>
+          ) : (
+            <>
+              <CreditCard className="w-4 h-4" />
+              {formatJPY(shippingCalculation.grandTotal)}で購入
+            </>
+          )}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+// メインカートビューコンポーネント
+export const CartView: React.FC = () => {
+  const { items, updateQty, removeFromCart, clearCart } = useCart()
+  const [showCheckout, setShowCheckout] = useState(false)
+  const [showGrouped, setShowGrouped] = useState(true)
+
+  // 送料計算
+  const shippingCalculation = useMemo(() => {
+    return ShippingService.calculateShipping(items)
+  }, [items])
+
+  // 最適化提案
+  const optimizationSuggestions = useMemo(() => {
+    return ShippingService.getShippingOptimizationSuggestions(shippingCalculation)
+  }, [shippingCalculation])
+
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <ShoppingBag className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          カートは空です
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400">
+          お気に入りの写真を見つけてカートに追加してください
+        </p>
+      </div>
+    )
+  }
+
+  if (showCheckout) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+            お支払い
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            カード情報を入力して購入を完了してください
+          </p>
+        </div>
+
+        <Elements stripe={stripePromise}>
+          <CheckoutForm
+            cartItems={items}
+            shippingCalculation={shippingCalculation}
+            onSuccess={() => setShowCheckout(false)}
+            onCancel={() => setShowCheckout(false)}
+          />
+        </Elements>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            ショッピングカート
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            {shippingCalculation.totalItems}点の商品 • {shippingCalculation.factoryGroups.length}つの工場
+          </p>
+        </div>
+
+        {items.length > 0 && (
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowGrouped(!showGrouped)}
+              className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1"
+            >
+              <Package className="w-4 h-4" />
+              {showGrouped ? '一覧表示' : '工場別表示'}
+            </button>
+            <button
+              onClick={clearCart}
+              className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+            >
+              すべて削除
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* 最適化提案 */}
+      {optimizationSuggestions.length > 0 && (
+        <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+          <div className="flex items-start gap-2">
+            <Truck className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+            <div>
+              <h3 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">
+                送料最適化のご提案
+              </h3>
+              <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+                {optimizationSuggestions.map((suggestion, index) => (
+                  <li key={index}>• {suggestion}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-4 mb-8">
+        {showGrouped ? (
+          // 工場別グループ表示
+          shippingCalculation.factoryGroups.map((group, index) => (
+            <FactoryGroupCard
+              key={group.factoryId || `unknown-${index}`}
+              group={group}
+              onUpdateQty={updateQty}
+              onRemove={removeFromCart}
+            />
+          ))
+        ) : (
+          // 通常のリスト表示
+          items.map(item => (
+            <CartItemCard
+              key={item.id}
+              item={item}
+              onUpdateQty={updateQty}
+              onRemove={removeFromCart}
+            />
+          ))
+        )}
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="space-y-3 mb-4">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-600 dark:text-gray-400">商品小計</span>
+            <span className="font-medium">{formatJPY(shippingCalculation.totalSubtotal)}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
+              <Truck className="w-4 h-4" />
+              送料合計
+            </span>
+            <span className="font-medium">{formatJPY(shippingCalculation.totalShipping)}</span>
+          </div>
+          <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                合計金額
+              </span>
+              <span className="text-2xl font-bold text-primary-600">
+                {formatJPY(shippingCalculation.grandTotal)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setShowCheckout(true)}
+          className="w-full py-3 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center gap-2 font-medium"
+        >
+          <CreditCard className="w-5 h-5" />
+          レジに進む
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export default CartView

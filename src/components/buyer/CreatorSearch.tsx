@@ -31,10 +31,10 @@ export function CreatorSearch() {
       <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         {items.map(u => (
           <li key={u.id} className="card flex items-center gap-3">
-            <img src={u.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${u.id}`} className="h-12 w-12 rounded-full" />
+            <img src={u.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${u.id}`} alt={`${u.display_name}のアバター`} className="h-12 w-12 rounded-full" />
             <div>
-              <p className="font-medium">{u.display_name}</p>
-              {u.bio && <p className="text-sm text-gray-600">{u.bio}</p>}
+              <p className="font-medium jp-text">{u.display_name}</p>
+              {u.bio && <p className="text-sm text-gray-600 jp-text line-clamp-2">{u.bio}</p>}
             </div>
           </li>
         ))}

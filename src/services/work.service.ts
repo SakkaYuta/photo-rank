@@ -66,3 +66,14 @@ export async function myPurchases(userId: string): Promise<(Purchase & { work: W
   return (data || []) as any
 }
 
+export async function listWorksByIds(ids: string[]): Promise<Work[]> {
+  if (!ids || ids.length === 0) return []
+  const { data, error } = await supabase
+    .from('works')
+    .select('*')
+    .in('id', ids)
+  if (error) throw error
+  // preserve input order
+  const map = new Map((data || []).map((w: any) => [w.id, w]))
+  return ids.map(id => map.get(id)).filter(Boolean) as Work[]
+}

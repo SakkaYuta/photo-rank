@@ -146,8 +146,9 @@ export const FactoryCompareContainer: React.FC<FactoryCompareContainerProps> = (
           return (
             <Card
               key={`${quote.partner.id}-${quote.product.id}`}
-              className={`relative transition-all cursor-pointer ${
-                isSelected ? 'ring-2 ring-primary-500 bg-primary-50/30' : 'hover:shadow-lg'
+              hoverable
+              className={`relative cursor-pointer transition-base ${
+                isSelected ? 'ring-2 ring-primary-500 bg-primary-50/30' : ''
               }`}
               onClick={() => setSelectedQuote(quote)}
             >
@@ -167,8 +168,8 @@ export const FactoryCompareContainer: React.FC<FactoryCompareContainerProps> = (
               <div className="p-6">
                 <div className="grid md:grid-cols-4 gap-6">
                   <div>
-                    <h3 className="font-semibold text-lg">{quote.partner.name}</h3>
-                    <p className="text-sm text-gray-600">{getPartnerLocation(quote.partner)}</p>
+                    <h3 className="font-semibold text-lg jp-text line-clamp-2">{quote.partner.name}</h3>
+                    <p className="text-sm text-gray-600 jp-text">{getPartnerLocation(quote.partner)}</p>
                     <div className="flex items-center gap-1 mt-2">
                       <Star className="w-4 h-4 text-yellow-500 fill-current" />
                       <span className="font-semibold">{averageRating?.toFixed?.(1) ?? 'N/A'}</span>
@@ -183,7 +184,7 @@ export const FactoryCompareContainer: React.FC<FactoryCompareContainerProps> = (
                     </div>
                   </div>
 
-                  <div>
+                  <div className="transition-base">
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-gray-600">単価</span>

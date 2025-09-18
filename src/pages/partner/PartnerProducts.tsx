@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { FactoryProduct } from '../../types'
 import { Plus, Edit3, Trash2, Eye, EyeOff } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 
 type ProductFormData = {
   product_type: string
@@ -147,7 +148,7 @@ export function PartnerProducts() {
         <h1 className="text-3xl font-bold">商品管理</h1>
         <button
           onClick={handleAddProduct}
-          className="btn btn-primary flex items-center gap-2"
+          className="btn btn-primary flex items-center gap-2 transition-base hover-lift"
         >
           <Plus className="w-4 h-4" />
           新しい商品を追加
@@ -224,57 +225,57 @@ export function PartnerProducts() {
                 
                 <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor="product_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       商品タイプ *
                     </label>
-                    <input
+                    <Input
+                      id="product_type"
                       type="text"
                       value={formData.product_type}
                       onChange={(e) => setFormData(prev => ({ ...prev, product_type: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                       placeholder="例: アクリルキーホルダー"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor="base_cost" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       基本価格（円） *
                     </label>
-                    <input
+                    <Input
+                      id="base_cost"
                       type="number"
                       value={formData.base_cost}
                       onChange={(e) => setFormData(prev => ({ ...prev, base_cost: parseInt(e.target.value) || 0 }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      min="0"
+                      min={0}
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor="lead_time_days" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       リードタイム（日） *
                     </label>
-                    <input
+                    <Input
+                      id="lead_time_days"
                       type="number"
                       value={formData.lead_time_days}
                       onChange={(e) => setFormData(prev => ({ ...prev, lead_time_days: parseInt(e.target.value) || 1 }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      min="1"
+                      min={1}
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label htmlFor="min_order_qty" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       最小注文数 *
                     </label>
-                    <input
+                    <Input
+                      id="min_order_qty"
                       type="number"
                       value={formData.min_order_qty}
                       onChange={(e) => setFormData(prev => ({ ...prev, min_order_qty: parseInt(e.target.value) || 1 }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      min="1"
+                      min={1}
                       required
                     />
                   </div>
@@ -285,7 +286,7 @@ export function PartnerProducts() {
                       id="is_active"
                       checked={formData.is_active}
                       onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                      className="w-4 h-4 text-primary-600 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400"
                     />
                     <label htmlFor="is_active" className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
                       有効にする
@@ -296,14 +297,14 @@ export function PartnerProducts() {
                     <button
                       type="button"
                       onClick={() => setShowForm(false)}
-                      className="btn btn-outline"
+                      className="btn btn-outline transition-base hover-lift"
                       disabled={submitting}
                     >
                       キャンセル
                     </button>
                     <button
                       type="submit"
-                      className="btn btn-primary"
+                      className="btn btn-primary transition-base hover-lift"
                       disabled={submitting}
                     >
                       {submitting ? '保存中...' : editingProduct ? '更新' : '追加'}

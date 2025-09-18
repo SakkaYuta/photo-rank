@@ -223,80 +223,72 @@ export function PartnerDashboard() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="rounded-lg p-6 transition-base hover-lift bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-soft">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 dark:text-blue-400 text-sm font-semibold">
-                    📦
-                  </span>
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-semibold">📦</span>
                 </div>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                <p className="text-sm font-medium text-white/80">
                   活動中の商品
                 </p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                <p className="text-2xl font-semibold">
                   {stats.activeProducts}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="rounded-lg p-6 transition-base hover-lift bg-gradient-to-r from-green-500 to-green-600 text-white shadow-soft">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                  <span className="text-green-600 dark:text-green-400 text-sm font-semibold">
-                    📋
-                  </span>
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-semibold">📋</span>
                 </div>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                <p className="text-sm font-medium text-white/80">
                   総注文数
                 </p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                <p className="text-2xl font-semibold">
                   {stats.totalOrders}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="rounded-lg p-6 transition-base hover-lift bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-soft">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
-                  <span className="text-orange-600 dark:text-orange-400 text-sm font-semibold">
-                    ⏳
-                  </span>
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-semibold">⏳</span>
                 </div>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                <p className="text-sm font-medium text-white/80">
                   処理中
                 </p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                <p className="text-2xl font-semibold">
                   {stats.pendingOrders}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="rounded-lg p-6 transition-base hover-lift bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-soft">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
-                  <span className="text-purple-600 dark:text-purple-400 text-sm font-semibold">
-                    ✅
-                  </span>
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-semibold">✅</span>
                 </div>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                <p className="text-sm font-medium text-white/80">
                   完了
                 </p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                <p className="text-2xl font-semibold">
                   {stats.completedOrders}
                 </p>
               </div>
@@ -305,25 +297,25 @@ export function PartnerDashboard() {
 
           {/* Notification Stats Card */}
           {notificationStats && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div className="rounded-lg p-6 transition-base hover-lift bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-soft">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center">
-                    <Bell className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                    <Bell className="w-4 h-4 text-white" />
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  <p className="text-sm font-medium text-white/80">
                     通知 (24h)
                   </p>
                   <div className="flex items-center gap-2">
-                    <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                    <p className="text-2xl font-semibold">
                       {notificationStats.total_24h}
                     </p>
                     <div className="flex text-xs">
-                      <span className="text-green-600">✓{notificationStats.sent_24h}</span>
+                      <span className="text-white/90">✓{notificationStats.sent_24h}</span>
                       {notificationStats.failed_24h > 0 && (
-                        <span className="text-red-600 ml-1">✗{notificationStats.failed_24h}</span>
+                        <span className="ml-1 text-white/90">✗{notificationStats.failed_24h}</span>
                       )}
                     </div>
                   </div>
@@ -341,9 +333,9 @@ export function PartnerDashboard() {
         </Card.Header>
         <Card.Body>
           <div className="flex flex-wrap gap-3">
-            <button className="btn btn-primary">新しい商品を追加</button>
-            <button className="btn btn-outline">未処理の注文を確認</button>
-            <button className="btn btn-outline">レビューを確認</button>
+            <button className="btn btn-primary transition-base hover-lift">新しい商品を追加</button>
+            <button className="btn btn-outline transition-base hover-lift">未処理の注文を確認</button>
+            <button className="btn btn-outline transition-base hover-lift">レビューを確認</button>
           </div>
         </Card.Body>
       </Card>
@@ -362,7 +354,7 @@ export function PartnerDashboard() {
             <>
               <div className="space-y-3">
                 {recentOrders.map(order => (
-                  <div key={order.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div key={order.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg transition-base hover-lift">
                     <div>
                       <p className="font-medium">{order.factory_products?.product_name || order.factory_products?.product_type}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -386,7 +378,7 @@ export function PartnerDashboard() {
 
               <Button
                 variant="primary"
-                className="mt-4 w-full"
+                className="mt-4 w-full transition-base hover-lift"
                 onClick={() => {
                   window.dispatchEvent(new CustomEvent('navigate', {
                     detail: { view: 'factory-order' }
@@ -403,6 +395,7 @@ export function PartnerDashboard() {
               <p className="text-gray-600 dark:text-gray-400 mb-4">製造発注はまだありません</p>
               <Button
                 variant="primary"
+                className="transition-base hover-lift"
                 onClick={() => {
                   window.dispatchEvent(new CustomEvent('navigate', {
                     detail: { view: 'factory-order' }
@@ -449,7 +442,7 @@ export function PartnerDashboard() {
           ) : notifications.length > 0 ? (
             <div className="space-y-3">
               {notifications.map(notification => (
-                <div key={notification.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div key={notification.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg transition-base hover-lift">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-medium">
