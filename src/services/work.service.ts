@@ -12,6 +12,42 @@ export async function listTrendingWorks(limit = 20): Promise<Work[]> {
   return data as Work[]
 }
 
+export type WorkSearchParams = {
+  q?: string
+  minPrice?: number
+  maxPrice?: number
+  factoryId?: string
+  limit?: number
+}
+
+export async function searchWorks(params: WorkSearchParams): Promise<Work[]> {
+  const { q, minPrice, maxPrice, factoryId, limit = 50 } = params || {}
+  let query = supabase
+    .from('works')
+    .select('*')
+    .eq('is_published', true)
+
+  if (q && q.trim()) {
+    query = query.ilike('title', `%${q.trim()}%`)
+  }
+  if (typeof minPrice === 'number') {
+    query = query.gte('price', minPrice)
+  }
+  if (typeof maxPrice === 'number') {
+    query = query.lte('price', maxPrice)
+  }
+  if (factoryId && factoryId.trim()) {
+    // DB上にfactory_idがある前提（ない場合はno-op）
+    // @ts-ignore - 型定義にない可能性あり
+    query = query.eq('factory_id', factoryId.trim())
+  }
+
+  query = query.order('created_at', { ascending: false }).limit(limit)
+  const { data, error } = await query
+  if (error) throw error
+  return (data || []) as Work[]
+}
+
 export async function createWork(payload: Partial<Work>): Promise<Work> {
   const { data, error } = await supabase
     .from('works')

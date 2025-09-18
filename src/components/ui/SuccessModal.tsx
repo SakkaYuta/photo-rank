@@ -11,6 +11,8 @@ export type SuccessModalProps = {
   message?: string
   actionLabel?: string
   onAction?: () => void
+  secondaryActionLabel?: string
+  onSecondaryAction?: () => void
   showGoToCart?: boolean
   onGoToCart?: () => void
   amount?: number
@@ -21,7 +23,7 @@ const SUCCESS_CONFIGS = {
   purchase: {
     icon: CheckCircle,
     defaultTitle: 'ご購入ありがとうございます！',
-    defaultMessage: 'お支払いが完了いたしました。商品の準備が整い次第、メールでお知らせいたします。',
+    defaultMessage: 'お支払いが完了しました。注文履歴で詳細をご確認いただけます。',
     iconColor: 'text-green-500',
     bgColor: 'bg-green-50 dark:bg-green-900/20'
   },
@@ -42,7 +44,7 @@ const SUCCESS_CONFIGS = {
   order: {
     icon: CheckCircle,
     defaultTitle: '注文を受け付けました',
-    defaultMessage: 'ご注文ありがとうございます。製造開始までしばらくお待ちください。',
+    defaultMessage: 'ご注文ありがとうございます。製造開始までしばらくお待ちください。注文履歴で詳細をご確認いただけます。',
     iconColor: 'text-green-500',
     bgColor: 'bg-green-50 dark:bg-green-900/20'
   },
@@ -63,6 +65,8 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
   message,
   actionLabel,
   onAction,
+  secondaryActionLabel,
+  onSecondaryAction,
   showGoToCart = false,
   onGoToCart,
   amount,
@@ -141,6 +145,20 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
               }}
             >
               {actionLabel}
+            </Button>
+          )}
+
+          {/* セカンダリアクション */}
+          {secondaryActionLabel && onSecondaryAction && (
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => {
+                onSecondaryAction()
+                onClose()
+              }}
+            >
+              {secondaryActionLabel}
             </Button>
           )}
 

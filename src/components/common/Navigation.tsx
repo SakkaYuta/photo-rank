@@ -20,6 +20,7 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
     { key: 'myworks', label: 'マイ作品' },
     ...(hasProfile ? [{ key: 'factory', label: '工場比較' }, { key: 'factory-order', label: '製造発注' }] : []),
     { key: 'orders', label: 'グッズ注文履歴' },
+    ...(hasProfile ? [{ key: 'profile', label: 'プロフィール設定' }] : []),
     ...(isAdmin ? [{ key: 'admin', label: '管理' } as NavItem] : []),
     ...(isPartner ? [
       { key: 'partner-dashboard', label: 'パートナー' },

@@ -4,7 +4,7 @@ import { useCart } from '@/contexts/CartContext'
 import { useToast } from '@/contexts/ToastContext'
 import { purchaseService } from '@/services/purchase.service'
 import { StripeCheckout } from '@/components/checkout/StripeCheckout'
-import { PurchaseSuccessModal } from '@/components/ui/SuccessModal'
+import { SuccessModal } from '@/components/ui/SuccessModal'
 
 type CartDrawerProps = {
   isOpen: boolean
@@ -89,6 +89,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                   <button className="btn btn-outline" onClick={() => proceedCheckout(it.id)} disabled={busy}>
                     <CreditCard className="w-4 h-4 mr-1" /> 購入
                   </button>
+                  <div className="text-[11px] text-gray-500">
+                    購入ボタンを押すと
+                    <button className="underline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'terms' } }))}>利用規約</button>
+                    ・
+                    <button className="underline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'privacy' } }))}>プライバシー</button>
+                    ・
+                    <button className="underline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'refunds' } }))}>返金</button>
+                    に同意したものとみなします
+                  </div>
                   <button className="btn btn-outline" onClick={() => { removeFromCart(it.id); showToast({ variant: 'success', message: '削除しました' }) }}>
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -151,11 +160,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
             </div>
           )}
           {showThanks && (
-            <PurchaseSuccessModal
+            <SuccessModal
               isOpen={true}
               onClose={() => setShowThanks(false)}
+              type="purchase"
               amount={thanksAmount}
               itemCount={1}
+              actionLabel="注文履歴を見る"
+              onAction={() => {
+                window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'orders' } }))
+              }}
+              secondaryActionLabel="続けてショッピング"
+              onSecondaryAction={() => {
+                window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'trending' } }))
+              }}
             />
           )}
         </footer>

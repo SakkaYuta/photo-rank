@@ -13,7 +13,7 @@ serve(async (req) => {
     const user = await authenticateUser(req)
     
     const body = await req.json()
-    const { workId } = body
+    const { workId, addressId } = body
     if (!workId || typeof workId !== 'string' || workId.length < 8) {
       return new Response('Bad Request: workId is required', { status: 400 })
     }
@@ -59,7 +59,7 @@ serve(async (req) => {
     const intent = await stripe.paymentIntents.create({
       amount: work.price,
       currency: 'jpy',
-      metadata: { user_id: user.id, work_id: work.id, type: 'work_purchase' },
+      metadata: { user_id: user.id, work_id: work.id, type: 'work_purchase', address_id: addressId || '' },
       description: `Photo purchase: ${work.title}`,
       automatic_payment_methods: { enabled: true },
     })

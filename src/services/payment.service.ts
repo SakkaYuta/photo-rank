@@ -15,9 +15,9 @@ export async function releaseWorkLock(workId: string) {
   if (error) throw error
 }
 
-export async function createPaymentIntent(workId: string) {
+export async function createPaymentIntent(workId: string, addressId?: string) {
   const { data, error } = await supabase.functions.invoke('create-payment-intent', {
-    body: { workId, userId: (await supabase.auth.getUser()).data.user?.id },
+    body: { workId, userId: (await supabase.auth.getUser()).data.user?.id, addressId },
   })
   if (error) throw error
   // accept either clientSecret or client_secret key

@@ -21,6 +21,11 @@ export async function getCurrentUserProfile(): Promise<User | null> {
     .eq('id', user.id)
     .single()
   if (error) throw error
-  return data as User
+
+  // Supabase Authからメール情報を追加
+  return {
+    ...data,
+    email: user.email || null
+  } as User
 }
 

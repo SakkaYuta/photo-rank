@@ -6,9 +6,10 @@ import { CreatorSearch } from './components/buyer/CreatorSearch'
 import { Collection } from './components/buyer/Collection'
 import { CreateWork } from './components/creator/CreateWork'
 import { MyWorks } from './components/creator/MyWorks'
-import { OrderHistory } from './components/goods/OrderHistory'
+import { OrderHistory } from './components/buyer/OrderHistory'
 import { Favorites } from './components/buyer/Favorites'
 import { CartView } from './components/buyer/CartView'
+import { ProfileSettings } from './components/buyer/ProfileSettings'
 import { AdminDashboard } from './pages/AdminDashboard'
 import { PartnerDashboard } from './pages/partner/PartnerDashboard'
 import { PartnerProducts } from './pages/partner/PartnerProducts'
@@ -25,6 +26,11 @@ import { PartialErrorBoundary } from './components/PartialErrorBoundary'
 import { ToastProvider } from './contexts/ToastContext'
 import { CartProvider } from './contexts/CartContext'
 import { FavoritesProvider } from './contexts/FavoritesContext'
+import { Footer } from './components/common/Footer'
+import { Terms } from './pages/legal/Terms'
+import { Privacy } from './pages/legal/Privacy'
+import { RefundPolicy } from './pages/legal/RefundPolicy'
+import { CommerceAct } from './pages/legal/CommerceAct'
 
 type ViewKey =
   | 'trending'
@@ -35,6 +41,7 @@ type ViewKey =
   | 'create'
   | 'myworks'
   | 'orders'
+  | 'profile'
   | 'admin'
   | 'partner-dashboard'
   | 'partner-products'
@@ -42,6 +49,10 @@ type ViewKey =
   | 'factory-picker'
   | 'factory'
   | 'factory-order'
+  | 'terms'
+  | 'privacy'
+  | 'refunds'
+  | 'commerce'
 
 function App() {
   const [view, setView] = useState<ViewKey>('trending')
@@ -149,6 +160,11 @@ function App() {
                   <OrderHistory />
                 </PartialErrorBoundary>
               )}
+              {view === 'profile' && (
+                <PartialErrorBoundary name="プロフィール設定">
+                  <ProfileSettings />
+                </PartialErrorBoundary>
+              )}
               {view === 'admin' && isAdmin && (
                 <PartialErrorBoundary name="管理画面">
                   <AdminDashboard />
@@ -190,7 +206,28 @@ function App() {
                   />
                 </PartialErrorBoundary>
               )}
+              {view === 'terms' && (
+                <PartialErrorBoundary name="利用規約">
+                  <Terms />
+                </PartialErrorBoundary>
+              )}
+              {view === 'privacy' && (
+                <PartialErrorBoundary name="プライバシーポリシー">
+                  <Privacy />
+                </PartialErrorBoundary>
+              )}
+              {view === 'refunds' && (
+                <PartialErrorBoundary name="返金ポリシー">
+                  <RefundPolicy />
+                </PartialErrorBoundary>
+              )}
+              {view === 'commerce' && (
+                <PartialErrorBoundary name="特定商取引法に基づく表示">
+                  <CommerceAct />
+                </PartialErrorBoundary>
+              )}
             </main>
+            <Footer />
           </div>
               </FavoritesProvider>
             </CartProvider>

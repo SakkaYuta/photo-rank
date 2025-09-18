@@ -8,6 +8,8 @@ import { Trash2, Plus, Minus, ShoppingBag, CreditCard, Truck, Package } from 'lu
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { PurchaseSuccessModal } from '../ui/SuccessModal'
+import { AddressService, type UserAddress } from '@/services/address.service'
+import { Analytics } from '@/services/analytics.service'
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
 
@@ -147,10 +149,35 @@ const CheckoutForm: React.FC<{
   const { clearCart } = useCart()
   const { showToast } = useToast()
   const [processing, setProcessing] = useState(false)
+  const [addresses, setAddresses] = useState<UserAddress[]>([])
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('')
+  const [adding, setAdding] = useState(false)
+  const [agree, setAgree] = useState(false)
+
+  const [newAddr, setNewAddr] = useState({
+    name: '', postal_code: '', prefecture: '', city: '', address1: '', address2: '', phone: '', is_default: true,
+  })
+
+  React.useEffect(() => {
+    (async () => {
+      const list = await AddressService.list()
+      setAddresses(list)
+      const def = list.find(a => a.is_default) || list[0]
+      setSelectedAddressId(def?.id || '')
+    })()
+  }, [])
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
 
+    if (!selectedAddressId && !adding) {
+      showToast({ message: '配送先住所を選択してください', variant: 'warning' })
+      return
+    }
+    if (!agree) {
+      showToast({ message: '利用規約等への同意が必要です', variant: 'warning' })
+      return
+    }
     if (!stripe || !elements) {
       showToast({ message: '決済システムの準備ができていません', variant: 'error' })
       return
@@ -161,7 +188,7 @@ const CheckoutForm: React.FC<{
     try {
       // 一括決済を開始
       const workIds = cartItems.map(item => item.id)
-      const result = await purchaseService.initiateBulkPurchase(workIds)
+      const result = await purchaseService.initiateBulkPurchase(workIds, selectedAddressId)
 
       if (result.status === 'failed') {
         showToast({ message: result.error || '決済の開始に失敗しました', variant: 'error' })
@@ -244,6 +271,50 @@ const CheckoutForm: React.FC<{
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* 配送先 */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">配送先</label>
+        {addresses.length > 0 && !adding ? (
+          <div className="space-y-2">
+            {addresses.map(addr => (
+              <label key={addr.id} className="flex items-start gap-3 p-3 border rounded-md dark:border-gray-700">
+                <input
+                  type="radio"
+                  name="address"
+                  checked={selectedAddressId === addr.id}
+                  onChange={() => setSelectedAddressId(addr.id)}
+                />
+                <div className="text-sm">
+                  <div className="font-medium">{addr.name} {addr.is_default && <span className="ml-1 text-xs text-green-600">既定</span>}</div>
+                  <div className="text-gray-600 dark:text-gray-400">{addr.postal_code} {addr.prefecture}{addr.city} {addr.address1} {addr.address2}</div>
+                  {addr.phone && <div className="text-gray-600 dark:text-gray-400">{addr.phone}</div>}
+                </div>
+              </label>
+            ))}
+            <button type="button" className="text-sm underline" onClick={() => setAdding(true)}>新しい住所を追加</button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input className="border rounded-md p-2" placeholder="氏名" value={newAddr.name} onChange={e => setNewAddr({ ...newAddr, name: e.target.value })} required />
+            <input className="border rounded-md p-2" placeholder="郵便番号" value={newAddr.postal_code} onChange={e => setNewAddr({ ...newAddr, postal_code: e.target.value })} required />
+            <input className="border rounded-md p-2" placeholder="都道府県" value={newAddr.prefecture} onChange={e => setNewAddr({ ...newAddr, prefecture: e.target.value })} />
+            <input className="border rounded-md p-2" placeholder="市区町村" value={newAddr.city} onChange={e => setNewAddr({ ...newAddr, city: e.target.value })} />
+            <input className="border rounded-md p-2 md:col-span-2" placeholder="住所1（番地等）" value={newAddr.address1} onChange={e => setNewAddr({ ...newAddr, address1: e.target.value })} required />
+            <input className="border rounded-md p-2 md:col-span-2" placeholder="住所2（建物名等）" value={newAddr.address2 || ''} onChange={e => setNewAddr({ ...newAddr, address2: e.target.value })} />
+            <input className="border rounded-md p-2 md:col-span-2" placeholder="電話番号" value={newAddr.phone || ''} onChange={e => setNewAddr({ ...newAddr, phone: e.target.value })} />
+            <div className="md:col-span-2 flex gap-2">
+              <button type="button" className="btn btn-outline" onClick={() => setAdding(false)}>キャンセル</button>
+              <button type="button" className="btn btn-primary" onClick={async () => {
+                const created = await AddressService.create(newAddr)
+                const list = await AddressService.list()
+                setAddresses(list)
+                setSelectedAddressId(created?.id || '')
+                setAdding(false)
+              }}>住所を保存</button>
+            </div>
+          </div>
+        )}
+      </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           カード情報
@@ -251,6 +322,21 @@ const CheckoutForm: React.FC<{
         <div className="p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800">
           <CardElement options={cardElementOptions} />
         </div>
+      </div>
+
+      {/* 規約同意 */}
+      <div className="text-sm text-gray-600 dark:text-gray-400">
+        <label className="inline-flex items-center gap-2">
+          <input type="checkbox" className="rounded" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
+          <span>
+            <button type="button" className="underline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'terms' } }))}>利用規約</button>
+            ・
+            <button type="button" className="underline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'privacy' } }))}>プライバシーポリシー</button>
+            ・
+            <button type="button" className="underline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'refunds' } }))}>返金ポリシー</button>
+            に同意します
+          </span>
+        </label>
       </div>
 
       <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-3">
@@ -289,7 +375,7 @@ const CheckoutForm: React.FC<{
         </button>
         <button
           type="submit"
-          disabled={!stripe || processing}
+          disabled={!stripe || processing || !agree}
           className="flex-1 py-3 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
         >
           {processing ? (
@@ -463,7 +549,13 @@ export const CartView: React.FC = () => {
         </div>
 
         <button
-          onClick={() => setShowCheckout(true)}
+          onClick={() => {
+            setShowCheckout(true)
+            Analytics.track('begin_checkout', {
+              value: shippingCalculation.grandTotal,
+              items: items.map(i => ({ item_id: i.id, price: i.price, quantity: i.qty })),
+            })
+          }}
           className="w-full py-3 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center gap-2 font-medium"
         >
           <CreditCard className="w-5 h-5" />

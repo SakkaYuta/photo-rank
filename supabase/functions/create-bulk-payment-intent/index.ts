@@ -23,7 +23,7 @@ serve(async (req) => {
       return new Response('Method not allowed', { status: 405 })
     }
 
-    const { workIds, userId } = await req.json()
+    const { workIds, userId, addressId } = await req.json()
 
     if (!workIds || !Array.isArray(workIds) || workIds.length === 0) {
       return new Response(
@@ -117,7 +117,8 @@ serve(async (req) => {
         type: 'bulk_purchase',
         productSubtotal: productSubtotal.toString(),
         shippingTotal: shippingTotal.toString(),
-        factoryCount: Object.keys(factoryGroups).length.toString()
+        factoryCount: Object.keys(factoryGroups).length.toString(),
+        address_id: addressId || ''
       },
       payment_method_types: ['card'],
     })

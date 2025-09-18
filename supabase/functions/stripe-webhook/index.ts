@@ -2,6 +2,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import Stripe from 'https://esm.sh/stripe@13.10.0?target=deno';
+import { sendEmail } from '../_shared/email.ts'
+import { renderPurchaseSuccessEmail, renderPaymentFailedEmail, renderRefundEmail } from '../_shared/emailTemplates.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -246,6 +248,42 @@ async function handlePaymentIntentSucceeded(
     throw new Error(`Transaction failed: ${error.message}`);
   }
 
+  // ユーザーのメールアドレスを取得
+  let buyerEmail: string | undefined = undefined
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email, display_name')
+      .eq('id', user_id)
+      .single()
+    buyerEmail = profile?.email
+  } catch (_) {}
+
+  // メール用のアイテム一覧を試行取得
+  const items: Array<{ title: string; price: number }> = []
+  try {
+    if (paymentIntent.metadata?.type === 'bulk_purchase') {
+      const { data } = await supabase
+        .from('purchases')
+        .select('amount, works(title)')
+        .eq('stripe_payment_intent_id', paymentIntent.id)
+      data?.forEach((row: any) => {
+        const title = row?.works?.title || 'アイテム'
+        const price = (row?.amount || 0)
+        items.push({ title, price })
+      })
+    } else if (work_id) {
+      const { data: work } = await supabase
+        .from('works')
+        .select('title, price')
+        .eq('id', work_id)
+        .single()
+      if (work) items.push({ title: work.title, price: work.price })
+    }
+  } catch (e) {
+    console.error('failed to load items for email:', e)
+  }
+
   // 製造発注がある場合は通知をキューに追加
   if (order_id) {
     const { data: order } = await supabase
@@ -272,6 +310,17 @@ async function handlePaymentIntentSucceeded(
           created_at: new Date().toISOString(),
         });
     }
+  }
+
+  // 購入完了メール（ベストエフォート）
+  try {
+    if (buyerEmail) {
+      const amountYen = (paymentIntent.amount_received || paymentIntent.amount || 0) / 100
+      const html = renderPurchaseSuccessEmail({ amount: amountYen, items })
+      await sendEmail({ to: buyerEmail, subject: 'ご購入ありがとうございます（注文確認）', html })
+    }
+  } catch (mailErr) {
+    console.error('failed to send purchase email:', mailErr)
   }
 
   return { 
@@ -309,6 +358,20 @@ async function handlePaymentIntentFailed(
       amount: paymentIntent.amount,
       created_at: new Date().toISOString(),
     });
+
+  // 失敗メール（ベストエフォート）
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', user_id)
+      .single()
+    if (profile?.email) {
+      await sendEmail({ to: profile.email, subject: 'お支払いに失敗しました', html: renderPaymentFailedEmail() })
+    }
+  } catch (mailErr) {
+    console.error('failed to send failure email:', mailErr)
+  }
 
   return { 
     success: true, 
@@ -371,8 +434,21 @@ async function handleChargeRefunded(
       })
       .eq('work_id', purchase.work_id)
       .in('status', ['submitted', 'accepted', 'in_production']);
+
+    // 返金メール（ベストエフォート）
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', purchase.user_id)
+        .single()
+      if (profile?.email) {
+        await sendEmail({ to: profile.email, subject: '返金手続きを行いました', html: renderRefundEmail(charge.amount_refunded/100) })
+      }
+    } catch (mailErr) {
+      console.error('failed to send refund email:', mailErr)
+    }
   }
 
   return { success: true, purchase_refunded: !!purchase };
 }
-
