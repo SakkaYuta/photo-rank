@@ -37,7 +37,7 @@ SELECT
   mo.work_id,
   mo.purchase_id,
   fp.product_type,
-  COALESCE(fp.product_name, fp.product_type) AS product_name,
+  fp.product_type AS product_name,
   w.title AS work_title,
   w.image_url AS work_image_url,
   w.creator_id,
@@ -55,4 +55,3 @@ LEFT JOIN public.users uu ON uu.id = p.user_id;
 
 -- Note: Apply RLS policies separately if RLS is enabled. At minimum,
 -- restrict SELECT on partner_orders_view to rows where partner_id matches the session's partner.
-

@@ -62,41 +62,96 @@ export async function deleteFactoryProduct(id: string): Promise<void> {
 }
 
 export async function getPartnerOrders(partnerId: string): Promise<any[]> {
+  // まずは統合ビューを利用（なければフォールバック）
+  const { data: viewRows, error: viewErr } = await supabase
+    .from('partner_orders_view')
+    .select('*')
+    .eq('partner_id', partnerId)
+    .order('created_at', { ascending: false })
+
+  if (!viewErr && Array.isArray(viewRows)) {
+    // ビューの行を既存UI互換の形に整形
+    return (viewRows as any[]).map((r) => ({
+      id: r.id,
+      order_id: r.order_id,
+      partner_id: r.partner_id,
+      status: r.status,
+      created_at: r.created_at,
+      assigned_at: r.assigned_at,
+      shipped_at: r.shipped_at,
+      tracking_number: r.tracking_number,
+      factory_products: {
+        id: r.factory_product_id,
+        product_type: r.product_type,
+        product_name: r.product_name,
+      },
+      works: {
+        id: r.work_id,
+        title: r.work_title,
+        image_url: r.work_image_url,
+        creator_id: r.creator_id,
+      },
+      creator_profile: r.creator_id
+        ? { id: r.creator_id, display_name: r.creator_name, avatar_url: r.creator_avatar }
+        : null,
+      customer_profile: r.customer_id
+        ? { id: r.customer_id, display_name: r.customer_name, avatar_url: r.customer_avatar }
+        : null,
+    }))
+  }
+
+  // フォールバック: 旧JOIN戦略（公開プロフィールを後付け）
   const { data, error } = await supabase
     .from('manufacturing_orders')
     .select(`
       *,
       factory_products(
         id,
-        product_name,
         product_type
       ),
       works(
         id,
         title,
         image_url,
-        users(
-          id,
-          display_name,
-          avatar_url
-        ),
-        purchases(
-          id,
-          user_id,
-          purchased_at,
-          users(
-            id,
-            display_name,
-            avatar_url
-          )
-        )
+        creator_id
+      ),
+      purchases(
+        id,
+        user_id,
+        purchased_at
       )
     `)
     .eq('partner_id', partnerId)
     .order('created_at', { ascending: false })
-  
   if (error) throw error
-  return (data || []) as any[]
+
+  const orders = (data || []) as any[]
+  const creatorIds = Array.from(new Set(orders.map(o => o?.works?.creator_id).filter(Boolean)))
+  const customerIds = Array.from(new Set(orders.map(o => (o?.purchases?.[0]?.user_id) || o?.creator_user_id).filter(Boolean)))
+
+  const [creatorProfiles, customerProfiles] = await Promise.all([
+    creatorIds.length > 0
+      ? supabase.from('user_public_profiles').select('id, display_name, avatar_url').in('id', creatorIds)
+      : Promise.resolve({ data: [] as any[] }),
+    customerIds.length > 0
+      ? supabase.from('user_public_profiles').select('id, display_name, avatar_url').in('id', customerIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ])
+
+  const creatorMap = new Map((creatorProfiles.data || []).map((p: any) => [p.id, p]))
+  const customerMap = new Map((customerProfiles.data || []).map((p: any) => [p.id, p]))
+
+  return orders.map(o => {
+    const cId = o?.works?.creator_id
+    const custId = (o?.purchases?.[0]?.user_id) || o?.creator_user_id
+    return {
+      ...o,
+      // ビューがない環境向けフォールバックとして product_name を product_type で埋める
+      factory_products: o.factory_products ? { ...o.factory_products, product_name: o.factory_products.product_type } : o.factory_products,
+      creator_profile: cId ? creatorMap.get(cId) : null,
+      customer_profile: custId ? customerMap.get(custId) : null,
+    }
+  })
 }
 
 export async function updateOrderStatus(
@@ -176,18 +231,29 @@ export async function getPartnerStats(partnerId: string) {
 export async function getPartnerReviews(partnerId: string): Promise<PartnerReview[]> {
   const { data, error } = await supabase
     .from('partner_reviews')
-    .select(`
-      *,
-      users!inner(
-        username,
-        avatar_url
-      )
-    `)
+    .select('*')
     .eq('partner_id', partnerId)
     .order('created_at', { ascending: false })
-  
   if (error) throw error
-  return data as PartnerReview[]
+
+  const reviews = (data || []) as any[]
+  const authorIds = Array.from(new Set(reviews.map(r => r.author_user_id).filter(Boolean)))
+  let profileMap = new Map<string, { display_name: string; avatar_url?: string }>()
+  if (authorIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('user_public_profiles')
+      .select('id, display_name, avatar_url')
+      .in('id', authorIds)
+    profileMap = new Map((profiles || []).map((p: any) => [p.id, { display_name: p.display_name, avatar_url: p.avatar_url }]))
+  }
+
+  return reviews.map(r => ({
+    ...r,
+    users: {
+      username: profileMap.get(r.author_user_id)?.display_name || 'User',
+      avatar_url: profileMap.get(r.author_user_id)?.avatar_url || undefined,
+    }
+  })) as PartnerReview[]
 }
 
 export async function createPartnerReview(review: {

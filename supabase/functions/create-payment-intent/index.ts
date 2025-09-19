@@ -6,9 +6,19 @@ import { getSupabaseAdmin, authenticateUser } from '../_shared/client.ts'
 type Stripe = any
 
 serve(async (req) => {
+  // CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { status: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type' } })
+  }
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 })
   
   try {
+    // Origin allowlist
+    const allowed = (Deno.env.get('ALLOWED_ORIGINS') || '').split(',').map(s => s.trim()).filter(Boolean)
+    const origin = req.headers.get('Origin') || ''
+    if (allowed.length > 0 && origin && !allowed.includes(origin)) {
+      return new Response('Forbidden origin', { status: 403 })
+    }
     // Authenticate user from request headers
     const user = await authenticateUser(req)
     
@@ -33,7 +43,7 @@ serve(async (req) => {
 
     const { data: work, error } = await supabase
       .from('works')
-      .select('id, price, title, creator_id, is_published')
+      .select('id, price, title, creator_id, is_published, is_active')
       .eq('id', workId)
       .single()
     if (error || !work) return new Response('Work not found', { status: 404 })
@@ -43,7 +53,7 @@ serve(async (req) => {
       return new Response('Cannot purchase your own work', { status: 400 })
     }
     // Basic publishing/price validation
-    if (work.is_published !== true) {
+    if (work.is_published !== true && work.is_active !== true) {
       return new Response('Work not available for purchase', { status: 400 })
     }
     if (!Number.isInteger(work.price) || work.price <= 0) {
@@ -64,7 +74,7 @@ serve(async (req) => {
       automatic_payment_methods: { enabled: true },
     })
 
-    return new Response(JSON.stringify({ clientSecret: intent.client_secret, client_secret: intent.client_secret }), { headers: { 'content-type': 'application/json' } })
+    return new Response(JSON.stringify({ clientSecret: intent.client_secret, client_secret: intent.client_secret }), { headers: { 'content-type': 'application/json', 'Access-Control-Allow-Origin': origin || '*' } })
   } catch (e) {
     console.error('create-payment-intent error:', e)
     if (e.message.includes('Missing or invalid Authorization') || e.message.includes('Invalid or expired token')) {

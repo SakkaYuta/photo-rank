@@ -1,29 +1,45 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import Stripe from 'https://esm.sh/stripe@14.21.0'
+import { authenticateUser, getSupabaseAdmin } from '../_shared/client.ts'
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
   apiVersion: '2023-10-16',
 })
 
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
+// 管理操作はadminクライアント、ユーザー検証はauthenticateUserで行う
+const supabaseAdmin = getSupabaseAdmin()
 
 serve(async (req) => {
   try {
+    // CORS preflight
+    if (req.method === 'OPTIONS') {
+      return new Response('ok', { status: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type' } })
+    }
     if (req.method !== 'POST') {
       return new Response('Method not allowed', { status: 405 })
     }
 
-    const { workIds, userId, addressId } = await req.json()
+    // Origin allowlist
+    const allowed = (Deno.env.get('ALLOWED_ORIGINS') || '').split(',').map(s => s.trim()).filter(Boolean)
+    const origin = req.headers.get('Origin') || ''
+    if (allowed.length > 0 && origin && !allowed.includes(origin)) {
+      return new Response('Forbidden origin', { status: 403 })
+    }
+
+    // 認証必須: ユーザーIDはトークンから取得
+    const authedUser = await authenticateUser(req)
+    const { workIds, addressId } = await req.json()
+
+    // 入力バリデーション
+    if (!Array.isArray(workIds) || workIds.length === 0) {
+      return new Response(JSON.stringify({ error: '商品IDが指定されていません' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    }
+    const uuidRe = /^[0-9a-fA-F-]{20,}$/
+    const invalid = workIds.find((w: unknown) => typeof w !== 'string' || !uuidRe.test(w))
+    if (invalid) {
+      return new Response(JSON.stringify({ error: '不正な商品IDが含まれています' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    }
 
     if (!workIds || !Array.isArray(workIds) || workIds.length === 0) {
       return new Response(
@@ -32,17 +48,23 @@ serve(async (req) => {
       )
     }
 
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: 'ユーザーIDが指定されていません' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
+    // レート制限（例: 20件/時間）
+    try {
+      const { data: canProceed } = await supabaseAdmin.rpc('check_rate_limit', {
+        p_user_id: authedUser.id,
+        p_action: 'create_bulk_payment_intent',
+        p_limit: 20,
+        p_window_minutes: 60,
+      })
+      if (canProceed === false) {
+        return new Response(JSON.stringify({ error: 'レート制限を超えました' }), { status: 429, headers: { 'Content-Type': 'application/json' } })
+      }
+    } catch (_) {}
 
     // 商品情報を取得（工場情報を含む）
-    const { data: works, error: worksError } = await supabase
+    const { data: works, error: worksError } = await supabaseAdmin
       .from('works')
-      .select('id, title, price, factory_id')
+      .select('id, title, price, factory_id, creator_id, is_published, is_active')
       .in('id', workIds)
 
     if (worksError) {
@@ -70,6 +92,20 @@ serve(async (req) => {
         }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       )
+    }
+
+    // 認可・妥当性検証
+    for (const w of works) {
+      if (w.creator_id === authedUser.id) {
+        return new Response(JSON.stringify({ error: '自身の作品は購入できません' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+      }
+      const published = (typeof w.is_published === 'boolean' ? w.is_published : false) || (typeof w.is_active === 'boolean' ? w.is_active : false)
+      if (!published) {
+        return new Response(JSON.stringify({ error: `購入不可の作品が含まれています: ${w.id}` }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+      }
+      if (!Number.isInteger(w.price) || w.price <= 0) {
+        return new Response(JSON.stringify({ error: `無効な価格の作品が含まれています: ${w.id}` }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+      }
     }
 
     // 工場別にグループ化して送料を計算
@@ -113,7 +149,7 @@ serve(async (req) => {
       currency: 'jpy',
       metadata: {
         workIds: JSON.stringify(workIds),
-        userId,
+        userId: authedUser.id,
         type: 'bulk_purchase',
         productSubtotal: productSubtotal.toString(),
         shippingTotal: shippingTotal.toString(),
@@ -123,12 +159,12 @@ serve(async (req) => {
       payment_method_types: ['card'],
     })
 
-    // 一括購入レコードを作成
-    const { error: insertError } = await supabase
+    // 一括購入レコードを作成（adminで作成するが、必ず認証ユーザーを設定）
+    const { error: insertError } = await supabaseAdmin
       .from('purchases')
       .insert(
         works.map(work => ({
-          user_id: userId,
+          user_id: authedUser.id,
           work_id: work.id,
           amount: work.price,
           status: 'pending',
@@ -169,7 +205,7 @@ serve(async (req) => {
       }),
       {
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': origin || '*' }
       }
     )
 

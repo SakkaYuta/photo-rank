@@ -18,6 +18,10 @@ npm install
 ```
 VITE_SUPABASE_URL=...
 VITE_SUPABASE_ANON_KEY=...
+# 任意（Stripe 決済UIを有効化する場合）
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_xxx
+# Edge Functions の許可オリジン（カンマ区切り）
+ALLOWED_ORIGINS=https://example.com,https://staging.example.com
 ```
 
 3. 開発サーバー起動
@@ -51,6 +55,8 @@ supabase db push --file db/migrations/v5_0_marketplace.sql
 supabase db push --file db/migrations/v5_0_rls.sql  
 supabase db push --file db/migrations/v5_0_backfill.sql
 supabase db push --file db/migrations/v5_0_payouts.sql
+# 2025-09-18 追加: 工場ダッシュボード強化（ビュー/参照項目拡張）
+supabase db push --file supabase/migrations/20250918_partner_orders_enhancements.sql
 ```
 
 **反映確認:**
@@ -119,10 +125,11 @@ SELECT public.generate_monthly_payouts_v50();
 - **RLS セキュリティ**: パートナー/クリエイター/管理者の適切な権限分離
 
 ### 基本機能（v3.1ベース）
+- 公開ナビゲーションからトレンド/クリエイター検索タブは削除（内部ルートは存続）
 - トレンド一覧表示（`TrendingView`）
 - クリエイター検索（`CreatorSearch`）
 - コレクション表示（購入履歴結合）（`Collection`）
-- 作品作成＋簡易エディタ（`CreateWork`/`PhotoEditor`）
+- 作品作成フォーム刷新（`CreateWork`）
 - マイ作品（`MyWorks`）
 - グッズ注文モーダル／履歴（`GoodsModal`/`OrderHistory`）
 - 認証（Google OAuth、`AuthModal`/`UserMenu`）
@@ -137,3 +144,37 @@ SELECT public.generate_monthly_payouts_v50();
 - 実行には Supabase のテーブル/ポリシーが必要です（提供スキーマ準拠）。
 - ストレージへのアップロードは省略し、URL直接入力で最小動作にしています。
 - ルーティングは簡易ナビゲーション（状態）で代替しています（`react-router` 未使用）。
+
+## 最近の更新（2025-09-18）
+
+- ナビゲーション調整
+  - 公開タブ「トレンド」「クリエイター検索」削除
+  - クリエイタータブ「工場比較」「製造発注」削除
+
+- 作品作成フォーム（CreateWork）
+  - 仕様に沿った項目へ刷新（タイトル/カテゴリ/説明[Markdown]/コンテンツURL/タグ/画像[並替]/ファイル使用量/バリエーション/価格/公開設定）
+  - 保存カラム: `title`, `description`, `image_url`(先頭), `price`, `is_published`
+  - UIのみ: `category`, `tags`, 2枚目以降の画像, ファイル, バリエーション
+
+- クリエイターダッシュボード修正
+  - スキーマ整合: `description`, `is_published`, `purchases.purchased_at` に統一
+  - エラー（列不存在/400）解消
+
+- 工場ダッシュボード強化（FactoryDashboard）
+  - 工場ID（`partner.id`）に紐づくデータを表示
+  - 製品IDフィルタ（`factory_products.id`/`product_id`/`product_type`）
+  - ステータスをMarkdownで一括更新（例: `ORD-001: in_production`）
+  - 設備状況セクションを削除、デモモードでダミー数値を自動表示
+
+- Stripe設定の安全化
+  - `VITE_STRIPE_PUBLISHABLE_KEY` 未設定時は決済UIを自動無効化し注意文表示
+
+- アイコン
+  - `public/favicon.ico` を追加
+
+- データベース拡張
+  - `supabase/migrations/20250918_partner_orders_enhancements.sql` 追加
+    - `manufacturing_orders`: `factory_product_id`, `purchase_id` 追加 + インデックス
+    - `manufacturing_order_status_history` 追加
+    - 統合ビュー `partner_orders_view` 追加（注文/商品/作品/クリエイター/顧客を1クエリで参照）
+  - RLS 環境では、ビューの参照ポリシー（`partner_id = セッションのパートナー`）を別途追加してください

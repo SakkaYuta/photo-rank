@@ -32,11 +32,30 @@ export const ApprovalDashboard = () => {
     setLoading(true)
     const { data, error } = await supabase
       .from('publishing_approvals')
-      .select(`*, works ( id, title, image_url, creator_id, users ( display_name ) )`)
+      .select(`*, works ( id, title, image_url, creator_id )`)
       .eq('status', 'pending')
       .eq('organizer_id', profile!.id)
 
-    if (!error) setRows((data as any) || [])
+    if (!error) {
+      const arr = (data as any) || []
+      const ids = Array.from(new Set(arr.map((r: any) => r?.works?.creator_id).filter(Boolean)))
+      let nameMap = new Map<string, string>()
+      if (ids.length > 0) {
+        const { data: profiles } = await supabase
+          .from('user_public_profiles')
+          .select('id, display_name')
+          .in('id', ids)
+        nameMap = new Map((profiles || []).map((p: any) => [p.id, p.display_name]))
+      }
+      const withNames = arr.map((r: any) => ({
+        ...r,
+        works: {
+          ...r.works,
+          users: { display_name: nameMap.get(r?.works?.creator_id) || 'Creator' }
+        }
+      }))
+      setRows(withNames)
+    }
     setLoading(false)
   }
 
@@ -85,4 +104,3 @@ export const ApprovalDashboard = () => {
 }
 
 export default ApprovalDashboard
-

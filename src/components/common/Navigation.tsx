@@ -57,7 +57,11 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
   const getUserItems = (): NavItem[] => {
     if (!hasProfile) return []
 
-    switch (userType) {
+    // 表示モードのオーバーライド（creator/organizer が一般表示へ切替時）
+    const viewOverride = typeof window !== 'undefined' ? localStorage.getItem('view_override') : null
+    const effectiveType = viewOverride === 'general' ? 'general' : userType
+
+    switch (effectiveType) {
       case 'creator':
         return creatorItems
       case 'factory':

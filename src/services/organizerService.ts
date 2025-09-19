@@ -63,7 +63,7 @@ export const fetchOrganizerDashboard = async (organizerId: string): Promise<Orga
     const organizerCreators = [
       {
         creator_id: '1',
-        status: 'active',
+        status: 'active' as const,
         joined_at: '2024-01-15T00:00:00Z',
         creators: {
           id: '1',
@@ -74,7 +74,7 @@ export const fetchOrganizerDashboard = async (organizerId: string): Promise<Orga
       },
       {
         creator_id: '2',
-        status: 'active',
+        status: 'active' as const,
         joined_at: '2024-02-10T00:00:00Z',
         creators: {
           id: '2',
@@ -85,7 +85,7 @@ export const fetchOrganizerDashboard = async (organizerId: string): Promise<Orga
       },
       {
         creator_id: '3',
-        status: 'pending',
+        status: 'pending' as const,
         joined_at: '2024-08-20T00:00:00Z',
         creators: {
           id: '3',
@@ -96,7 +96,7 @@ export const fetchOrganizerDashboard = async (organizerId: string): Promise<Orga
       },
       {
         creator_id: '4',
-        status: 'active',
+        status: 'active' as const,
         joined_at: '2024-03-05T00:00:00Z',
         creators: {
           id: '4',
@@ -107,7 +107,7 @@ export const fetchOrganizerDashboard = async (organizerId: string): Promise<Orga
       },
       {
         creator_id: '5',
-        status: 'inactive',
+        status: 'inactive' as const,
         joined_at: '2023-12-01T00:00:00Z',
         creators: {
           id: '5',
@@ -246,7 +246,7 @@ export const fetchOrganizerDashboard = async (organizerId: string): Promise<Orga
         name: creator.name,
         email: creator.email,
         avatar_url: creator.avatar_url,
-        status: oc.status,
+        status: oc.status as "pending" | "active" | "inactive",
         joined_at: oc.joined_at,
         total_works: creatorWorks.length,
         total_revenue: totalRevenue,

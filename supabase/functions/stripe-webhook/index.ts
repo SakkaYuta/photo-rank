@@ -252,7 +252,7 @@ async function handlePaymentIntentSucceeded(
   let buyerEmail: string | undefined = undefined
   try {
     const { data: profile } = await supabase
-      .from('profiles')
+      .from('users')
       .select('email, display_name')
       .eq('id', user_id)
       .single()
@@ -362,7 +362,7 @@ async function handlePaymentIntentFailed(
   // 失敗メール（ベストエフォート）
   try {
     const { data: profile } = await supabase
-      .from('profiles')
+      .from('users')
       .select('email')
       .eq('id', user_id)
       .single()
@@ -438,7 +438,7 @@ async function handleChargeRefunded(
     // 返金メール（ベストエフォート）
     try {
       const { data: profile } = await supabase
-        .from('profiles')
+        .from('users')
         .select('email')
         .eq('id', purchase.user_id)
         .single()

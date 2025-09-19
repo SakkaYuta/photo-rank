@@ -39,7 +39,7 @@ export function useAdminAuth() {
 
         // データベースから正確なロール情報を取得
         const { data, error } = await supabase
-          .from('profiles')
+          .from('users')
           .select('id, email, role, display_name, avatar_url')
           .eq('id', authUser.id)
           .in('role', ['admin', 'moderator'])

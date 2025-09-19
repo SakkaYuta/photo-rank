@@ -347,7 +347,7 @@ const FactoryDashboard: React.FC = () => {
                           <p className="text-xs text-gray-500">製品ID: {String(((order as any).factory_products?.id) || (order.request_payload as any)?.product_id || (order.request_payload as any)?.product_type || '—')}</p>
                           {(order as any).works && (
                             <p className="text-xs text-gray-500">
-                              作品: {(order as any).works.title} / クリエイター: {(order as any).works.users?.display_name || '—'}
+                              作品: {(order as any).works.title} / クリエイター: {(order as any).creator_profile?.display_name || '—'}
                             </p>
                           )}
                         </div>
@@ -456,7 +456,7 @@ const FactoryDashboard: React.FC = () => {
                         {(order as any).works?.title || '—'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {(order as any).works?.users?.display_name || '—'}
+                        {(order as any).creator_profile?.display_name || '—'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {String(((order as any).factory_products?.id) || (order.request_payload as any)?.product_id || (order.request_payload as any)?.product_type || '—')}
@@ -465,7 +465,7 @@ const FactoryDashboard: React.FC = () => {
                         {order.request_payload?.quantity ?? '—'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {((order as any).works?.purchases && (order as any).works.purchases[0]?.users?.display_name) || '—'}
+                        {(order as any).customer_profile?.display_name || '—'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {(() => {

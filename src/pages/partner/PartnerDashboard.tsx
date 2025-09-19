@@ -69,7 +69,7 @@ export function PartnerDashboard() {
           .from('manufacturing_orders')
           .select(`
             *,
-            factory_products(product_name, product_type),
+            factory_products(product_type),
             manufacturing_partners(name)
           `)
           .eq('partner_id', partner!.id)

@@ -27,6 +27,16 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ className = '' }) => {
     }
   };
 
+  const setViewOverride = (mode: 'general' | 'auto') => {
+    if (mode === 'general') {
+      localStorage.setItem('view_override', 'general');
+    } else {
+      localStorage.removeItem('view_override');
+    }
+    window.dispatchEvent(new Event('view-override-changed'))
+    setIsOpen(false)
+  }
+
   if (loading) {
     return (
       <div className={`flex items-center gap-2 text-sm text-gray-500 ${className}`}>
@@ -68,6 +78,26 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ className = '' }) => {
                 )}
               </button>
             ))}
+            {(userType === 'creator' || userType === 'organizer') && (
+              <>
+                <div className="my-1 border-t" />
+                <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  表示モード
+                </div>
+                <button
+                  onClick={() => setViewOverride('general')}
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors`}
+                >
+                  一般ユーザー表示に切り替え
+                </button>
+                <button
+                  onClick={() => setViewOverride('auto')}
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors`}
+                >
+                  通常表示に戻す
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

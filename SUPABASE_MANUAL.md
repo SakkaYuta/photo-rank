@@ -102,6 +102,68 @@ CREATE TRIGGER update_works_updated_at BEFORE UPDATE ON works FOR EACH ROW EXECU
 CREATE TRIGGER update_cart_items_updated_at BEFORE UPDATE ON cart_items FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 ```
 
+### 2-Extra. 工場ダッシュボード拡張（2025-09-18）
+```sql
+-- 追加マイグレーション: パートナー注文ビューとリレーション強化
+-- ファイル: supabase/migrations/20250918_partner_orders_enhancements.sql
+
+-- 1) manufacturing_orders に外部キーを追加
+ALTER TABLE public.manufacturing_orders
+  ADD COLUMN IF NOT EXISTS factory_product_id uuid REFERENCES public.factory_products(id),
+  ADD COLUMN IF NOT EXISTS purchase_id uuid REFERENCES public.purchases(id);
+
+-- インデックス
+CREATE INDEX IF NOT EXISTS idx_mo_partner ON public.manufacturing_orders(partner_id);
+CREATE INDEX IF NOT EXISTS idx_mo_factory_product ON public.manufacturing_orders(factory_product_id);
+CREATE INDEX IF NOT EXISTS idx_mo_work ON public.manufacturing_orders(work_id);
+CREATE INDEX IF NOT EXISTS idx_mo_purchase ON public.manufacturing_orders(purchase_id);
+
+-- 2) 製造注文のステータス履歴（任意）
+CREATE TABLE IF NOT EXISTS public.manufacturing_order_status_history (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  manufacturing_order_id uuid NOT NULL REFERENCES public.manufacturing_orders(id) ON DELETE CASCADE,
+  status text NOT NULL CHECK (status IN ('submitted','accepted','in_production','shipped','cancelled','failed')),
+  message text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- 3) パートナー向け統合ビュー
+CREATE OR REPLACE VIEW public.partner_orders_view AS
+SELECT
+  mo.id,
+  mo.order_id,
+  mo.partner_id,
+  mo.status,
+  mo.created_at,
+  mo.assigned_at,
+  mo.shipped_at,
+  mo.tracking_number,
+  mo.factory_product_id,
+  mo.work_id,
+  mo.purchase_id,
+  fp.product_type,
+  fp.product_type AS product_name,
+  w.title AS work_title,
+  w.image_url AS work_image_url,
+  w.creator_id,
+  cu.display_name AS creator_name,
+  cu.avatar_url AS creator_avatar,
+  p.user_id AS customer_id,
+  uu.display_name AS customer_name,
+  uu.avatar_url AS customer_avatar
+FROM public.manufacturing_orders mo
+LEFT JOIN public.factory_products fp ON fp.id = mo.factory_product_id
+LEFT JOIN public.works w ON w.id = mo.work_id
+LEFT JOIN public.users cu ON cu.id = w.creator_id
+LEFT JOIN public.purchases p ON p.id = mo.purchase_id
+LEFT JOIN public.users uu ON uu.id = p.user_id;
+
+-- RLS を使用している場合は、ビュー/基表に以下のようなセレクト制限を追加してください
+-- 例: パートナー自身の行のみ参照可
+-- CREATE POLICY "partner can read own orders view" ON partner_orders_view
+--   FOR SELECT USING (partner_id = auth.jwt() ->> 'partner_id');
+```
+
 ### 3. プロフィール機能テーブル追加
 ```sql
 -- 2. Profile Tables Migration (20240118_add_profile_tables.sql)
@@ -219,6 +281,13 @@ CREATE POLICY "Users can manage their own favorites" ON favorites
 
 CREATE POLICY "Users can manage their own cart" ON cart_items
   FOR ALL USING (auth.uid() = user_id);
+
+-- Partner orders view の参照制御（例）
+-- ビューに対して直接RLSを定義するか、基表側のポリシーで partner_id によるフィルタリングを保証してください
+-- CREATE POLICY "Partners see their orders" ON manufacturing_orders
+--   FOR SELECT USING (partner_id IN (
+--     SELECT id FROM manufacturing_partners WHERE owner_user_id = auth.uid()
+--   ));
 ```
 
 ### 5. ストレージ設定
