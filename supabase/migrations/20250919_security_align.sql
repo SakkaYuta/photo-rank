@@ -16,6 +16,12 @@ DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='works' AND policyname='Creators can manage their works') THEN
     DROP POLICY "Creators can manage their works" ON public.works;
   END IF;
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='works' AND policyname='works_public_read') THEN
+    DROP POLICY works_public_read ON public.works;
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='works' AND policyname='works_creator_manage') THEN
+    DROP POLICY works_creator_manage ON public.works;
+  END IF;
 END $$;
 
 -- Public can read published/active works; creators can always read their own
@@ -35,6 +41,9 @@ ALTER TABLE public.purchases ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='purchases' AND policyname='Users can view their own purchases') THEN
     DROP POLICY "Users can view their own purchases" ON public.purchases;
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='purchases' AND policyname='purchases_buyer_or_creator_read') THEN
+    DROP POLICY purchases_buyer_or_creator_read ON public.purchases;
   END IF;
 END $$;
 
