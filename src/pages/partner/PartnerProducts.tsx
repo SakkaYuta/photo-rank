@@ -2,12 +2,10 @@ import { useEffect, useState } from 'react'
 import { usePartnerAuth } from '../../hooks/usePartnerAuth'
 import { getPartnerProducts, createFactoryProduct, updateFactoryProduct, deleteFactoryProduct } from '../../services/partner.service'
 import { LoadingSpinner } from '../../components/common/LoadingSpinner'
-import { Table } from '../../components/ui/table'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
+import { Table, Badge, Button } from '../../components/ui'
 import type { FactoryProduct } from '../../types'
 import { Plus, Edit3, Trash2, Eye, EyeOff } from 'lucide-react'
-import { Input } from '../../components/ui/input'
+import { Input } from '../../components/ui'
 
 type ProductFormData = {
   product_type: string
