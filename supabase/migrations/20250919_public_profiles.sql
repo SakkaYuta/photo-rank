@@ -44,10 +44,19 @@ FOR EACH ROW EXECUTE PROCEDURE public.delete_user_public_profile();
 -- RLS: allow public read-only access to safe fields
 ALTER TABLE public.user_public_profiles ENABLE ROW LEVEL SECURITY;
 
--- Drop legacy policies if exist
+-- Drop existing policies if they exist to avoid duplicate-name errors
 DO $$ BEGIN
-  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='user_public_profiles') THEN
-    -- no-op; we'll (re)create below
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='user_public_profiles' AND policyname='upp_read_all') THEN
+    EXECUTE 'DROP POLICY upp_read_all ON public.user_public_profiles';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='user_public_profiles' AND policyname='upp_no_insert') THEN
+    EXECUTE 'DROP POLICY upp_no_insert ON public.user_public_profiles';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='user_public_profiles' AND policyname='upp_no_update') THEN
+    EXECUTE 'DROP POLICY upp_no_update ON public.user_public_profiles';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='user_public_profiles' AND policyname='upp_no_delete') THEN
+    EXECUTE 'DROP POLICY upp_no_delete ON public.user_public_profiles';
   END IF;
 END $$;
 
@@ -75,4 +84,3 @@ ON CONFLICT (id) DO UPDATE SET display_name = EXCLUDED.display_name, avatar_url 
 INSERT INTO public.schema_migrations(version, checksum)
 VALUES ('v5.0_public_profiles_20250919', 'local')
 ON CONFLICT (version) DO NOTHING;
-
