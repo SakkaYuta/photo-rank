@@ -1,5 +1,0 @@
-export { Badge } from './badge.tsx'
-export { Button } from './button.tsx'
-export { Input } from './input.tsx'
-export { Table } from './table.tsx'
-export { Tabs } from './tabs.tsx'
