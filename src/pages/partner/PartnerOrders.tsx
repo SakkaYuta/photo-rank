@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import { usePartnerAuth } from '../../hooks/usePartnerAuth'
 import { getPartnerOrders, updateOrderStatus } from '../../services/partner.service'
 import { LoadingSpinner } from '../../components/common/LoadingSpinner'
-import { Table } from '../../components/ui/table.tsx'
-import { Badge } from '../../components/ui/badge.tsx'
-import { Tabs } from '../../components/ui/tabs.tsx'
-import { Button } from '../../components/ui/button.tsx'
+import { Table } from '../../components/ui/table'
+import { Badge } from '../../components/ui/badge'
+import { Tabs } from '../../components/ui/tabs'
+import { Button } from '../../components/ui/button'
 import type { ManufacturingOrder } from '../../types'
 import { Package, Truck, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
-import { Input } from '../../components/ui/input.tsx'
+import { Input } from '../../components/ui/input'
 
 const statusColors = {
   submitted: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
