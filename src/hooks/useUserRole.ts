@@ -110,20 +110,20 @@ export const useUserRole = () => {
           const organizerProfile = organizerResult.data
 
           // Handle errors gracefully
-          if (factoryResult.error) {
-            console.log('Factory profiles table might not exist:', factoryResult.error.message);
+          if (import.meta.env.DEV) {
+            if (factoryResult.error) {
+              console.debug('Factory profiles table issue:', factoryResult.error.message)
+            }
+            if (organizerResult.error) {
+              console.debug('Organizer profiles table issue:', organizerResult.error.message)
+            }
+            console.debug('Profile detection', {
+              hasFactory: !!factoryProfile,
+              hasOrganizer: !!organizerProfile,
+              userType: userData.user_type,
+              isCreator: userData.is_creator
+            })
           }
-          if (organizerResult.error) {
-            console.log('Organizer profiles table might not exist:', organizerResult.error.message);
-          }
-
-          console.log('Profile detection:', {
-            factoryProfile,
-            organizerProfile,
-            userData,
-            userType: userData.user_type,
-            isCreator: userData.is_creator
-          })
 
           if (organizerProfile) {
             profileData.organizer_profile = organizerProfile as any

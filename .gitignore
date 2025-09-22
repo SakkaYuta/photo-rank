@@ -64,3 +64,21 @@ jspm_packages/
 .vercel
 .env*.local
 supabase/functions/.env
+
+# Development and debug files
+*.debug.sql
+*debug*.sql
+*_backup.sql
+sql_archive/
+temp/
+tmp/
+
+# Build artifacts
+.vite/
+*.tsbuildinfo
+
+# Other temporary files
+*.tmp
+*.temp
+check-*.js
+build-*.sh

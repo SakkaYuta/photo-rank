@@ -342,12 +342,12 @@ export const fetchOrganizerDashboard = async (organizerId: string): Promise<Orga
 export const updateCreatorStatus = async (organizerId: string, creatorId: string, status: OrganizerCreator['status']): Promise<void> => {
   try {
     // モック実装 - 実際のSupabase更新をシミュレート
-    console.log(`Updating creator ${creatorId} status to ${status} for organizer ${organizerId}`);
+    if (import.meta.env.DEV) console.debug('Updating creator status', { organizerId, creatorId, status });
 
     // 実際のデータベース更新をシミュレート
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    console.log('Creator status updated successfully');
+    if (import.meta.env.DEV) console.debug('Creator status updated successfully');
   } catch (error) {
     console.error('Failed to update creator status:', error);
     throw error;
@@ -357,12 +357,12 @@ export const updateCreatorStatus = async (organizerId: string, creatorId: string
 export const approveWork = async (workId: string, approved: boolean): Promise<void> => {
   try {
     // モック実装 - 実際のSupabase更新をシミュレート
-    console.log(`${approved ? 'Approving' : 'Rejecting'} work ${workId}`);
+    if (import.meta.env.DEV) console.debug(approved ? 'Approving work' : 'Rejecting work', { workId });
 
     // 実際のデータベース更新をシミュレート
     await new Promise(resolve => setTimeout(resolve, 300));
 
-    console.log(`Work ${workId} ${approved ? 'approved' : 'rejected'} successfully`);
+    if (import.meta.env.DEV) console.debug('Work approval completed', { workId, approved });
   } catch (error) {
     console.error('Failed to approve/reject work:', error);
     throw error;
@@ -372,12 +372,12 @@ export const approveWork = async (workId: string, approved: boolean): Promise<vo
 export const bulkApproveWorks = async (workIds: string[], approved: boolean): Promise<void> => {
   try {
     // モック実装 - 実際のSupabase更新をシミュレート
-    console.log(`Bulk ${approved ? 'approving' : 'rejecting'} ${workIds.length} works:`, workIds);
+    if (import.meta.env.DEV) console.debug('Bulk work approval', { approved, count: workIds.length });
 
     // 実際のデータベース更新をシミュレート
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    console.log(`${workIds.length} works ${approved ? 'approved' : 'rejected'} successfully`);
+    if (import.meta.env.DEV) console.debug('Bulk work approval completed', { approved, count: workIds.length });
   } catch (error) {
     console.error('Failed to bulk approve/reject works:', error);
     throw error;
@@ -407,8 +407,7 @@ export const generateInviteCode = async (organizerId: string, organizerName: str
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    console.log(`Generated invite code: ${code} for organizer: ${organizerName}`);
-    console.log(`Code expires at: ${expiresAt.toISOString()}`);
+    if (import.meta.env.DEV) console.debug('Generated invite code', { organizerName, code, expiresAt });
 
     // モック実装 - 実際はSupabaseに保存
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -423,7 +422,7 @@ export const generateInviteCode = async (organizerId: string, organizerName: str
 // 招待コードで参加申請
 export const joinOrganizerWithCode = async (userId: string, inviteCode: string): Promise<{ success: boolean; organizerName?: string; message: string }> => {
   try {
-    console.log(`User ${userId} trying to join with code: ${inviteCode}`);
+    if (import.meta.env.DEV) console.debug('Join organizer by code', { userId, inviteCode });
 
     // モック招待コードデータ
     const mockInviteCodes: InviteCode[] = [
@@ -497,7 +496,7 @@ export const joinOrganizerWithCode = async (userId: string, inviteCode: string):
     // 参加処理をシミュレート
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    console.log(`User ${userId} successfully joined organizer: ${inviteCodeData.organizer_name}`);
+    if (import.meta.env.DEV) console.debug('Joined organizer successfully', { userId, organizer: inviteCodeData.organizer_name });
 
     return {
       success: true,
@@ -517,7 +516,7 @@ export const joinOrganizerWithCode = async (userId: string, inviteCode: string):
 export const inviteCreator = async (organizerId: string, email: string): Promise<void> => {
   try {
     // モック実装 - クリエイター招待機能
-    console.log('Inviting creator:', email, 'to organizer:', organizerId);
+    if (import.meta.env.DEV) console.debug('Inviting creator', { organizerId, email });
 
     // 1. メールアドレスの形式チェック
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -535,12 +534,7 @@ export const inviteCreator = async (organizerId: string, email: string): Promise
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // 4. 招待メール送信をシミュレート
-    console.log(`招待メールを ${email} に送信しました`);
-
-    // 5. データベースに招待記録を追加（モック）
-    console.log(`クリエイター ${email} をオーガナイザー ${organizerId} のpendingリストに追加しました`);
-
-    console.log('Creator invitation sent successfully');
+    if (import.meta.env.DEV) console.debug('Creator invitation queued', { organizerId, email });
   } catch (error) {
     console.error('Failed to invite creator:', error);
     throw error;

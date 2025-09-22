@@ -110,7 +110,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        <ErrorLogTable errors={metrics?.recentErrors || []} onViewDetails={(e) => console.log('Error details', e)} />
+        <ErrorLogTable errors={metrics?.recentErrors || []} onViewDetails={() => { /* noop */ }} />
       </div>
     </div>
   )
