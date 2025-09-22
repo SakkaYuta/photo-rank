@@ -155,7 +155,7 @@ export const useUserRole = () => {
     try {
       setError(null);
 
-      console.log('Updating user type to:', newUserType);
+      // updating user type
 
       // Create organizer profile if switching to organizer
       if (newUserType === 'organizer') {
@@ -166,9 +166,7 @@ export const useUserRole = () => {
             .eq('user_id', user.id)
             .maybeSingle();
 
-          if (selectError) {
-            console.log('organizer_profiles table might not exist, continuing with user_type only');
-          } else if (!existingOrganizerProfile) {
+          if (!existingOrganizerProfile && !selectError) {
             const { error: orgError } = await supabase
               .from('organizer_profiles')
               .insert({
@@ -176,14 +174,9 @@ export const useUserRole = () => {
                 name: userProfile?.display_name || user.email?.split('@')[0] || 'オーガナイザー',
                 description: 'クリエイターを管理するオーガナイザーです',
               });
-
-            if (orgError) {
-              console.log('Error creating organizer profile, continuing with user_type only:', orgError.message);
-            }
+            // ignore orgError silently
           }
-        } catch (error) {
-          console.log('Organizer profile operations failed, continuing with user_type only:', error);
-        }
+        } catch (error) { /* silent */ }
       }
 
       const { error: updateError } = await supabase

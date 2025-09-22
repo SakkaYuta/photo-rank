@@ -113,11 +113,6 @@ export function registerDevUtils() {
         window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'local-data' } }))
       }
     }
-    console.log('🔧 開発者ユーティリティを利用できます:')
-    console.log('  devUtils.initializeSampleData() - サンプルデータを追加')
-    console.log('  devUtils.clearLocalStorage() - ローカルストレージをクリア')
-    console.log('  devUtils.clearSessionStorage() - セッションストレージをクリア')
-    console.log('  devUtils.exportAllData() - データをエクスポート')
-    console.log('  devUtils.goToDataViewer() - データビューアーを開く')
+    // 静かな登録（コンソール出力は行わない）
   }
 }

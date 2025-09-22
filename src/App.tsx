@@ -102,17 +102,6 @@ function App() {
         ? 'factory'
         : userType
 
-      console.log('User role debug:', {
-        userType,
-        effectiveType,
-        hasOrganizerProfile: !!(userProfile as any)?.organizer_profile,
-        hasFactoryProfile: !!(userProfile as any)?.factory_profile,
-        userProfile,
-        viewOverride,
-        view
-      })
-
-
       switch (effectiveType) {
         case 'creator':
           navigate(viewOverride === 'general' ? 'merch' : 'creator-dashboard')

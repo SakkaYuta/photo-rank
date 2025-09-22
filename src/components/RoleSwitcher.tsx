@@ -95,7 +95,7 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ className = '' }) => {
                 )}
               </button>
             ))}
-            {(userType === 'creator' || userType === 'factory' || userType === 'organizer') && (
+            {(userType === 'creator' || userType === 'factory') && (
               <>
                 <div className="my-1 border-t" />
                 <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
