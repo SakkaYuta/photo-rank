@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { AuthModal } from './AuthModal'
 import { signOut } from '../../services/auth.service'
-import { Settings } from 'lucide-react'
+// removed Settings icon
 import { useUserRole } from '@/hooks/useUserRole'
 import { useNav } from '@/contexts/NavContext'
 
@@ -12,7 +12,7 @@ export function UserMenu() {
   const { userType } = useUserRole()
   const { navigate } = useNav()
   const [open, setOpen] = useState(false)
-  const [showProfileSettings, setShowProfileSettings] = useState(false)
+  // const [showProfileSettings, setShowProfileSettings] = useState(false)
 
   if (loading) return <div className="h-8 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-800" />
   if (!profile) return (
@@ -21,11 +21,9 @@ export function UserMenu() {
       {open && <AuthModal onClose={() => setOpen(false)} />}
     </>
   )
-  const handleProfileClick = () => {
-    setShowProfileSettings(true);
-  };
+  // const handleProfileClick = () => setShowProfileSettings(true)
 
-  const profileModal = showProfileSettings && createPortal(
+  const profileModal = false && createPortal(
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
         <div className="flex items-center justify-between mb-6">
@@ -93,20 +91,10 @@ export function UserMenu() {
   return (
     <>
       <div className="flex items-center gap-1 md:gap-3">
-        <button
-          className="flex items-center gap-2 p-1 rounded-lg hover:bg-gray-100 transition-colors"
-          onClick={handleProfileClick}
-          aria-label="プロフィール設定"
-        >
-          <Settings className="w-4 h-4 text-gray-600" />
-        </button>
         <a
-          href={`#${userType === 'general' ? 'merch' : 'role-based'}`}
-          onClick={() => {
-            const target = userType === 'general' ? 'merch' : 'role-based'
-            navigate(target)
-          }}
-          title="ホームへ"
+          href="#account-settings"
+          onClick={() => navigate('account-settings')}
+          title="アカウント設定"
         >
           <img
             src={profile.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${profile.id}`}

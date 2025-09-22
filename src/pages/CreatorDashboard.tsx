@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useUserRole } from '../hooks/useUserRole';
+import { useNav } from '../hooks/useNav';
 import { fetchCreatorDashboard, CreatorDashboardData, updateWorkStatus } from '../services/creatorService';
 import {
   Upload,
@@ -18,6 +19,7 @@ import {
 
 const CreatorDashboard: React.FC = () => {
   const { userProfile, user } = useUserRole();
+  const { navigateTo } = useNav();
   const [dashboardData, setDashboardData] = useState<CreatorDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -400,17 +402,12 @@ const CreatorDashboard: React.FC = () => {
                   <Upload className="w-5 h-5 text-blue-600" />
                   <span className="truncate">新しい作品をアップロード</span>
                 </button>
-                <button className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg">
-                  <BarChart3 className="w-5 h-5 text-green-600" />
-                  <span className="truncate">詳細な分析を見る</span>
-                </button>
-                <button className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg">
+                <button
+                  className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg"
+                  onClick={() => navigateTo('search')}
+                >
                   <Gamepad2 className="w-5 h-5 text-purple-600" />
                   <span className="truncate">バトルを探す</span>
-                </button>
-                <button className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg">
-                  <Star className="w-5 h-5 text-orange-600" />
-                  <span className="truncate">レビューを確認</span>
                 </button>
               </div>
             </div>

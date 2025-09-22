@@ -42,6 +42,8 @@ import OrganizerDashboard from './pages/OrganizerDashboard'
 import BattleSearch from './pages/BattleSearch'
 import LocalDataViewer from './pages/dev/LocalDataViewer'
 import { registerDevUtils } from './utils/devUtils'
+import LiveBattle from './pages/LiveBattle'
+import AccountSettings from './pages/AccountSettings'
 
 type ViewKey =
   | 'trending'
@@ -76,6 +78,8 @@ type ViewKey =
   | 'battle-search'
   | 'creator-profile'
   | 'local-data'
+  | 'live-battle'
+  | 'account-settings'
 
 function App() {
   const [view, setView] = useState<ViewKey>('merch')
@@ -125,7 +129,7 @@ function App() {
   // ナビゲーション関数
   const isValidView = (v: string): v is ViewKey => {
     return [
-      'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','battle-search','creator-profile','local-data'
+      'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','battle-search','creator-profile','local-data','live-battle','account-settings'
     ].includes(v)
   }
 
@@ -280,6 +284,11 @@ function App() {
                   <ProfileSettings />
                 </PartialErrorBoundary>
               )}
+              {view === 'account-settings' && (
+                <PartialErrorBoundary name="アカウント設定">
+                  <AccountSettings />
+                </PartialErrorBoundary>
+              )}
               {view === 'admin' && isAdmin && (
                 <PartialErrorBoundary name="管理画面">
                   <AdminDashboard />
@@ -376,6 +385,11 @@ function App() {
               {view === 'battle-search' && (
                 <PartialErrorBoundary name="バトル検索">
                   <BattleSearch />
+                </PartialErrorBoundary>
+              )}
+              {view === 'live-battle' && (
+                <PartialErrorBoundary name="ライブ観戦">
+                  <LiveBattle />
                 </PartialErrorBoundary>
               )}
               {view === 'creator-profile' && (

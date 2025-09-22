@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, memo } from 'react'
 import { usePartnerAuth } from '../../hooks/usePartnerAuth'
+import { useNav } from '../../hooks/useNav'
 import { getPartnerStats } from '../../services/partner.service'
 import { useOptimizedQuery } from '../../hooks/useOptimizedQuery'
 import { LoadingSpinner } from '../../components/common/LoadingSpinner'
@@ -41,6 +42,7 @@ type PartnerNotification = {
 
 export function PartnerDashboard() {
   const { partner } = usePartnerAuth()
+  const { navigateTo } = useNav()
   const [stats, setStats] = useState<PartnerStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [recentOrders, setRecentOrders] = useState<any[]>([])
@@ -335,8 +337,12 @@ export function PartnerDashboard() {
           <div className="flex flex-wrap gap-3">
             <button className="btn btn-primary transition-base hover-lift">新しい商品を追加</button>
             <button className="btn btn-outline transition-base hover-lift">未処理の注文を確認</button>
-            <button className="btn btn-outline transition-base hover-lift">バトルを探す</button>
-            <button className="btn btn-outline transition-base hover-lift">レビューを確認</button>
+            <button
+              className="btn btn-outline transition-base hover-lift"
+              onClick={() => navigateTo('search')}
+            >
+              バトルを探す
+            </button>
           </div>
         </Card.Body>
       </Card>

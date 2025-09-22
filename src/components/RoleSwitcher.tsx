@@ -13,8 +13,7 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ className = '' }) => {
 
   const roles = [
     { value: 'general' as UserType, label: '一般ユーザー' },
-    { value: 'creator' as UserType, label: 'クリエイター' },
-    { value: 'organizer' as UserType, label: 'オーガナイザー' }
+    { value: 'creator' as UserType, label: 'クリエイター' }
   ];
 
   const handleRoleChange = async (newRole: UserType) => {
@@ -82,7 +81,7 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ className = '' }) => {
                 )}
               </button>
             ))}
-            {(userType === 'creator' || userType === 'organizer') && (
+            {userType === 'creator' && (
               <>
                 <div className="my-1 border-t" />
                 <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">

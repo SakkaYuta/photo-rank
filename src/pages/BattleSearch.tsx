@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { listBattles } from '@/services/battle.service'
 import { SAMPLE_BATTLES, SAMPLE_PARTICIPANTS } from '@/sample/battleSamples'
+import { useNav } from '@/contexts/NavContext'
 import {
   Gamepad2,
   Clock,
@@ -17,7 +18,13 @@ import {
   Target,
   Timer,
   Crown,
-  Sparkles
+  Sparkles,
+  Bell,
+  BellRing,
+  X,
+  Check,
+  Mail,
+  Smartphone
 } from 'lucide-react';
 
 interface Battle {
@@ -49,12 +56,26 @@ interface Battle {
 }
 
 const BattleSearch: React.FC = () => {
+  const { navigate } = useNav();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedDuration, setSelectedDuration] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [battles, setBattles] = useState<Battle[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 通知設定のモーダル状態
+  const [notificationModal, setNotificationModal] = useState<{
+    isOpen: boolean;
+    battle: Battle | null;
+  }>({ isOpen: false, battle: null });
+
+  // 通知設定の状態
+  const [notifications, setNotifications] = useState<Record<string, {
+    email: boolean;
+    push: boolean;
+    sms: boolean;
+  }>>({});
 
   // Load from backend (fallback to sample data when enabled or on error)
   useEffect(() => {
@@ -134,6 +155,60 @@ const BattleSearch: React.FC = () => {
       }
     })()
   }, [selectedStatus])
+
+  // 通知設定関数
+  const openNotificationModal = (battle: Battle) => {
+    setNotificationModal({ isOpen: true, battle });
+    // ローカルストレージから既存の通知設定を読み込み
+    const savedNotifications = localStorage.getItem(`notifications_${battle.id}`);
+    if (savedNotifications) {
+      setNotifications(prev => ({
+        ...prev,
+        [battle.id]: JSON.parse(savedNotifications)
+      }));
+    } else {
+      setNotifications(prev => ({
+        ...prev,
+        [battle.id]: { email: false, push: false, sms: false }
+      }));
+    }
+  };
+
+  const closeNotificationModal = () => {
+    setNotificationModal({ isOpen: false, battle: null });
+  };
+
+  const updateNotificationSetting = (battleId: string, type: 'email' | 'push' | 'sms', value: boolean) => {
+    setNotifications(prev => {
+      const updated = {
+        ...prev,
+        [battleId]: {
+          ...prev[battleId],
+          [type]: value
+        }
+      };
+      // ローカルストレージに保存
+      localStorage.setItem(`notifications_${battleId}`, JSON.stringify(updated[battleId]));
+      return updated;
+    });
+  };
+
+  const saveNotificationSettings = () => {
+    if (!notificationModal.battle) return;
+
+    const settings = notifications[notificationModal.battle.id];
+    const enabledTypes = Object.entries(settings)
+      .filter(([_, enabled]) => enabled)
+      .map(([type]) => type);
+
+    if (enabledTypes.length > 0) {
+      alert(`通知設定が完了しました！\n設定された通知方法: ${enabledTypes.map(t => t === 'email' ? 'メール' : t === 'push' ? 'プッシュ通知' : 'SMS').join(', ')}\n\nバトル開始時にお知らせします。`);
+    } else {
+      alert('通知が無効になりました。');
+    }
+
+    closeNotificationModal();
+  };
 
   const filteredBattles = battles.filter(battle => {
     const matchesSearch = battle.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -278,12 +353,22 @@ const BattleSearch: React.FC = () => {
           {/* Action Button */}
           <div className="mt-4">
             {isLive ? (
-              <button className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 px-4 rounded-lg font-bold flex items-center justify-center gap-2 hover:from-red-600 hover:to-pink-600 transition-all transform hover:scale-105">
+              <button
+                onClick={() => {
+                  // ライブバトルページにナビゲート
+                  window.location.hash = `live-battle?battle=${encodeURIComponent(battle.id)}`;
+                  navigate('live-battle');
+                }}
+                className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 px-4 rounded-lg font-bold flex items-center justify-center gap-2 hover:from-red-600 hover:to-pink-600 transition-all transform hover:scale-105"
+              >
                 <Play className="w-4 h-4" />
                 ライブ観戦
               </button>
             ) : battle.status === 'scheduled' ? (
-              <button className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-4 rounded-lg font-bold flex items-center justify-center gap-2 hover:from-blue-600 hover:to-purple-600 transition-all transform hover:scale-105">
+              <button
+                onClick={() => openNotificationModal(battle)}
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-4 rounded-lg font-bold flex items-center justify-center gap-2 hover:from-blue-600 hover:to-purple-600 transition-all transform hover:scale-105"
+              >
                 <Heart className="w-4 h-4" />
                 通知設定
               </button>
@@ -439,6 +524,119 @@ const BattleSearch: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* 通知設定モーダル */}
+      {notificationModal.isOpen && notificationModal.battle && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            {/* モーダルヘッダー */}
+            <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-6">
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-6 h-6" />
+                  <h2 className="text-lg font-bold">通知設定</h2>
+                </div>
+                <button
+                  onClick={closeNotificationModal}
+                  className="text-white/80 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="text-sm opacity-90">
+                <div className="font-semibold">{notificationModal.battle.title}</div>
+                <div>{formatTimeRemaining(notificationModal.battle.startTime)}</div>
+              </div>
+            </div>
+
+            {/* モーダルボディ */}
+            <div className="p-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                バトル開始時にお知らせする方法を選択してください
+              </p>
+
+              <div className="space-y-4">
+                {/* メール通知 */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-5 h-5 text-blue-500" />
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white">メール通知</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">登録メールアドレスに送信</div>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={notifications[notificationModal.battle.id]?.email || false}
+                      onChange={(e) => updateNotificationSetting(notificationModal.battle.id, 'email', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+
+                {/* プッシュ通知 */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <BellRing className="w-5 h-5 text-green-500" />
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white">プッシュ通知</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">ブラウザ通知で表示</div>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={notifications[notificationModal.battle.id]?.push || false}
+                      onChange={(e) => updateNotificationSetting(notificationModal.battle.id, 'push', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+                  </label>
+                </div>
+
+                {/* SMS通知 */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Smartphone className="w-5 h-5 text-orange-500" />
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white">SMS通知</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">携帯電話にテキストメッセージ</div>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={notifications[notificationModal.battle.id]?.sms || false}
+                      onChange={(e) => updateNotificationSetting(notificationModal.battle.id, 'sms', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-600"></div>
+                  </label>
+                </div>
+              </div>
+
+              {/* モーダルフッター */}
+              <div className="flex gap-3 mt-8">
+                <button
+                  onClick={closeNotificationModal}
+                  className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={saveNotificationSettings}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg font-medium hover:from-blue-600 hover:to-purple-600 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  設定完了
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
