@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { getDemoUser } from './auth.service';
 
 export interface CreatorStats {
   totalWorks: number;
@@ -38,6 +39,33 @@ export interface CreatorDashboardData {
 
 export const fetchCreatorDashboard = async (creatorId: string): Promise<CreatorDashboardData> => {
   try {
+    const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || Boolean(getDemoUser())
+    if (isSample) {
+      const works = (await import('@/sample/worksSamples')).SAMPLE_WORKS.filter(w => w.creator_id === creatorId || true).map(w => ({
+        id: w.id,
+        title: w.title,
+        description: w.description || '',
+        image_url: w.image_url,
+        price: w.price,
+        category: 'photo',
+        tags: [],
+        is_active: true,
+        created_at: w.created_at,
+        updated_at: w.updated_at || w.created_at,
+        views: Math.floor(Math.random() * 500) + 50,
+        likes: Math.floor(Math.random() * 100),
+        sales: Math.floor(Math.random() * 20),
+        revenue: w.price * Math.floor(Math.random() * 20)
+      }))
+      const stats: CreatorStats = {
+        totalWorks: works.length,
+        totalRevenue: works.reduce((s, x) => s + x.revenue, 0),
+        totalViews: works.reduce((s, x) => s + x.views, 0),
+        totalSales: works.reduce((s, x) => s + x.sales, 0),
+        monthlyGrowth: { works: 3, revenue: 15000, views: 1200, sales: 8 }
+      }
+      return { stats, recentWorks: works.slice(0, 5), topPerformingWorks: [...works].sort((a,b)=>b.revenue-a.revenue).slice(0,5) }
+    }
     // 作品一覧と売上情報を取得
     const { data: worksData, error: worksError } = await supabase
       .from('works')
@@ -152,6 +180,25 @@ export const fetchCreatorDashboard = async (creatorId: string): Promise<CreatorD
 
 export const fetchCreatorWorks = async (creatorId: string): Promise<CreatorWork[]> => {
   try {
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+      const works = (await import('@/sample/worksSamples')).SAMPLE_WORKS
+      return works.map(w => ({
+        id: w.id,
+        title: w.title,
+        description: w.description || '',
+        image_url: w.image_url,
+        price: w.price,
+        category: 'photo',
+        tags: [],
+        is_active: true,
+        created_at: w.created_at,
+        updated_at: w.updated_at || w.created_at,
+        views: Math.floor(Math.random() * 500) + 50,
+        likes: Math.floor(Math.random() * 100),
+        sales: Math.floor(Math.random() * 20),
+        revenue: w.price * Math.floor(Math.random() * 20)
+      }))
+    }
     const { data: worksData, error: worksError } = await supabase
       .from('works')
       .select(`

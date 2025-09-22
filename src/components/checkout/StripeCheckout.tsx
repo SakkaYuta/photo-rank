@@ -11,11 +11,12 @@ type Props = {
   clientSecret: string
   workId: string
   onSuccess?: () => void
+  onSucceeded?: (paymentIntentId: string) => void
   onError?: (msg: string) => void
   onCancel?: () => void
 }
 
-function CheckoutForm({ clientSecret, workId, onSuccess, onError, onCancel }: Props) {
+function CheckoutForm({ clientSecret, workId, onSuccess, onSucceeded, onError, onCancel }: Props) {
   const stripe = useStripe()
   const elements = useElements()
   const [isProcessing, setIsProcessing] = useState(false)
@@ -41,6 +42,9 @@ function CheckoutForm({ clientSecret, workId, onSuccess, onError, onCancel }: Pr
         try { await releaseWorkLock(workId) } catch {}
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         onSuccess?.()
+        if (paymentIntent.id) {
+          onSucceeded?.(paymentIntent.id)
+        }
       }
     } catch (err: any) {
       const msg = err?.message || '予期しないエラーが発生しました'

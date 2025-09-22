@@ -33,7 +33,7 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
     {
       type: 'organizer' as UserType,
       label: 'オーガナイザー',
-      description: '写真展・コンテストを企画する方',
+      description: 'イベントやクリエイターをマネジメントする方',
       icon: Calendar,
       color: 'text-orange-600'
     }

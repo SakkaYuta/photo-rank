@@ -4,6 +4,15 @@ import type { User, UserProfileUpdate, UserNotificationSettings, UserPrivacySett
 export class ProfileService {
   // プロフィール情報取得（メール情報含む）
   static async getProfile(): Promise<User | null> {
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+      return {
+        id: 'demo-user-1',
+        display_name: 'デモユーザー',
+        email: 'demo@example.com',
+        bio: 'これはデモプロフィールです',
+        avatar_url: 'https://images.unsplash.com/photo-1494790108755-2616b332c66a?w=80&h=80&fit=crop&crop=face',
+      } as any
+    }
     const { data: { user: authUser } } = await supabase.auth.getUser()
     if (!authUser) return null
 
@@ -24,6 +33,14 @@ export class ProfileService {
 
   // プロフィール基本情報更新
   static async updateProfile(updates: UserProfileUpdate): Promise<User> {
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+      return {
+        id: 'demo-user-1',
+        display_name: updates.display_name || 'デモユーザー',
+        email: 'demo@example.com',
+        avatar_url: updates.avatar_url as string || 'https://images.unsplash.com/photo-1494790108755-2616b332c66a?w=80&h=80&fit=crop&crop=face'
+      } as any
+    }
     const { data: { user: authUser } } = await supabase.auth.getUser()
     if (!authUser) throw new Error('認証が必要です')
 
@@ -60,6 +77,9 @@ export class ProfileService {
 
   // 通知設定取得
   static async getNotificationSettings(userId: string): Promise<UserNotificationSettings> {
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+      return { email_notifications: true, order_updates: true, marketing_emails: false, push_notifications: true }
+    }
     const { data, error } = await supabase
       .from('user_notification_settings')
       .select('*')
@@ -89,6 +109,7 @@ export class ProfileService {
     userId: string,
     settings: UserNotificationSettings
   ): Promise<void> {
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') return
     const { error } = await supabase
       .from('user_notification_settings')
       .upsert({
@@ -102,6 +123,9 @@ export class ProfileService {
 
   // プライバシー設定取得
   static async getPrivacySettings(userId: string): Promise<UserPrivacySettings> {
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+      return { profile_visibility: 'public', show_purchase_history: false, show_favorites: true }
+    }
     const { data, error } = await supabase
       .from('user_privacy_settings')
       .select('*')
@@ -129,6 +153,7 @@ export class ProfileService {
     userId: string,
     settings: UserPrivacySettings
   ): Promise<void> {
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') return
     const { error } = await supabase
       .from('user_privacy_settings')
       .upsert({
@@ -142,6 +167,9 @@ export class ProfileService {
 
   // アバター画像アップロード
   static async uploadAvatar(file: File): Promise<string> {
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+      return 'https://placehold.co/256x256'
+    }
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('認証が必要です')
 
@@ -167,17 +195,31 @@ export class ProfileService {
     return data.publicUrl
   }
 
-  // アカウント削除
+  // アカウント削除（Edge Function経由で安全に実行）
   static async deleteAccount(): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('認証が必要です')
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') return
 
-    // 関連データの削除をSupabaseのカスケード削除に任せる
-    // または明示的に削除する場合はここで実装
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) throw new Error('認証が必要です')
 
-    // アカウント削除（実際の実装では管理者による論理削除が推奨）
-    const { error } = await supabase.auth.admin.deleteUser(user.id)
-    if (error) throw error
+    // Edge Function経由でアカウント削除（サービスロール権限を使用）
+    const { data, error } = await supabase.functions.invoke('delete-account', {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    })
+
+    if (error) {
+      console.error('Delete account error:', error)
+      throw new Error('アカウント削除に失敗しました')
+    }
+
+    if (data?.error) {
+      throw new Error(data.error)
+    }
+
+    // ローカルセッションもクリア
+    await supabase.auth.signOut()
   }
 
   // プロフィール完全性チェック

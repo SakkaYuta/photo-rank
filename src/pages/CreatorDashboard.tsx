@@ -157,6 +157,13 @@ const CreatorDashboard: React.FC = () => {
                 <Upload className="w-5 h-5" />
                 新しい作品をアップロード
               </button>
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'merch' } }))}
+                className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm"
+                title="ホームへ"
+              >
+                ✨ PhotoRank
+              </button>
             </div>
           </div>
         </div>
@@ -262,10 +269,16 @@ const CreatorDashboard: React.FC = () => {
                       const pendingStatus = pendingStatusChanges.get(work.id);
                       const currentStatus = pendingStatus !== undefined ? pendingStatus : work.is_active;
                       const hasChange = pendingStatusChanges.has(work.id);
+                      const openWork = () => {
+                        try {
+                          localStorage.setItem('highlight_work_id', work.id)
+                        } catch {}
+                        window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'myworks' } }))
+                      }
 
                       return (
                       <div key={work.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 cursor-pointer" onClick={openWork}>
                           <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
                             {work.image_url ? (
                               <img

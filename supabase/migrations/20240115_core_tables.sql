@@ -101,7 +101,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Updated at trigger for works and cart_items
+-- Updated at trigger for works and cart_items (idempotent)
+DROP TRIGGER IF EXISTS update_works_updated_at ON works;
+DROP TRIGGER IF EXISTS update_cart_items_updated_at ON cart_items;
 CREATE TRIGGER update_works_updated_at BEFORE UPDATE ON works FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 CREATE TRIGGER update_cart_items_updated_at BEFORE UPDATE ON cart_items FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
@@ -130,15 +132,32 @@ CREATE POLICY "Users can manage their own favorites" ON favorites
 CREATE POLICY "Users can manage their own cart" ON cart_items
   FOR ALL USING (auth.uid() = user_id);
 
--- Insert some test data
-INSERT INTO users (id, email, display_name, is_creator, is_verified)
-VALUES
-  ('00000000-0000-0000-0000-000000000001', 'creator@example.com', 'Test Creator', true, true),
-  ('00000000-0000-0000-0000-000000000002', 'buyer@example.com', 'Test Buyer', false, false)
-ON CONFLICT (email) DO NOTHING;
+-- Insert some test data (safe version with column existence check)
+DO $$ BEGIN
+  -- Only insert if the table has the required columns
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'email'
+  ) THEN
+    INSERT INTO users (id, email, display_name, is_creator, is_verified)
+    VALUES
+      ('00000000-0000-0000-0000-000000000001', 'creator@example.com', 'Test Creator', true, true),
+      ('00000000-0000-0000-0000-000000000002', 'buyer@example.com', 'Test Buyer', false, false)
+    ON CONFLICT (id) DO NOTHING;
+  END IF;
+END $$;
 
-INSERT INTO works (id, title, description, creator_id, price, image_url, category)
-VALUES
-  ('00000000-0000-0000-0000-000000000001', 'Beautiful Landscape', 'A stunning mountain landscape', '00000000-0000-0000-0000-000000000001', 2500, 'https://via.placeholder.com/400x300', 'landscape'),
-  ('00000000-0000-0000-0000-000000000002', 'City Lights', 'Vibrant city at night', '00000000-0000-0000-0000-000000000001', 3000, 'https://via.placeholder.com/400x300', 'urban')
-ON CONFLICT (id) DO NOTHING;
+-- Insert works test data safely
+DO $$ BEGIN
+  -- Only insert if the table has the required columns
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'works' AND column_name = 'description'
+  ) THEN
+    INSERT INTO works (id, title, description, creator_id, price, image_url, category)
+    VALUES
+      ('00000000-0000-0000-0000-000000000001', 'Beautiful Landscape', 'A stunning mountain landscape', '00000000-0000-0000-0000-000000000001', 2500, 'https://via.placeholder.com/400x300', 'landscape'),
+      ('00000000-0000-0000-0000-000000000002', 'City Lights', 'Vibrant city at night', '00000000-0000-0000-0000-000000000001', 3000, 'https://via.placeholder.com/400x300', 'urban')
+    ON CONFLICT (id) DO NOTHING;
+  END IF;
+END $$;

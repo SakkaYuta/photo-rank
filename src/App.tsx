@@ -2,13 +2,15 @@ import React, { useState, useEffect, Suspense } from 'react'
 import { Header } from './components/common/Header'
 import { Navigation } from './components/common/Navigation'
 import { TrendingView } from './components/buyer/TrendingView'
-import { CreatorSearch } from './components/buyer/CreatorSearch'
-import { Collection } from './components/buyer/Collection'
+import CreatorSearchPage from './pages/buyer/CreatorSearch'
+import MerchContentHub from './pages/MerchContentHub'
+import CreatorProfilePage from './pages/buyer/CreatorProfile'
+import CollectionPage from './pages/buyer/Collection'
 import { CreateWork } from './components/creator/CreateWork'
 import { MyWorks } from './components/creator/MyWorks'
-import { OrderHistory } from './components/buyer/OrderHistory'
-import { Favorites } from './components/buyer/Favorites'
-import { CartView } from './components/buyer/CartView'
+import OrderHistoryPage from './pages/buyer/OrderHistory'
+import FavoritesPage from './pages/buyer/Favorites'
+import CartPage from './pages/buyer/Cart'
 import { ProfileSettings } from './components/buyer/ProfileSettings'
 import { AdminDashboard } from './pages/AdminDashboard'
 import { PartnerDashboard } from './pages/partner/PartnerDashboard'
@@ -27,17 +29,23 @@ import { PartialErrorBoundary } from './components/PartialErrorBoundary'
 import { ToastProvider } from './contexts/ToastContext'
 import { CartProvider } from './contexts/CartContext'
 import { FavoritesProvider } from './contexts/FavoritesContext'
+import { NavProvider } from './contexts/NavContext'
 import { Footer } from './components/common/Footer'
 import { Terms } from './pages/legal/Terms'
 import { Privacy } from './pages/legal/Privacy'
 import { RefundPolicy } from './pages/legal/RefundPolicy'
 import { CommerceAct } from './pages/legal/CommerceAct'
-import RoleBasedRouter from './components/RoleBasedRouter'
-import { UrlCreate } from './pages/UrlCreate'
+import GeneralDashboard from './pages/GeneralDashboard'
+import CreatorDashboard from './pages/CreatorDashboard'
+import FactoryDashboard from './pages/FactoryDashboard'
+import OrganizerDashboard from './pages/OrganizerDashboard'
 import BattleSearch from './pages/BattleSearch'
+import LocalDataViewer from './pages/dev/LocalDataViewer'
+import { registerDevUtils } from './utils/devUtils'
 
 type ViewKey =
   | 'trending'
+  | 'merch'
   | 'search'
   | 'collection'
   | 'favorites'
@@ -52,7 +60,7 @@ type ViewKey =
   | 'partner-dashboard'
   | 'partner-products'
   | 'partner-orders'
-  | 'factory-picker'
+  | 'partner-settings'
   | 'factory'
   | 'factory-order'
   | 'events'
@@ -61,17 +69,49 @@ type ViewKey =
   | 'privacy'
   | 'refunds'
   | 'commerce'
-  | 'role-based'
-  | 'url-create'
+  | 'general-dashboard'
+  | 'creator-dashboard'
+  | 'factory-dashboard'
+  | 'organizer-dashboard'
   | 'battle-search'
+  | 'creator-profile'
+  | 'local-data'
 
 function App() {
-  const [view, setView] = useState<ViewKey>('role-based')
+  const [view, setView] = useState<ViewKey>('general-dashboard')
   const { profile } = useAuth()
   const { partner } = usePartnerAuth()
   const { isAdmin, isAdminOrModerator, adminUser } = useAdminAuth()
-  const { userType } = useUserRole()
+  const { userType, user } = useUserRole()
   const isPartner = Boolean(partner && partner.status === 'approved')
+  const isFactoryUser = userType === 'factory'
+  const isDemoMode = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+
+  // ユーザータイプに応じて初期ビューを設定
+  useEffect(() => {
+    if (user) {
+      const viewOverride = localStorage.getItem('view_override')
+
+      switch (userType) {
+        case 'creator':
+          setView(viewOverride === 'general' ? 'merch' : 'creator-dashboard')
+          break
+        case 'factory':
+          setView('factory-dashboard')
+          break
+        case 'organizer':
+          setView(viewOverride === 'general' ? 'merch' : 'organizer-dashboard')
+          break
+        case 'general':
+        default:
+          setView('general-dashboard')
+          break
+      }
+    }
+  }, [userType, user])
+
+  // セキュリティ: デモ時のみ工場ユーザーにパートナーページアクセスを許可
+  const canAccessPartnerPages = isPartner || (isDemoMode && isFactoryUser)
 
   // 工場発注ビュー用の状態
   const [selectedProductType, setSelectedProductType] = useState<string>('tshirt')
@@ -79,7 +119,22 @@ function App() {
   const [selectedWorkId, setSelectedWorkId] = useState<string>('')
   const [currentOrderId, setCurrentOrderId] = useState<string>('')
 
+  // ナビゲーション関数
+  const isValidView = (v: string): v is ViewKey => {
+    return [
+      'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','battle-search','creator-profile','local-data'
+    ].includes(v)
+  }
+
+  const navigate = (v: ViewKey) => {
+    setView(v)
+    try { window.location.hash = v } catch {}
+  }
+
   useEffect(() => {
+    // 開発者ユーティリティを初期化
+    registerDevUtils()
+
     // WorkCardFactoryExtension からのナビゲーション
     const handler = (e: any) => {
       const { workId, productType, quantity } = e.detail || {}
@@ -93,12 +148,35 @@ function App() {
     const navHandler = (e: any) => {
       if (e?.detail?.view) setView(e.detail.view as ViewKey)
     }
+    ;(window as any).navigateTo = (v: string) => setView(v as ViewKey)
     window.addEventListener('start-factory-order', handler as any)
     window.addEventListener('navigate', navHandler as any)
     return () => {
       window.removeEventListener('start-factory-order', handler as any)
       window.removeEventListener('navigate', navHandler as any)
+      try { delete (window as any).navigateTo } catch {}
     }
+  }, [])
+
+  // ハッシュナビゲーション（#view?param=... を許容）
+  useEffect(() => {
+    // 初期ハッシュ適用
+    try {
+      const raw = window.location.hash.replace(/^#/, '')
+      const v = raw.split('?')[0]
+      if (isValidView(v)) setView(v as ViewKey)
+    } catch {}
+
+    // ハッシュ変更監視
+    const onHash = () => {
+      try {
+        const raw = window.location.hash.replace(/^#/, '')
+        const v = raw.split('?')[0]
+        if (isValidView(v)) setView(v as ViewKey)
+      } catch {}
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
   return (
@@ -116,6 +194,7 @@ function App() {
           <ToastProvider>
             <CartProvider>
               <FavoritesProvider>
+                <NavProvider navigate={(v) => navigate(v as ViewKey)}>
           <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
             <PartialErrorBoundary name="ヘッダー">
               <Header />
@@ -126,16 +205,31 @@ function App() {
                 current={view}
                 onChange={(k) => setView(k as ViewKey)}
                 isAdmin={isAdmin}
-                isPartner={isPartner}
+                isPartner={canAccessPartnerPages}
                 hasProfile={Boolean(profile)}
                 userType={userType}
               />
             </PartialErrorBoundary>
 
             <main className="mx-auto max-w-6xl">
-              {view === 'role-based' && (
-                <PartialErrorBoundary name="ロールベースルーティング">
-                  <RoleBasedRouter />
+              {view === 'general-dashboard' && (
+                <PartialErrorBoundary name="一般ダッシュボード">
+                  <GeneralDashboard />
+                </PartialErrorBoundary>
+              )}
+              {view === 'creator-dashboard' && (
+                <PartialErrorBoundary name="クリエイターダッシュボード">
+                  <CreatorDashboard />
+                </PartialErrorBoundary>
+              )}
+              {view === 'factory-dashboard' && (
+                <PartialErrorBoundary name="工場ダッシュボード">
+                  <FactoryDashboard />
+                </PartialErrorBoundary>
+              )}
+              {view === 'organizer-dashboard' && (
+                <PartialErrorBoundary name="オーガナイザーダッシュボード">
+                  <OrganizerDashboard />
                 </PartialErrorBoundary>
               )}
               {view === 'trending' && (
@@ -145,22 +239,22 @@ function App() {
               )}
               {view === 'search' && (
                 <PartialErrorBoundary name="クリエイター検索">
-                  <CreatorSearch />
+                  <CreatorSearchPage />
                 </PartialErrorBoundary>
               )}
               {view === 'collection' && (
                 <PartialErrorBoundary name="コレクション">
-                  <Collection />
+                  <CollectionPage />
                 </PartialErrorBoundary>
               )}
               {view === 'favorites' && (
                 <PartialErrorBoundary name="お気に入り">
-                  <Favorites />
+                  <FavoritesPage />
                 </PartialErrorBoundary>
               )}
               {view === 'cart' && (
                 <PartialErrorBoundary name="ショッピングカート">
-                  <CartView />
+                  <CartPage />
                 </PartialErrorBoundary>
               )}
               {view === 'create' && (
@@ -175,18 +269,12 @@ function App() {
               )}
               {view === 'orders' && (
                 <PartialErrorBoundary name="注文履歴">
-                  <OrderHistory />
+                  <OrderHistoryPage />
                 </PartialErrorBoundary>
               )}
               {view === 'profile' && (
                 <PartialErrorBoundary name="プロフィール設定">
                   <ProfileSettings />
-                </PartialErrorBoundary>
-              )}
-              {view === 'url-create' && (
-                <PartialErrorBoundary name="URLから作成">
-                  {/* 遅延読み込みにせず軽量UIで提供 */}
-                  <UrlCreate />
                 </PartialErrorBoundary>
               )}
               {view === 'admin' && isAdmin && (
@@ -208,25 +296,27 @@ function App() {
                   </Suspense>
                 </PartialErrorBoundary>
               )}
-              {view === 'partner-dashboard' && isPartner && (
+              {view === 'partner-dashboard' && canAccessPartnerPages && (
                 <PartialErrorBoundary name="パートナーダッシュボード">
                   <PartnerDashboard />
                 </PartialErrorBoundary>
               )}
-              {view === 'partner-products' && isPartner && (
+              {view === 'partner-products' && canAccessPartnerPages && (
                 <PartialErrorBoundary name="パートナー商品">
                   <PartnerProducts />
                 </PartialErrorBoundary>
               )}
-              {view === 'partner-orders' && isPartner && (
+              {view === 'partner-orders' && canAccessPartnerPages && (
                 <PartialErrorBoundary name="パートナー注文">
                   <PartnerOrders />
                 </PartialErrorBoundary>
               )}
-              {view === 'factory-picker' && profile && (
-                <div className="p-6 text-sm text-gray-500">
-                  旧FactoryPickerは廃止予定です。新UI「工場比較」をご利用ください。
-                </div>
+              {view === 'partner-settings' && canAccessPartnerPages && (
+                <PartialErrorBoundary name="工場設定">
+                  <Suspense fallback={<SuspenseFallback />}>
+                    <FactorySettings />
+                  </Suspense>
+                </PartialErrorBoundary>
               )}
               {view === 'factory' && (
                 <PartialErrorBoundary name="工場比較">
@@ -285,9 +375,27 @@ function App() {
                   <BattleSearch />
                 </PartialErrorBoundary>
               )}
+              {view === 'creator-profile' && (
+                <PartialErrorBoundary name="クリエイタープロフィール">
+                  <React.Suspense fallback={<SuspenseFallback />}>
+                    <CreatorProfilePage />
+                  </React.Suspense>
+                </PartialErrorBoundary>
+              )}
+              {view === 'merch' && (
+                <PartialErrorBoundary name="PhotoRank">
+                  <MerchContentHub />
+                </PartialErrorBoundary>
+              )}
+              {view === 'local-data' && (
+                <PartialErrorBoundary name="ローカルデータビューアー">
+                  <LocalDataViewer />
+                </PartialErrorBoundary>
+              )}
             </main>
             <Footer />
           </div>
+                </NavProvider>
               </FavoritesProvider>
             </CartProvider>
           </ToastProvider>
@@ -298,7 +406,8 @@ function App() {
 }
 
 // Admin pages (lazy import could be added later)
-const AdminAssetPolicies = React.lazy(() => import('./pages/admin/AssetPolicies').then(m => ({ default: m.AssetPolicies })))
-const AdminApprovalQueue = React.lazy(() => import('./pages/admin/AssetApprovalQueue').then(m => ({ default: m.AssetApprovalQueue })))
+const AdminAssetPolicies = React.lazy(() => import('./pages/admin/AssetPolicies'))
+const AdminApprovalQueue = React.lazy(() => import('./pages/admin/AssetApprovalQueue'))
+const FactorySettings = React.lazy(() => import('./pages/partner/FactorySettings'))
 
 export default App

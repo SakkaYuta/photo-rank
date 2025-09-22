@@ -6,6 +6,7 @@ import FactoryDashboard from '../pages/FactoryDashboard';
 import OrganizerDashboard from '../pages/OrganizerDashboard';
 import GeneralHomepage from '../pages/GeneralHomepage';
 import GeneralDashboard from '../pages/GeneralDashboard';
+import MerchContentHub from '../pages/MerchContentHub';
 import { LoadingSpinner } from './common/LoadingSpinner';
 
 interface RoleBasedRouterProps {
@@ -64,12 +65,12 @@ const RoleBasedRouter: React.FC<RoleBasedRouterProps> = ({
   // Route based on user type (with override)
   switch (userType) {
     case 'creator':
-      if (viewOverride === 'general') return <GeneralDashboard />
+      if (viewOverride === 'general') return <MerchContentHub />
       return <CreatorDashboard />;
     case 'factory':
       return <FactoryDashboard />;
     case 'organizer':
-      if (viewOverride === 'general') return <GeneralDashboard />
+      if (viewOverride === 'general') return <MerchContentHub />
       return <OrganizerDashboard />;
     case 'general':
     default:

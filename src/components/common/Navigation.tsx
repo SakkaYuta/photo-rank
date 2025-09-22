@@ -11,6 +11,12 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
   hasProfile?: boolean,
   userType?: string
 }) {
+  // 表示モードのオーバーライド（creator/organizer が一般表示へ切替時）
+  const viewOverride = typeof window !== 'undefined' ? localStorage.getItem('view_override') : null
+  const effectiveType = viewOverride === 'general' ? 'general' : userType
+
+  // 一般ユーザー表示ではナビゲーション自体を非表示にする
+  if (effectiveType === 'general') return null
   // 未登録ユーザー向けの基本ナビゲーション
   const publicItems: NavItem[] = [
     // クリエイターページ仕様変更に伴いトレンド/検索タブを削除
@@ -19,6 +25,7 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
   // 一般ユーザー向けのナビゲーション
   const generalUserItems: NavItem[] = [
     { key: 'role-based', label: 'ダッシュボード' },
+    { key: 'merch', label: 'PhotoRank' },
   ]
 
   // クリエイター向けのナビゲーション
@@ -45,7 +52,11 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
 
   // 管理者・パートナー向けの追加ナビゲーション
   const adminItems: NavItem[] = [
-    ...(isAdmin ? [{ key: 'admin', label: '管理' } as NavItem] : []),
+    ...(isAdmin ? [
+      { key: 'admin', label: '管理' } as NavItem,
+      { key: 'admin-asset-policies', label: 'ポリシー' } as NavItem,
+      { key: 'admin-approvals', label: '承認キュー' } as NavItem,
+    ] : []),
     ...(isPartner ? [
       { key: 'partner-dashboard', label: 'パートナー' },
       { key: 'partner-products', label: '商品管理' },
@@ -56,10 +67,6 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
   // ユーザータイプに基づいてナビゲーション項目を選択
   const getUserItems = (): NavItem[] => {
     if (!hasProfile) return []
-
-    // 表示モードのオーバーライド（creator/organizer が一般表示へ切替時）
-    const viewOverride = typeof window !== 'undefined' ? localStorage.getItem('view_override') : null
-    const effectiveType = viewOverride === 'general' ? 'general' : userType
 
     switch (effectiveType) {
       case 'creator':
@@ -80,11 +87,21 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
     ...getUserItems(),
     ...adminItems,
   ]
+
+  // 重複タブをキーで排除（例: 工場ユーザーで isPartner=true のときの受注/商品管理）
+  const dedupedItems: NavItem[] = []
+  const seen = new Set<string>()
+  for (const it of items) {
+    if (!seen.has(it.key)) {
+      dedupedItems.push(it)
+      seen.add(it.key)
+    }
+  }
   return (
     <nav className="sticky top-[53px] z-10 border-b border-gray-200 bg-white/80 backdrop-blur dark:border-gray-800 dark:bg-gray-900/70">
       <div className="mx-auto max-w-6xl overflow-x-auto px-2">
         <ul className="flex gap-2 py-2">
-          {items.map((it) => (
+          {dedupedItems.map((it) => (
             <li key={it.key}>
               <button
                 className={`btn btn-outline ${current === it.key ? 'bg-gray-100 dark:bg-gray-800' : ''}`}

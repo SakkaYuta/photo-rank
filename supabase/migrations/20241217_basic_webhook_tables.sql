@@ -3,6 +3,21 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Manufacturing partners table
+CREATE TABLE IF NOT EXISTS manufacturing_partners (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL UNIQUE,
+  contact_email TEXT,
+  webhook_url TEXT,
+  webhook_secret TEXT,
+  status TEXT DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index for manufacturing partners
+CREATE INDEX IF NOT EXISTS idx_manufacturing_partners_status ON manufacturing_partners(status);
+
 -- Stripe webhook events table
 CREATE TABLE IF NOT EXISTS stripe_webhook_events (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -80,6 +95,11 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply triggers
+CREATE TRIGGER update_manufacturing_partners_updated_at
+  BEFORE UPDATE ON manufacturing_partners
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_stripe_webhook_events_updated_at
   BEFORE UPDATE ON stripe_webhook_events
   FOR EACH ROW
@@ -91,11 +111,17 @@ CREATE TRIGGER update_partner_notifications_updated_at
   EXECUTE FUNCTION update_updated_at_column();
 
 -- Enable RLS
+ALTER TABLE manufacturing_partners ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stripe_webhook_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE partner_notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_failures ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
+CREATE POLICY "Service role access" ON manufacturing_partners
+  FOR ALL USING (
+    auth.jwt() ->> 'role' = 'service_role'
+  );
+
 CREATE POLICY "Service role access" ON stripe_webhook_events
   FOR ALL USING (
     auth.jwt() ->> 'role' = 'service_role'

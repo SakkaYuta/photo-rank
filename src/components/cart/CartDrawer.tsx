@@ -57,7 +57,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex">
       <div className="flex-1 bg-black/40" onClick={onClose} aria-hidden="true" />
-      <aside className="w-full max-w-md bg-white dark:bg-gray-900 h-full shadow-xl border-l border-gray-200 dark:border-gray-700 flex flex-col">
+      <aside className="w-full sm:max-w-md bg-white dark:bg-gray-900 h-full shadow-xl border-l border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
         <header className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2 font-semibold">
             <ShoppingCart className="w-5 h-5" /> カート
@@ -69,7 +69,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
         <div className="flex-1 overflow-auto p-4 space-y-3">
           {items.length === 0 ? (
-            <div className="text-gray-500 text-center py-12">カートは空です</div>
+            <div className="text-gray-500 dark:text-gray-400 text-center py-12">カートは空です</div>
           ) : (
             items.map(it => (
               <div key={it.id} className="flex items-center gap-3 border rounded-lg p-3 dark:border-gray-700">
@@ -77,11 +77,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                   <img src={it.imageUrl} alt="thumb" className="w-16 h-16 rounded object-cover" />
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate jp-text">{it.title}</div>
-                  <div className="text-sm text-gray-600">¥{(it.price * it.qty).toLocaleString()}（¥{it.price.toLocaleString()} × {it.qty}）</div>
+                  <div className="font-medium truncate jp-text text-gray-900 dark:text-white">{it.title}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">¥{(it.price * it.qty).toLocaleString()}（¥{it.price.toLocaleString()} × {it.qty}）</div>
                   <div className="mt-2 inline-flex items-center gap-2">
                     <button className="btn btn-outline" onClick={() => updateQty(it.id, Math.max(1, it.qty - 1))}><Minus className="w-4 h-4" /></button>
-                    <span className="text-sm">{it.qty}</span>
+                    <span className="text-sm text-gray-900 dark:text-white">{it.qty}</span>
                     <button className="btn btn-outline" onClick={() => updateQty(it.id, it.qty + 1)}><Plus className="w-4 h-4" /></button>
                   </div>
                 </div>
@@ -109,20 +109,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
         <footer className="border-t border-gray-200 dark:border-gray-700 p-4 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">小計</span>
-            <span className="text-base font-semibold">¥{subtotal.toLocaleString()}</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">小計</span>
+            <span className="text-base font-semibold text-gray-900 dark:text-white">¥{subtotal.toLocaleString()}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">消費税 (10%)</span>
-            <span className="text-base">¥{tax.toLocaleString()}</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">消費税 (10%)</span>
+            <span className="text-base text-gray-900 dark:text-white">¥{tax.toLocaleString()}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">送料</span>
-            <span className="text-base">¥{SHIPPING.toLocaleString()}</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">送料</span>
+            <span className="text-base text-gray-900 dark:text-white">¥{SHIPPING.toLocaleString()}</span>
           </div>
           <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
-            <span className="text-sm font-semibold">合計</span>
-            <span className="text-lg font-bold">¥{total.toLocaleString()}</span>
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">合計</span>
+            <span className="text-lg font-bold text-gray-900 dark:text-white">¥{total.toLocaleString()}</span>
           </div>
           <div className="flex items-center justify-between gap-2">
             <button className="btn btn-outline flex-1" onClick={() => { clearCart(); showToast({ variant: 'warning', message: 'カートを空にしました' }) }} disabled={items.length === 0}>クリア</button>

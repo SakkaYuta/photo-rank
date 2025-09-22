@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { listBattles } from '@/services/battle.service'
+import { SAMPLE_BATTLES, SAMPLE_PARTICIPANTS } from '@/sample/battleSamples'
 import {
   Gamepad2,
   Clock,
@@ -54,56 +56,84 @@ const BattleSearch: React.FC = () => {
   const [battles, setBattles] = useState<Battle[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Mock data for demonstration
+  // Load from backend (fallback to sample data when enabled or on error)
   useEffect(() => {
-    const mockBattles: Battle[] = [
-      {
-        id: '1',
-        title: '推しイラストバトル - 冬コミ直前対決！',
-        challenger: { id: '1', name: 'ArtMaster_Yuki', avatar: '/api/placeholder/40/40', worksCount: 156 },
-        opponent: { id: '2', name: 'PixelQueen', avatar: '/api/placeholder/40/40', worksCount: 203 },
-        status: 'live',
-        duration: 30,
-        startTime: '2025-01-22T14:00:00Z',
-        viewerCount: 2847,
-        totalPoints: { challenger: 15600, opponent: 18200 },
-        category: 'イラスト',
-        prizePool: 50000
-      },
-      {
-        id: '2',
-        title: 'アニメグッズ究極対決',
-        challenger: { id: '3', name: 'OtakuPro', avatar: '/api/placeholder/40/40', worksCount: 89 },
-        opponent: { id: '4', name: 'FigureKing', avatar: '/api/placeholder/40/40', worksCount: 134 },
-        status: 'scheduled',
-        duration: 60,
-        startTime: '2025-01-22T19:00:00Z',
-        viewerCount: 0,
-        totalPoints: { challenger: 0, opponent: 0 },
-        category: 'フィギュア',
-        prizePool: 75000
-      },
-      {
-        id: '3',
-        title: 'Vtuberグッズ速攻バトル',
-        challenger: { id: '5', name: 'VtuberFan_Mai', avatar: '/api/placeholder/40/40', worksCount: 67 },
-        opponent: { id: '6', name: 'StreamMaster', avatar: '/api/placeholder/40/40', worksCount: 112 },
-        status: 'finished',
-        duration: 5,
-        startTime: '2025-01-22T12:00:00Z',
-        endTime: '2025-01-22T12:05:00Z',
-        viewerCount: 1523,
-        totalPoints: { challenger: 8900, opponent: 12300 },
-        category: 'Vtuber',
-        prizePool: 25000
+    // プリセット検索クエリ
+    try {
+      const preset = localStorage.getItem('battle_query')
+      if (preset) {
+        setSearchQuery(preset)
+        localStorage.removeItem('battle_query')
       }
-    ];
-
-    setTimeout(() => {
-      setBattles(mockBattles);
-      setLoading(false);
-    }, 1000);
-  }, []);
+    } catch {}
+    (async () => {
+      setLoading(true)
+      try {
+        const useSamples = (import.meta as any).env?.VITE_ENABLE_BATTLE_SAMPLE === 'true'
+        if (useSamples) {
+          const samples = SAMPLE_BATTLES
+            .filter(b => selectedStatus === 'all' || b.status === selectedStatus)
+            .filter(b => selectedDuration === 'all' || String(b.duration_minutes) === selectedDuration)
+            .map(b => ({
+              id: b.id,
+              title: b.title,
+              challenger: { id: b.challenger_id, name: SAMPLE_PARTICIPANTS[b.challenger_id]?.display_name || 'Challenger', avatar: SAMPLE_PARTICIPANTS[b.challenger_id]?.avatar_url || '/api/placeholder/40/40', worksCount: 0 },
+              opponent: { id: b.opponent_id, name: SAMPLE_PARTICIPANTS[b.opponent_id]?.display_name || 'Opponent', avatar: SAMPLE_PARTICIPANTS[b.opponent_id]?.avatar_url || '/api/placeholder/40/40', worksCount: 0 },
+              status: b.status,
+              duration: b.duration_minutes,
+              startTime: b.start_time,
+              viewerCount: 1200,
+              totalPoints: { challenger: 15600, opponent: 14800 },
+              category: 'デモ',
+              prizePool: 56000,
+            }))
+          setBattles(samples as any)
+        } else {
+          const res = await listBattles({
+            limit: 20,
+            status: selectedStatus !== 'all' ? (selectedStatus as any) : undefined,
+            duration: selectedDuration !== 'all' ? (Number(selectedDuration) as any) : undefined
+          })
+          const items: Battle[] = (res.items || []).map((b: any) => ({
+            id: b.id,
+            title: 'グッズバトル',
+            challenger: { id: b.challenger_id, name: res.participants?.[b.challenger_id]?.display_name || b.challenger_id.slice(0,8), avatar: res.participants?.[b.challenger_id]?.avatar_url || '/api/placeholder/40/40', worksCount: 0 },
+            opponent: { id: b.opponent_id, name: res.participants?.[b.opponent_id]?.display_name || b.opponent_id.slice(0,8), avatar: res.participants?.[b.opponent_id]?.avatar_url || '/api/placeholder/40/40', worksCount: 0 },
+            status: b.status,
+            duration: (b.duration_minutes as 5|30|60) ?? 5,
+            startTime: b.start_time || new Date().toISOString(),
+            viewerCount: 0,
+            totalPoints: {
+              challenger: res.aggregates?.[b.id]?.by_user?.[b.challenger_id] || 0,
+              opponent: res.aggregates?.[b.id]?.by_user?.[b.opponent_id] || 0,
+            },
+            category: 'グッズ',
+            prizePool: res.aggregates?.[b.id]?.amount || 0,
+          }))
+          setBattles(items)
+        }
+      } catch (e) {
+        const samples = SAMPLE_BATTLES
+          .filter(b => selectedStatus === 'all' || b.status === selectedStatus)
+          .map(b => ({
+            id: b.id,
+            title: b.title,
+            challenger: { id: b.challenger_id, name: SAMPLE_PARTICIPANTS[b.challenger_id]?.display_name || 'Challenger', avatar: SAMPLE_PARTICIPANTS[b.challenger_id]?.avatar_url || '/api/placeholder/40/40', worksCount: 0 },
+            opponent: { id: b.opponent_id, name: SAMPLE_PARTICIPANTS[b.opponent_id]?.display_name || 'Opponent', avatar: SAMPLE_PARTICIPANTS[b.opponent_id]?.avatar_url || '/api/placeholder/40/40', worksCount: 0 },
+            status: b.status,
+            duration: b.duration_minutes,
+            startTime: b.start_time,
+            viewerCount: 1200,
+            totalPoints: { challenger: 15600, opponent: 14800 },
+            category: 'デモ',
+            prizePool: 56000,
+          }))
+        setBattles(samples as any)
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [selectedStatus])
 
   const filteredBattles = battles.filter(battle => {
     const matchesSearch = battle.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -160,8 +190,8 @@ const BattleSearch: React.FC = () => {
     const challengerWinning = battle.totalPoints.challenger > battle.totalPoints.opponent;
 
     return (
-      <div className={`bg-white rounded-xl shadow-lg overflow-hidden border-2 transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer ${
-        isLive ? 'border-red-500 bg-gradient-to-br from-red-50 to-pink-50' : 'border-gray-200 hover:border-purple-300'
+      <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border-2 transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer ${
+        isLive ? 'border-red-500 bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600'
       }`}>
         {/* Header */}
         <div className={`p-4 ${isLive ? 'bg-gradient-to-r from-red-500 to-pink-500' : 'bg-gradient-to-r from-purple-500 to-blue-500'} text-white`}>
@@ -187,14 +217,14 @@ const BattleSearch: React.FC = () => {
         <div className="p-4">
           <div className="grid grid-cols-3 gap-4 items-center">
             {/* Challenger */}
-            <div className={`text-center p-3 rounded-lg ${challengerWinning && isLive ? 'bg-yellow-100 border-2 border-yellow-400' : 'bg-gray-50'}`}>
+            <div className={`text-center p-3 rounded-lg ${challengerWinning && isLive ? 'bg-yellow-100 dark:bg-yellow-900/30 border-2 border-yellow-400 dark:border-yellow-500' : 'bg-gray-50 dark:bg-gray-700'}`}>
               <img
                 src={battle.challenger.avatar}
                 alt={battle.challenger.name}
                 className="w-12 h-12 rounded-full mx-auto mb-2 border-2 border-white shadow-lg"
               />
-              <div className="font-semibold text-sm truncate">{battle.challenger.name}</div>
-              <div className="text-xs text-gray-600">{battle.challenger.worksCount}作品</div>
+              <div className="font-semibold text-sm truncate text-gray-900 dark:text-white">{battle.challenger.name}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">{battle.challenger.worksCount}作品</div>
               {isLive && (
                 <div className="text-lg font-bold text-purple-600 mt-1">
                   {battle.totalPoints.challenger.toLocaleString()}pt
@@ -219,14 +249,14 @@ const BattleSearch: React.FC = () => {
             </div>
 
             {/* Opponent */}
-            <div className={`text-center p-3 rounded-lg ${!challengerWinning && isLive ? 'bg-yellow-100 border-2 border-yellow-400' : 'bg-gray-50'}`}>
+            <div className={`text-center p-3 rounded-lg ${!challengerWinning && isLive ? 'bg-yellow-100 dark:bg-yellow-900/30 border-2 border-yellow-400 dark:border-yellow-500' : 'bg-gray-50 dark:bg-gray-700'}`}>
               <img
                 src={battle.opponent.avatar}
                 alt={battle.opponent.name}
                 className="w-12 h-12 rounded-full mx-auto mb-2 border-2 border-white shadow-lg"
               />
-              <div className="font-semibold text-sm truncate">{battle.opponent.name}</div>
-              <div className="text-xs text-gray-600">{battle.opponent.worksCount}作品</div>
+              <div className="font-semibold text-sm truncate text-gray-900 dark:text-white">{battle.opponent.name}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">{battle.opponent.worksCount}作品</div>
               {isLive && (
                 <div className="text-lg font-bold text-purple-600 mt-1">
                   {battle.totalPoints.opponent.toLocaleString()}pt
@@ -240,7 +270,7 @@ const BattleSearch: React.FC = () => {
           <div className="mt-4 text-center">
             <div className="flex items-center justify-center gap-2 text-sm">
               <Sparkles className="w-4 h-4 text-yellow-500" />
-              <span className="text-gray-600">賞金プール:</span>
+              <span className="text-gray-600 dark:text-gray-400">賞金プール:</span>
               <span className="font-bold text-green-600">¥{battle.prizePool.toLocaleString()}</span>
             </div>
           </div>
@@ -270,7 +300,7 @@ const BattleSearch: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 text-white">
         <div className="max-w-6xl mx-auto px-6 py-12">
@@ -295,7 +325,7 @@ const BattleSearch: React.FC = () => {
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Search and Filters */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
           <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Search Input */}
             <div className="lg:col-span-2">
@@ -306,7 +336,7 @@ const BattleSearch: React.FC = () => {
                   placeholder="バトル・クリエイター名で検索..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
               </div>
             </div>
@@ -315,7 +345,7 @@ const BattleSearch: React.FC = () => {
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="all">全ての状態</option>
               <option value="live">ライブ配信中</option>
@@ -327,7 +357,7 @@ const BattleSearch: React.FC = () => {
             <select
               value={selectedDuration}
               onChange={(e) => setSelectedDuration(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="all">全ての時間</option>
               <option value="5">5分バトル</option>
@@ -339,7 +369,7 @@ const BattleSearch: React.FC = () => {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="all">全カテゴリ</option>
               <option value="イラスト">イラスト</option>
@@ -355,21 +385,21 @@ const BattleSearch: React.FC = () => {
         {loading ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="bg-white rounded-xl shadow-lg overflow-hidden animate-pulse">
-                <div className="h-32 bg-gray-200"></div>
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden animate-pulse">
+                <div className="h-32 bg-gray-200 dark:bg-gray-700"></div>
                 <div className="p-6">
-                  <div className="h-4 bg-gray-200 rounded mb-4"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="text-center">
-                      <div className="w-12 h-12 bg-gray-200 rounded-full mx-auto mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded"></div>
+                      <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-2"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded"></div>
                     </div>
                     <div className="text-center">
-                      <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto"></div>
+                      <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto"></div>
                     </div>
                     <div className="text-center">
-                      <div className="w-12 h-12 bg-gray-200 rounded-full mx-auto mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded"></div>
+                      <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-2"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded"></div>
                     </div>
                   </div>
                 </div>
@@ -385,8 +415,8 @@ const BattleSearch: React.FC = () => {
         ) : (
           <div className="text-center py-16">
             <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">バトルが見つかりません</h3>
-            <p className="text-gray-500">検索条件を変更してお試しください</p>
+            <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">バトルが見つかりません</h3>
+            <p className="text-gray-500 dark:text-gray-500">検索条件を変更してお試しください</p>
           </div>
         )}
 

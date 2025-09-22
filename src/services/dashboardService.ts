@@ -2,6 +2,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from './supabaseClient';
 
+// サンプルモード判定（環境変数 or デモユーザー or demo-* ユーザーID）
+const isSampleMode = (userId?: string): boolean => {
+  // 環境変数での明示指定
+  // deno-lint-ignore no-explicit-any
+  if (((import.meta as any).env?.VITE_ENABLE_SAMPLE) === 'true') return true
+  // demo-* ID を使用
+  if (userId && userId.startsWith('demo-')) return true
+  // ローカルストレージのデモユーザー
+  try {
+    const du = typeof window !== 'undefined' ? localStorage.getItem('demoUser') : null
+    if (du) return true
+  } catch {}
+  return false
+}
+
 export interface DashboardData {
   collections: number;
   favorites: number;
@@ -56,6 +71,17 @@ export interface OrderHistory {
 
 export const fetchDashboardData = async (userId: string): Promise<DashboardData> => {
   try {
+    if (isSampleMode(userId)) {
+      const collections = 3
+      const favorites = 5
+      const cartItems = 2
+      const orders = 4
+      const recentActivities: Activity[] = [
+        { id: 'a1', type: 'order', title: '「桜の季節」を注文しました', timestamp: new Date().toISOString(), icon: null, color: 'from-green-500 to-green-600', workTitle: '桜の季節', creatorName: 'さくら', orderStatus: 'paid' },
+        { id: 'a2', type: 'favorite', title: '「夕暮れの街」をお気に入りに追加', timestamp: new Date(Date.now()-3600000).toISOString(), icon: null, color: 'from-blue-500 to-purple-600', workTitle: '夕暮れの街', creatorName: 'りく' },
+      ]
+      return { collections, favorites, cartItems, orders, recentActivities }
+    }
     // コレクション数を取得（購入したクリエイターの数）
     const { data: collectionsData } = await supabase
       .from('purchases')
@@ -103,6 +129,12 @@ export const fetchDashboardData = async (userId: string): Promise<DashboardData>
 
 export const fetchRecentActivities = async (userId: string): Promise<Activity[]> => {
   try {
+    if (isSampleMode(userId)) {
+      return [
+        { id: 'a1', type: 'order', title: '「桜の季節」を注文しました', timestamp: new Date().toISOString(), icon: null, color: 'from-green-500 to-green-600', workTitle: '桜の季節', creatorName: 'さくら', orderStatus: 'paid' },
+        { id: 'a2', type: 'cart', title: '「海辺の朝」をカートに追加', timestamp: new Date(Date.now()-7200000).toISOString(), icon: null, color: 'from-orange-500 to-orange-600', workTitle: '海辺の朝', creatorName: 'みお' },
+      ]
+    }
     const activities: Activity[] = [];
     const creatorIdSet = new Set<string>()
 
@@ -238,6 +270,18 @@ export const fetchRecentActivities = async (userId: string): Promise<Activity[]>
 
 export const fetchUserCollections = async (userId: string): Promise<Collection[]> => {
   try {
+    if (isSampleMode(userId)) {
+      return [
+        {
+          id: 'col-1', creator_id: 'demo-user-1', creator_name: 'さくら', creator_avatar: 'https://images.unsplash.com/photo-1494790108755-2616b332c66a?w=80&h=80&fit=crop&crop=face',
+          work_count: 2, total_spent: 5300, first_purchase_date: new Date(Date.now()-86400000).toISOString(), latest_purchase_date: new Date().toISOString(),
+          works: [
+            { id: 'demo-work-1', title: '桜の季節', image_url: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=200&h=150&fit=crop', price: 2500, purchased_at: new Date().toISOString() },
+            { id: 'demo-work-3', title: '海辺の朝', image_url: 'https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=200&h=150&fit=crop', price: 2800, purchased_at: new Date(Date.now()-86400000).toISOString() },
+          ]
+        }
+      ]
+    }
     const { data: purchasesData } = await supabase
       .from('purchases')
       .select(`

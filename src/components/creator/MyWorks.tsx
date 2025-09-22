@@ -7,6 +7,7 @@ import { ProductCard } from '@/components/product/ProductCard'
 export function MyWorks() {
   const [items, setItems] = useState<Work[]>([])
   const [loading, setLoading] = useState(true)
+  const [highlightId, setHighlightId] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
@@ -16,6 +17,20 @@ export function MyWorks() {
       const data = await myWorks(user.id)
       if (active) setItems(data)
       setLoading(false)
+      // ハイライト対象があればスクロール
+      try {
+        const id = localStorage.getItem('highlight_work_id')
+        if (id) {
+          setHighlightId(id)
+          setTimeout(() => {
+            const el = document.getElementById(`work-${id}`)
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            // ハイライトは数秒で解除
+            setTimeout(() => setHighlightId((prev) => (prev === id ? null : prev)), 2200)
+            localStorage.removeItem('highlight_work_id')
+          }, 50)
+        }
+      } catch {}
     })()
     return () => { active = false }
   }, [])
@@ -25,14 +40,23 @@ export function MyWorks() {
   return (
     <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
       {items.map((w) => (
-        <ProductCard
+        <div
           key={w.id}
-          id={w.id}
-          imageUrl={w.thumbnail_url || w.image_url}
-          title={w.title}
-          price={w.price}
-          badgeText={new Date(w.created_at).toLocaleDateString('ja-JP')}
-        />
+          id={`work-${w.id}`}
+          className={
+            highlightId === w.id
+              ? 'ring-2 ring-primary-500 rounded-lg transition-shadow'
+              : ''
+          }
+        >
+          <ProductCard
+            id={w.id}
+            imageUrl={w.thumbnail_url || w.image_url}
+            title={w.title}
+            price={w.price}
+            badgeText={new Date(w.created_at).toLocaleDateString('ja-JP')}
+          />
+        </div>
       ))}
       {items.length === 0 && <div className="p-4 text-gray-500">作品はまだありません。</div>}
     </div>

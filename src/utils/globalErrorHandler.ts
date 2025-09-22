@@ -23,7 +23,7 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 
   // デフォルトの動作を防ぐ（コンソールエラーの抑制）
-  event.preventDefault()
+  // event.preventDefault()  // デバッグのため一時的にコメントアウト
 })
 
 // グローバルエラーハンドラ

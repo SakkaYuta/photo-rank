@@ -228,7 +228,22 @@ async function handlePaymentIntentSucceeded(
   supabase: any,
   paymentIntent: Stripe.PaymentIntent
 ): Promise<any> {
-  const { user_id, work_id, order_id } = paymentIntent.metadata;
+  const { user_id, work_id, order_id, type, battle_id, creator_id } = paymentIntent.metadata as any;
+  // Cheer ticket flow
+  if (type === 'cheer_ticket' && battle_id && creator_id && user_id) {
+    await supabase
+      .from('cheer_tickets')
+      .insert({
+        battle_id,
+        supporter_id: user_id,
+        creator_id,
+        amount: paymentIntent.amount,
+        has_signed_goods_right: true,
+        has_exclusive_options: true,
+        purchased_at: new Date().toISOString()
+      })
+    return { success: true, cheer: true }
+  }
   
   if (!user_id || !work_id) {
     throw new Error('Missing required metadata in payment intent');

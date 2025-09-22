@@ -32,6 +32,18 @@ export interface CreateAdminNotificationRequest {
 export class AdminNotificationService {
   // 管理者通知を作成
   static async createNotification(data: CreateAdminNotificationRequest): Promise<AdminNotification> {
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+      return {
+        id: `demo-noti-${Date.now()}`,
+        type: data.type,
+        severity: data.severity || 'normal',
+        title: data.title,
+        description: data.description,
+        metadata: data.metadata,
+        read: false,
+        created_at: new Date().toISOString(),
+      }
+    }
     const { data: notification, error } = await supabase
       .from('admin_notifications')
       .insert({
@@ -56,6 +68,12 @@ export class AdminNotificationService {
     limit = 50,
     unreadOnly = false
   ): Promise<AdminNotification[]> {
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+      return [
+        { id: 'demo-n1', type: 'system_error', severity: 'critical', title: 'デモ: システムエラー', description: 'サンプル通知', metadata: {}, read: false, created_at: new Date().toISOString() },
+        { id: 'demo-n2', type: 'payment_failure', severity: 'high', title: 'デモ: 決済失敗', description: 'サンプル', metadata: {}, read: true, created_at: new Date(Date.now()-3600000).toISOString() },
+      ]
+    }
     let query = supabase
       .from('admin_notifications')
       .select('*')
@@ -77,6 +95,7 @@ export class AdminNotificationService {
 
   // 通知を既読にマーク
   static async markAsRead(notificationId: string): Promise<void> {
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') return
     const { error } = await supabase
       .from('admin_notifications')
       .update({ read: true })
@@ -89,6 +108,7 @@ export class AdminNotificationService {
 
   // 複数の通知を既読にマーク
   static async markMultipleAsRead(notificationIds: string[]): Promise<void> {
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') return
     const { error } = await supabase
       .from('admin_notifications')
       .update({ read: true })
@@ -101,6 +121,9 @@ export class AdminNotificationService {
 
   // 未読通知数を取得
   static async getUnreadCount(): Promise<number> {
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+      return 1
+    }
     const { count, error } = await supabase
       .from('admin_notifications')
       .select('*', { count: 'exact', head: true })
@@ -115,6 +138,7 @@ export class AdminNotificationService {
 
   // 通知を削除
   static async deleteNotification(notificationId: string): Promise<void> {
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') return
     const { error } = await supabase
       .from('admin_notifications')
       .delete()
@@ -132,6 +156,14 @@ export class AdminNotificationService {
     by_severity: Record<AdminNotificationSeverity, number>
     by_type: Record<string, number>
   }> {
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+      return {
+        total: 2,
+        unread: 1,
+        by_severity: { low: 0, normal: 0, high: 1, critical: 1 },
+        by_type: { payment_failure: 1, system_error: 1 }
+      }
+    }
     const { data, error } = await supabase
       .from('admin_notifications')
       .select('severity, type, read')

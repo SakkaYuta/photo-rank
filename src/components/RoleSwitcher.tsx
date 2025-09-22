@@ -14,7 +14,6 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ className = '' }) => {
   const roles = [
     { value: 'general' as UserType, label: '一般ユーザー' },
     { value: 'creator' as UserType, label: 'クリエイター' },
-    { value: 'factory' as UserType, label: '工場' },
     { value: 'organizer' as UserType, label: 'オーガナイザー' }
   ];
 
@@ -46,6 +45,11 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ className = '' }) => {
     );
   }
 
+  // 一般ユーザーの場合は切り替えタブを非表示
+  if (userType === 'general') {
+    return null;
+  }
+
   return (
     <div className={`relative ${className}`}>
       <button
@@ -59,7 +63,7 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ className = '' }) => {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 min-w-40 bg-white border rounded-lg shadow-lg z-50">
+        <div className="absolute top-full right-0 mt-1 min-w-40 bg-white border rounded-lg shadow-lg z-50">
           <div className="py-1">
             <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
               ロール切り替え（テスト用）

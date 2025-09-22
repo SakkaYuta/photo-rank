@@ -2,6 +2,17 @@ import { supabase } from './supabaseClient'
 import type { ManufacturingPartner, FactoryProduct, ManufacturingOrder, PartnerReview } from '../types'
 
 export async function getCurrentPartnerProfile(): Promise<ManufacturingPartner | null> {
+  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+    return {
+      id: 'demo-partner-1',
+      name: 'デモ製造パートナー',
+      contact_email: 'partner@example.com',
+      status: 'approved',
+      avg_rating: 4.5,
+      ratings_count: 12,
+      created_at: new Date().toISOString(),
+    } as any
+  }
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   
@@ -19,6 +30,12 @@ export async function getCurrentPartnerProfile(): Promise<ManufacturingPartner |
 }
 
 export async function getPartnerProducts(partnerId: string): Promise<FactoryProduct[]> {
+  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || partnerId.startsWith('demo')) {
+    return [
+      { id: 'prod-1', partner_id: partnerId, product_type: 'tshirt', base_cost: 1500, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: 'prod-2', partner_id: partnerId, product_type: 'mug', base_cost: 800, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    ] as any
+  }
   const { data, error } = await supabase
     .from('factory_products')
     .select('*')
@@ -62,6 +79,11 @@ export async function deleteFactoryProduct(id: string): Promise<void> {
 }
 
 export async function getPartnerOrders(partnerId: string): Promise<any[]> {
+  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || partnerId.startsWith('demo')) {
+    return [
+      { id: 'order-1', partner_id: partnerId, status: 'in_production', created_at: new Date().toISOString(), factory_products: { id: 'prod-1', product_type: 'tshirt' }, works: { id: 'demo-work-1', title: '桜の季節', image_url: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=400&h=300&fit=crop' }, purchases: [{ id: 'demo-order-1', user_id: 'demo-buyer-1', purchased_at: new Date().toISOString() }] },
+    ]
+  }
   // まずは統合ビューを利用（なければフォールバック）
   const { data: viewRows, error: viewErr } = await supabase
     .from('partner_orders_view')
@@ -184,6 +206,9 @@ export async function updateOrderStatus(
 }
 
 export async function getPartnerStats(partnerId: string) {
+  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || partnerId.startsWith('demo')) {
+    return { activeProducts: 2, totalOrders: 5, pendingOrders: 2, completedOrders: 1, averageRating: 4.3, totalReviews: 12 }
+  }
   const [ordersResult, productsResult, reviewsResult] = await Promise.all([
     supabase
       .from('manufacturing_orders')
@@ -229,6 +254,11 @@ export async function getPartnerStats(partnerId: string) {
 // ===== レビュー関連サービス =====
 
 export async function getPartnerReviews(partnerId: string): Promise<PartnerReview[]> {
+  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+    return [
+      { id: 'rev-1', partner_id: partnerId, author_user_id: 'demo-user-1', rating: 5, comment: 'とても素早く対応いただきました！', created_at: new Date().toISOString(), users: { username: 'ユーザーA', avatar_url: undefined } },
+    ] as any
+  }
   const { data, error } = await supabase
     .from('partner_reviews')
     .select('*')

@@ -63,3 +63,4 @@ jspm_packages/
 .supabase/
 .vercel
 .env*.local
+supabase/functions/.env

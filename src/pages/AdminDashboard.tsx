@@ -4,6 +4,7 @@ import { ErrorLogTable } from '../components/admin/ErrorLogTable'
 import { SystemStatus } from '../components/admin/SystemStatus'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '../services/supabaseClient'
+import { SAMPLE_ADMIN_METRICS } from '@/sample/adminMetrics'
 
 export const AdminDashboard: React.FC = () => {
   const [metrics, setMetrics] = useState<any>(null)
@@ -12,6 +13,20 @@ export const AdminDashboard: React.FC = () => {
 
   const fetchMetrics = async () => {
     try {
+      if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+        setMetrics({
+          todayRevenue: SAMPLE_ADMIN_METRICS.todayRevenue,
+          successRate: SAMPLE_ADMIN_METRICS.successRate,
+          expiredLocks: SAMPLE_ADMIN_METRICS.expiredLocks,
+          recentErrors: SAMPLE_ADMIN_METRICS.recentErrors,
+        })
+        setRevenueData(SAMPLE_ADMIN_METRICS.daily.map(d => ({
+          date: new Date(d.date).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' }),
+          revenue: d.total_revenue,
+          orders: d.total_purchases,
+        })))
+        return
+      }
       const res = await fetch('/functions/v1/admin-metrics')
       const data = await res.json()
       setMetrics(data.metrics)
@@ -30,6 +45,18 @@ export const AdminDashboard: React.FC = () => {
       }
     } catch (e) {
       console.error('metrics fetch error', e)
+      // fallback to sample on error
+      setMetrics({
+        todayRevenue: SAMPLE_ADMIN_METRICS.todayRevenue,
+        successRate: SAMPLE_ADMIN_METRICS.successRate,
+        expiredLocks: SAMPLE_ADMIN_METRICS.expiredLocks,
+        recentErrors: SAMPLE_ADMIN_METRICS.recentErrors,
+      })
+      setRevenueData(SAMPLE_ADMIN_METRICS.daily.map(d => ({
+        date: new Date(d.date).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' }),
+        revenue: d.total_revenue,
+        orders: d.total_purchases,
+      })))
     } finally {
       setLoading(false)
     }
@@ -88,4 +115,3 @@ export const AdminDashboard: React.FC = () => {
     </div>
   )
 }
-
