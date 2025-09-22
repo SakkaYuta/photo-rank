@@ -303,13 +303,13 @@ const BattleSearch: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 text-white">
-        <div className="max-w-6xl mx-auto px-6 py-12">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-8 sm:py-12">
           <div className="text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
               <Gamepad2 className="w-12 h-12 animate-bounce" />
               <Flame className="w-8 h-8 text-orange-300 animate-pulse" />
             </div>
-            <h1 className="text-4xl font-bold mb-4">
+            <h1 className="text-2xl sm:text-4xl font-bold mb-4">
               リアルタイム
               <span className="bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
                 バトル検索
@@ -323,7 +323,7 @@ const BattleSearch: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* Search and Filters */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
           <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">

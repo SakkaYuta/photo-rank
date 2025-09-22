@@ -17,7 +17,7 @@ const GeneralHomepage: React.FC = () => {
       {/* Hero Section */}
       <section className="relative px-6 py-20 text-center">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">
+          <h1 className="text-3xl sm:text-5xl font-bold text-gray-900 mb-6">
             推し活を
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">
               グッズバトル
@@ -133,15 +133,15 @@ const GeneralHomepage: React.FC = () => {
 
           <div className="grid md:grid-cols-3 gap-8">
             <div className="p-6">
-              <div className="text-4xl font-bold text-purple-600 mb-2">1,200+</div>
+              <div className="text-2xl sm:text-4xl font-bold text-purple-600 mb-2">1,200+</div>
               <p className="text-gray-600">作成グッズ数</p>
             </div>
             <div className="p-6">
-              <div className="text-4xl font-bold text-blue-600 mb-2">350+</div>
+              <div className="text-2xl sm:text-4xl font-bold text-blue-600 mb-2">350+</div>
               <p className="text-gray-600">登録クリエイター</p>
             </div>
             <div className="p-6">
-              <div className="text-4xl font-bold text-green-600 mb-2">85</div>
+              <div className="text-2xl sm:text-4xl font-bold text-green-600 mb-2">85</div>
               <p className="text-gray-600">バトル開催数</p>
             </div>
           </div>
@@ -151,7 +151,7 @@ const GeneralHomepage: React.FC = () => {
       {/* CTA Section */}
       <section className="px-6 py-20 bg-gradient-to-r from-purple-600 to-blue-600">
         <div className="max-w-4xl mx-auto text-center text-white">
-          <h2 className="text-4xl font-bold mb-6">
+          <h2 className="text-2xl sm:text-4xl font-bold mb-6">
             あなたもPhoto-Rankの一員に
           </h2>
           <p className="text-xl mb-8 opacity-90">

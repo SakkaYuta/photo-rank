@@ -82,7 +82,7 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6 dark:bg-gray-950">
       <div className="mx-auto max-w-7xl">
-        <h1 className="mb-8 text-3xl font-bold">管理ダッシュボード</h1>
+        <h1 className="mb-6 sm:mb-8 text-xl sm:text-3xl font-bold">管理ダッシュボード</h1>
 
         <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           <MetricCard title="本日の売上" value={metrics?.todayRevenue || 0} prefix="¥" trend="up" change={12} />

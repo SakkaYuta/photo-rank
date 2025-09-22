@@ -20,7 +20,7 @@ export const ProductPreview = ({ photo, isOwner }: Props) => {
       )}
       {!isOwner && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <span className="text-white text-6xl opacity-30" style={{ transform: 'rotate(45deg)' }}>
+          <span className="text-white text-4xl sm:text-6xl opacity-30" style={{ transform: 'rotate(45deg)' }}>
             SAMPLE
           </span>
         </div>

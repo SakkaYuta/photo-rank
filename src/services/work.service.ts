@@ -94,7 +94,9 @@ export async function createWork(payload: Partial<Work>): Promise<Work> {
 export async function myWorks(creatorId: string): Promise<Work[]> {
   if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
     const all = [...sampleCreatedWorks, ...SAMPLE_WORKS]
-    return all.filter(w => !creatorId || w.creator_id === creatorId)
+    // デモ環境ではデモID（例: demo-creator-...）とサンプルのcreator_idが一致しないため全件表示
+    if (!creatorId || creatorId.startsWith('demo-')) return all
+    return all.filter(w => w.creator_id === creatorId)
   }
   const { data, error } = await supabase
     .from('works')
