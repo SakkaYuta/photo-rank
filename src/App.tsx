@@ -33,6 +33,8 @@ import { Privacy } from './pages/legal/Privacy'
 import { RefundPolicy } from './pages/legal/RefundPolicy'
 import { CommerceAct } from './pages/legal/CommerceAct'
 import RoleBasedRouter from './components/RoleBasedRouter'
+import { UrlCreate } from './pages/UrlCreate'
+import BattleSearch from './pages/BattleSearch'
 
 type ViewKey =
   | 'trending'
@@ -45,6 +47,8 @@ type ViewKey =
   | 'orders'
   | 'profile'
   | 'admin'
+  | 'admin-asset-policies'
+  | 'admin-approvals'
   | 'partner-dashboard'
   | 'partner-products'
   | 'partner-orders'
@@ -58,6 +62,8 @@ type ViewKey =
   | 'refunds'
   | 'commerce'
   | 'role-based'
+  | 'url-create'
+  | 'battle-search'
 
 function App() {
   const [view, setView] = useState<ViewKey>('role-based')
@@ -177,9 +183,29 @@ function App() {
                   <ProfileSettings />
                 </PartialErrorBoundary>
               )}
+              {view === 'url-create' && (
+                <PartialErrorBoundary name="URLから作成">
+                  {/* 遅延読み込みにせず軽量UIで提供 */}
+                  <UrlCreate />
+                </PartialErrorBoundary>
+              )}
               {view === 'admin' && isAdmin && (
                 <PartialErrorBoundary name="管理画面">
                   <AdminDashboard />
+                </PartialErrorBoundary>
+              )}
+              {view === 'admin-asset-policies' && isAdmin && (
+                <PartialErrorBoundary name="アセットポリシー">
+                  <Suspense fallback={<SuspenseFallback />}>
+                    <AdminAssetPolicies />
+                  </Suspense>
+                </PartialErrorBoundary>
+              )}
+              {view === 'admin-approvals' && isAdmin && (
+                <PartialErrorBoundary name="承認キュー">
+                  <Suspense fallback={<SuspenseFallback />}>
+                    <AdminApprovalQueue />
+                  </Suspense>
                 </PartialErrorBoundary>
               )}
               {view === 'partner-dashboard' && isPartner && (
@@ -254,6 +280,11 @@ function App() {
                   </div>
                 </PartialErrorBoundary>
               )}
+              {view === 'battle-search' && (
+                <PartialErrorBoundary name="バトル検索">
+                  <BattleSearch />
+                </PartialErrorBoundary>
+              )}
             </main>
             <Footer />
           </div>
@@ -265,5 +296,9 @@ function App() {
     </ErrorBoundary>
   )
 }
+
+// Admin pages (lazy import could be added later)
+const AdminAssetPolicies = React.lazy(() => import('./pages/admin/AssetPolicies').then(m => ({ default: m.AssetPolicies })))
+const AdminApprovalQueue = React.lazy(() => import('./pages/admin/AssetApprovalQueue').then(m => ({ default: m.AssetApprovalQueue })))
 
 export default App
