@@ -12,7 +12,7 @@ export function UserMenu() {
   const { userType } = useUserRole()
   const { navigate } = useNav()
   const [open, setOpen] = useState(false)
-  // const [showProfileSettings, setShowProfileSettings] = useState(false)
+  const [showProfileSettings, setShowProfileSettings] = useState(false)
 
   if (loading) return <div className="h-8 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-800" />
   if (!profile) return (

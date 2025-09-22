@@ -20,7 +20,7 @@ export const AccountExtraService = {
     return (data as AccountExtra) || null
   },
 
-  async upsert(input: Omit<AccountExtra, 'updated_at'>): Promise<AccountExtra> {
+  async upsert(input: Omit<AccountExtra, 'updated_at' | 'user_id'>): Promise<AccountExtra> {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
     const payload = { ...input, user_id: user.id }
@@ -33,4 +33,3 @@ export const AccountExtraService = {
     return data as AccountExtra
   }
 }
-

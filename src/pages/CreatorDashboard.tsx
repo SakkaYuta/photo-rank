@@ -404,7 +404,7 @@ const CreatorDashboard: React.FC = () => {
                 </button>
                 <button
                   className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg"
-                  onClick={() => navigateTo('search')}
+                  onClick={() => navigate('search')}
                 >
                   <Gamepad2 className="w-5 h-5 text-purple-600" />
                   <span className="truncate">バトルを探す</span>

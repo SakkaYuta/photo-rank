@@ -1,6 +1,5 @@
 import { APP_NAME } from '../../utils/constants'
 import { UserMenu } from '../auth/UserMenu'
-import { ThemeToggle } from '../ui/ThemeToggle'
 import { ShoppingCart } from 'lucide-react'
 import { useCart } from '@/contexts/CartContext'
 import RoleSwitcher from '../RoleSwitcher'
@@ -51,11 +50,11 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur dark:border-gray-800 dark:bg-gray-900/70">
+    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-3 sm:px-4 py-2 sm:py-3">
         <a
           href={`#${getHomeView()}`}
-          className="text-left text-lg sm:text-xl font-bold text-primary-700 dark:text-primary-400 flex-shrink-0 hover:opacity-80 truncate"
+          className="text-left text-lg sm:text-xl font-bold text-primary-700 flex-shrink-0 hover:opacity-80 truncate"
           onClick={handleLogoClick}
           aria-label="ホームへ"
           title="ホームへ"
@@ -65,9 +64,9 @@ export function Header() {
         <div className="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0 overflow-visible">
           {/* ログイン済みユーザーのみロール切り替えを表示 */}
           {user && <RoleSwitcher />}
-          {!isFactory && (
+          {user && !isFactory && (
             <button
-              className="relative rounded-md p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-base"
+              className="relative rounded-md p-1.5 sm:p-2 hover:bg-gray-100 transition-base"
               onClick={handleCartClick}
               aria-label="カートを見る"
             >
@@ -79,7 +78,6 @@ export function Header() {
               )}
             </button>
           )}
-          <ThemeToggle />
           <UserMenu />
         </div>
       </div>
