@@ -20,7 +20,7 @@ export function Header() {
   // ログイン済みユーザーの初期ページを決定
   const getHomeView = () => {
     if (!user) {
-      return 'general-dashboard' // 未ログイン時はGeneralDashboard
+      return 'merch' // 未ログイン時はMerchContentHub（LP表示）
     }
 
     // viewOverrideをチェック（localStorageから取得）

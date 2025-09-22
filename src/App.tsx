@@ -78,7 +78,7 @@ type ViewKey =
   | 'local-data'
 
 function App() {
-  const [view, setView] = useState<ViewKey>('general-dashboard')
+  const [view, setView] = useState<ViewKey>('merch')
   const { profile } = useAuth()
   const { partner } = usePartnerAuth()
   const { isAdmin, isAdminOrModerator, adminUser } = useAdminAuth()
@@ -107,6 +107,9 @@ function App() {
           setView('general-dashboard')
           break
       }
+    } else {
+      // 未ログインユーザーはLPを表示
+      setView('merch')
     }
   }, [userType, user])
 
