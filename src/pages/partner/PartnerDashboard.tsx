@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, memo } from 'react'
 import { usePartnerAuth } from '../../hooks/usePartnerAuth'
-import { useNav } from '../../hooks/useNav'
+import { useNav } from '@/contexts/NavContext'
 import { getPartnerStats } from '../../services/partner.service'
 import { useOptimizedQuery } from '../../hooks/useOptimizedQuery'
 import { LoadingSpinner } from '../../components/common/LoadingSpinner'
@@ -42,7 +42,7 @@ type PartnerNotification = {
 
 export function PartnerDashboard() {
   const { partner } = usePartnerAuth()
-  const { navigateTo } = useNav()
+  const { navigate } = useNav()
   const [stats, setStats] = useState<PartnerStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [recentOrders, setRecentOrders] = useState<any[]>([])
@@ -339,7 +339,7 @@ export function PartnerDashboard() {
             <button className="btn btn-outline transition-base hover-lift">未処理の注文を確認</button>
             <button
               className="btn btn-outline transition-base hover-lift"
-              onClick={() => navigateTo('search')}
+              onClick={() => navigate('search')}
             >
               バトルを探す
             </button>
