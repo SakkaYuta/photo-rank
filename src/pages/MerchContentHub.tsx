@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Users, Sword, ChevronRight, Sparkles, Search, Package, Shirt, Mug, Sticker } from 'lucide-react'
+import { Users, Sword, ChevronRight, Sparkles, Search, Package, Shirt, Sticker } from 'lucide-react'
 import { APP_NAME } from '@/utils/constants'
 import { useUserRole } from '@/hooks/useUserRole'
 import { supabase } from '@/services/supabaseClient'
@@ -103,7 +103,7 @@ const MerchContentHub: React.FC = () => {
               </div>
             </a>
             <a href="#search" className="rounded-xl border bg-white p-4 hover:shadow transition-base flex items-center gap-3">
-              <div className="rounded-lg bg-orange-50 p-2 text-orange-600"><Mug className="w-6 h-6" /></div>
+              <div className="rounded-lg bg-orange-50 p-2 text-orange-600"><Package className="w-6 h-6" /></div>
               <div>
                 <p className="font-semibold">マグカップ</p>
                 <p className="text-xs text-gray-500">¥800〜</p>
