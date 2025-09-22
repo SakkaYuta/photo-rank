@@ -236,10 +236,10 @@ const FactoryDashboard: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">
                 工場管理ダッシュボード
               </h1>
               <p className="text-gray-600">
@@ -281,15 +281,15 @@ const FactoryDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-gray-600">受注中</h3>
               <Package className="w-5 h-5 text-blue-600" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{loading && !demoMode ? '—' : (displayStats.pendingOrders)}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-gray-900">{loading && !demoMode ? '—' : (displayStats.pendingOrders)}</p>
             <p className="text-sm text-orange-600">{loading && !demoMode ? '' : `総受注 ${displayStats.totalOrders}件`}</p>
           </div>
 
@@ -298,7 +298,7 @@ const FactoryDashboard: React.FC = () => {
               <h3 className="text-sm font-medium text-gray-600">完了済み</h3>
               <CheckCircle className="w-5 h-5 text-green-600" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{loading && !demoMode ? '—' : (displayStats.completedOrders)}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-gray-900">{loading && !demoMode ? '—' : (displayStats.completedOrders)}</p>
             <p className="text-sm text-green-600">出荷済み件数</p>
           </div>
 
@@ -307,7 +307,7 @@ const FactoryDashboard: React.FC = () => {
               <h3 className="text-sm font-medium text-gray-600">有効商品</h3>
               <Factory className="w-5 h-5 text-purple-600" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{loading && !demoMode ? '—' : (displayStats.activeProducts)}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-gray-900">{loading && !demoMode ? '—' : (displayStats.activeProducts)}</p>
             <p className="text-sm text-blue-600">公開中の商品</p>
           </div>
 
@@ -316,12 +316,12 @@ const FactoryDashboard: React.FC = () => {
               <h3 className="text-sm font-medium text-gray-600">平均評価</h3>
               <DollarSign className="w-5 h-5 text-orange-600" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{loading && !demoMode ? '—' : displayStats.averageRating.toFixed(1)}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-gray-900">{loading && !demoMode ? '—' : displayStats.averageRating.toFixed(1)}</p>
             <p className="text-sm text-gray-600">レビュー {loading && !demoMode ? '—' : displayStats.totalReviews} 件</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
           {/* Production Queue */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-sm">
@@ -379,7 +379,7 @@ const FactoryDashboard: React.FC = () => {
               </div>
               <div className="p-6 space-y-3">
                 <label className="text-sm text-gray-700">製品IDで絞り込み</label>
-                <select className="w-full border rounded-lg px-3 py-2" value={productFilter} onChange={(e) => setProductFilter(e.target.value)}>
+                <select className="w-full border rounded-lg px-3 py-2 text-sm" value={productFilter} onChange={(e) => setProductFilter(e.target.value)}>
                   <option value="">すべて</option>
                   {productKeys.map(k => (
                     <option key={k} value={k}>{k}</option>
@@ -398,7 +398,7 @@ const FactoryDashboard: React.FC = () => {
                   例: <code>ORD-001: in_production</code> や <code>ORD-002 -&gt; shipped</code> を1行ずつ記述
                 </p>
                 <textarea
-                  className="w-full border rounded-lg px-3 py-2 text-sm min-h-[120px]"
+                  className="w-full border rounded-lg px-3 py-2 text-xs sm:text-sm min-h-[100px] sm:min-h-[120px]"
                   placeholder={"ORD-001: in_production\nORD-002 -> shipped"}
                   value={mdText}
                   onChange={(e) => setMdText(e.target.value)}

@@ -30,7 +30,6 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
 
   // クリエイター向けのナビゲーション
   const creatorItems: NavItem[] = [
-    { key: 'role-based', label: 'ダッシュボード' },
     { key: 'create', label: '作品作成' },
     { key: 'myworks', label: 'マイ作品' },
     // 仕様変更により工場比較/製造発注タブを削除
@@ -99,12 +98,12 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
   }
   return (
     <nav className="sticky top-[53px] z-10 border-b border-gray-200 bg-white/80 backdrop-blur dark:border-gray-800 dark:bg-gray-900/70">
-      <div className="mx-auto max-w-6xl overflow-x-auto px-2">
-        <ul className="flex gap-2 py-2">
+      <div className="mx-auto max-w-6xl overflow-x-auto px-2 sm:px-4">
+        <ul className="flex gap-1 sm:gap-2 py-2 min-w-max">
           {dedupedItems.map((it) => (
             <li key={it.key}>
               <button
-                className={`btn btn-outline ${current === it.key ? 'bg-gray-100 dark:bg-gray-800' : ''}`}
+                className={`btn btn-outline text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 whitespace-nowrap ${current === it.key ? 'bg-gray-100 dark:bg-gray-800' : ''}`}
                 onClick={() => onChange(it.key)}
               >
                 {it.label}

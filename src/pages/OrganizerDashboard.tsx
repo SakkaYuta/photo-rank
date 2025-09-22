@@ -161,12 +161,12 @@ const OrganizerDashboard: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6">
           <div className="mb-8">
             <div className="h-8 bg-gray-200 rounded animate-pulse w-96 mb-4"></div>
             <div className="h-4 bg-gray-200 rounded animate-pulse w-64"></div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="bg-white p-6 rounded-lg shadow-sm">
                 <div className="h-6 bg-gray-200 rounded animate-pulse mb-4"></div>
@@ -201,10 +201,10 @@ const OrganizerDashboard: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">
                 クリエイター管理ダッシュボード
               </h1>
               <p className="text-gray-600">
@@ -238,15 +238,15 @@ const OrganizerDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-gray-600">総クリエイター数</h3>
               <Users className="w-5 h-5 text-blue-600" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{dashboardData.stats.totalCreators}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-gray-900">{dashboardData.stats.totalCreators}</p>
             <p className="text-sm text-green-600">アクティブ: {dashboardData.stats.activeCreators}名</p>
           </div>
 
@@ -255,7 +255,7 @@ const OrganizerDashboard: React.FC = () => {
               <h3 className="text-sm font-medium text-gray-600">今月の売上</h3>
               <DollarSign className="w-5 h-5 text-green-600" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{formatPrice(dashboardData.stats.monthlyRevenue)}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-gray-900">{formatPrice(dashboardData.stats.monthlyRevenue)}</p>
             <p className="text-sm text-gray-600">総売上: {formatPrice(dashboardData.stats.totalRevenue)}</p>
           </div>
 
@@ -264,7 +264,7 @@ const OrganizerDashboard: React.FC = () => {
               <h3 className="text-sm font-medium text-gray-600">作品数</h3>
               <Camera className="w-5 h-5 text-purple-600" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{dashboardData.stats.totalWorks}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-gray-900">{dashboardData.stats.totalWorks}</p>
             <p className="text-sm text-green-600">今月: +{dashboardData.stats.monthlyWorks}作品</p>
           </div>
 
@@ -273,12 +273,12 @@ const OrganizerDashboard: React.FC = () => {
               <h3 className="text-sm font-medium text-gray-600">承認待ち</h3>
               <AlertCircle className="w-5 h-5 text-yellow-600" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{dashboardData.stats.pendingApprovals}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-gray-900">{dashboardData.stats.pendingApprovals}</p>
             <p className="text-sm text-red-600">品質問題: {dashboardData.stats.qualityIssues}件</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
           {/* Creator Management */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-sm">

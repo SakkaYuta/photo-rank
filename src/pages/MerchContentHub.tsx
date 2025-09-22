@@ -84,30 +84,30 @@ const MerchContentHub: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
         {/* Hero Section */}
-        <section className="relative px-6 py-20 text-center">
+        <section className="relative px-4 sm:px-6 py-12 sm:py-20 text-center">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-5xl font-bold text-gray-900 mb-6">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight">
               推し活を
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">
                 グッズバトル
               </span>
               で盛り上げよう
             </h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg lg:text-xl text-gray-600 mb-6 sm:mb-8 max-w-2xl mx-auto px-2">
               お気に入りの画像から45種類のオリジナルグッズを作成・販売。
               リアルタイムバトルで競い合い、ファンと一緒に推し活を楽しもう！
             </p>
 
-            <div className="space-x-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
               <button
                 onClick={() => setIsAuthModalOpen(true)}
-                className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+                className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all text-sm sm:text-base"
               >
                 グッズ作成を始める
               </button>
               <button
                 onClick={handleViewWorks}
-                className="px-8 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:border-gray-400 transition-colors"
+                className="w-full sm:w-auto px-6 sm:px-8 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:border-gray-400 transition-colors text-sm sm:text-base"
               >
                 バトルを見る
               </button>
@@ -116,41 +116,41 @@ const MerchContentHub: React.FC = () => {
         </section>
 
         {/* Features Section */}
-        <section className="px-6 py-16 bg-white">
+        <section className="px-4 sm:px-6 py-12 sm:py-16 bg-white">
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-8 sm:mb-12">
               {APP_NAME}の特徴
             </h2>
 
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="text-center p-6">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Globe className="w-8 h-8 text-purple-600" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+              <div className="text-center p-4 sm:p-6">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Globe className="w-7 h-7 sm:w-8 sm:h-8 text-purple-600" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">URLから簡単グッズ化</h3>
-                <p className="text-gray-600">
+                <h3 className="text-lg sm:text-xl font-semibold mb-3">URLから簡単グッズ化</h3>
+                <p className="text-gray-600 text-sm sm:text-base">
                   お気に入りの画像URLを入力するだけで、自動で権利チェック。
                   45種類のグッズから選んですぐに注文できます。
                 </p>
               </div>
 
-              <div className="text-center p-6">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Gamepad2 className="w-8 h-8 text-blue-600" />
+              <div className="text-center p-4 sm:p-6">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Gamepad2 className="w-7 h-7 sm:w-8 sm:h-8 text-blue-600" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">リアルタイムバトル</h3>
-                <p className="text-gray-600">
+                <h3 className="text-lg sm:text-xl font-semibold mb-3">リアルタイムバトル</h3>
+                <p className="text-gray-600 text-sm sm:text-base">
                   クリエイター同士がリアルタイムでバトル！ファンの応援でポイント獲得。
                   勝者には売上の20%ボーナスをプレゼント。
                 </p>
               </div>
 
-              <div className="text-center p-6">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Zap className="w-8 h-8 text-green-600" />
+              <div className="text-center p-4 sm:p-6">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Zap className="w-7 h-7 sm:w-8 sm:h-8 text-green-600" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">応援チケット・特典</h3>
-                <p className="text-gray-600">
+                <h3 className="text-lg sm:text-xl font-semibold mb-3">応援チケット・特典</h3>
+                <p className="text-gray-600 text-sm sm:text-base">
                   100円の応援チケットでバトルをサポート。
                   サイン入りグッズ権利やカスタムオプションを獲得。
                 </p>
@@ -160,13 +160,13 @@ const MerchContentHub: React.FC = () => {
         </section>
 
         {/* Popular Categories */}
-        <section className="px-6 py-16 bg-gray-50">
+        <section className="px-4 sm:px-6 py-12 sm:py-16 bg-gray-50">
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-8 sm:mb-12">
               人気のグッズカテゴリ
             </h2>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {[
                 { name: 'Tシャツ・アパレル', count: '234', image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=200&fit=crop' },
                 { name: 'アクリルスタンド', count: '189', image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=300&h=200&fit=crop' },
@@ -177,12 +177,12 @@ const MerchContentHub: React.FC = () => {
                   <img
                     src={category.image}
                     alt={category.name}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-36 sm:h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-30 group-hover:bg-opacity-40 transition-opacity">
-                    <div className="absolute bottom-4 left-4 text-white">
-                      <h3 className="text-xl font-semibold">{category.name}</h3>
-                      <p className="text-sm opacity-90">{category.count}点の作品</p>
+                    <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 text-white">
+                      <h3 className="text-sm sm:text-xl font-semibold leading-tight">{category.name}</h3>
+                      <p className="text-xs sm:text-sm opacity-90">{category.count}点の作品</p>
                     </div>
                   </div>
                 </div>
@@ -192,48 +192,48 @@ const MerchContentHub: React.FC = () => {
         </section>
 
         {/* Stats Section */}
-        <section className="px-6 py-16 bg-white">
+        <section className="px-4 sm:px-6 py-12 sm:py-16 bg-white">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl font-bold text-gray-900 mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-8 sm:mb-12">
               {APP_NAME}の実績
             </h2>
 
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="p-6">
-                <div className="text-4xl font-bold text-purple-600 mb-2">1,200+</div>
-                <p className="text-gray-600">作成グッズ数</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
+              <div className="p-4 sm:p-6">
+                <div className="text-3xl sm:text-4xl font-bold text-purple-600 mb-2">1,200+</div>
+                <p className="text-gray-600 text-sm sm:text-base">作成グッズ数</p>
               </div>
-              <div className="p-6">
-                <div className="text-4xl font-bold text-blue-600 mb-2">350+</div>
-                <p className="text-gray-600">登録クリエイター</p>
+              <div className="p-4 sm:p-6">
+                <div className="text-3xl sm:text-4xl font-bold text-blue-600 mb-2">350+</div>
+                <p className="text-gray-600 text-sm sm:text-base">登録クリエイター</p>
               </div>
-              <div className="p-6">
-                <div className="text-4xl font-bold text-green-600 mb-2">85</div>
-                <p className="text-gray-600">バトル開催数</p>
+              <div className="p-4 sm:p-6">
+                <div className="text-3xl sm:text-4xl font-bold text-green-600 mb-2">85</div>
+                <p className="text-gray-600 text-sm sm:text-base">バトル開催数</p>
               </div>
             </div>
           </div>
         </section>
 
         {/* CTA Section */}
-        <section className="px-6 py-20 bg-gradient-to-r from-purple-600 to-blue-600">
+        <section className="px-4 sm:px-6 py-16 sm:py-20 bg-gradient-to-r from-purple-600 to-blue-600">
           <div className="max-w-4xl mx-auto text-center text-white">
-            <h2 className="text-4xl font-bold mb-6">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6">
               あなたも{APP_NAME}の一員に
             </h2>
-            <p className="text-xl mb-8 opacity-90">
+            <p className="text-base sm:text-lg lg:text-xl mb-6 sm:mb-8 opacity-90 px-2">
               クリエイターとして推し活グッズを作成・販売、ファンとしてお気に入りグッズを購入・応援。みんなで推し活を盛り上げよう！
             </p>
-            <div className="space-x-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
               <button
                 onClick={() => setIsAuthModalOpen(true)}
-                className="px-8 py-3 bg-white text-purple-600 font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+                className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-white text-purple-600 font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all text-sm sm:text-base"
               >
                 クリエイター登録
               </button>
               <button
                 onClick={() => setIsAuthModalOpen(true)}
-                className="px-8 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-white hover:text-purple-600 transition-all"
+                className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-white hover:text-purple-600 transition-all text-sm sm:text-base"
               >
                 ファン登録
               </button>
@@ -253,49 +253,63 @@ const MerchContentHub: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">{APP_NAME}</h1>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6 flex items-center justify-between">
+          <h1 className="text-xl sm:text-2xl font-bold">{APP_NAME}</h1>
           <div className="flex gap-2">
-            <button onClick={() => go('search')} className="btn btn-outline flex items-center gap-2">
-              <Users className="w-4 h-4" /> クリエイター
+            <button onClick={() => go('search')} className="btn btn-outline flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2">
+              <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">クリエイター</span>
+              <span className="sm:hidden">検索</span>
             </button>
-            <button onClick={() => go('battle-search')} className="btn btn-primary flex items-center gap-2">
-              <Sword className="w-4 h-4" /> バトル
+            <button onClick={() => go('battle-search')} className="btn btn-primary flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2">
+              <Sword className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">バトル</span>
+              <span className="sm:hidden">対戦</span>
             </button>
           </div>
         </div>
       </div>
 
-      <main className="max-w-6xl mx-auto px-4 md:px-6 py-8 space-y-10">
+      <main className="max-w-6xl mx-auto px-4 md:px-6 py-6 sm:py-8 space-y-8 sm:space-y-10">
         {/* Products overview */}
         <section>
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2"><Package className="w-5 h-5 text-teal-600" /> 販売中の商品</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <a href="#search" className="rounded-xl border bg-white p-4 hover:shadow transition-base flex items-center gap-3">
-              <div className="rounded-lg bg-emerald-50 p-2 text-emerald-600"><Shirt className="w-6 h-6" /></div>
+          <h2 className="text-base sm:text-lg font-semibold mb-3 flex items-center gap-2">
+            <Package className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600" /> 販売中の商品
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            <a href="#search" className="rounded-xl border bg-white p-3 sm:p-4 hover:shadow transition-base flex items-center gap-2 sm:gap-3">
+              <div className="rounded-lg bg-emerald-50 p-1.5 sm:p-2 text-emerald-600">
+                <Shirt className="w-4 h-4 sm:w-6 sm:h-6" />
+              </div>
               <div>
-                <p className="font-semibold">Tシャツ</p>
+                <p className="font-semibold text-sm sm:text-base">Tシャツ</p>
                 <p className="text-xs text-gray-500">¥1,500〜</p>
               </div>
             </a>
-            <a href="#search" className="rounded-xl border bg-white p-4 hover:shadow transition-base flex items-center gap-3">
-              <div className="rounded-lg bg-orange-50 p-2 text-orange-600"><Package className="w-6 h-6" /></div>
+            <a href="#search" className="rounded-xl border bg-white p-3 sm:p-4 hover:shadow transition-base flex items-center gap-2 sm:gap-3">
+              <div className="rounded-lg bg-orange-50 p-1.5 sm:p-2 text-orange-600">
+                <Package className="w-4 h-4 sm:w-6 sm:h-6" />
+              </div>
               <div>
-                <p className="font-semibold">マグカップ</p>
+                <p className="font-semibold text-sm sm:text-base">マグカップ</p>
                 <p className="text-xs text-gray-500">¥800〜</p>
               </div>
             </a>
-            <a href="#search" className="rounded-xl border bg-white p-4 hover:shadow transition-base flex items-center gap-3">
-              <div className="rounded-lg bg-pink-50 p-2 text-pink-600"><Sticker className="w-6 h-6" /></div>
+            <a href="#search" className="rounded-xl border bg-white p-3 sm:p-4 hover:shadow transition-base flex items-center gap-2 sm:gap-3">
+              <div className="rounded-lg bg-pink-50 p-1.5 sm:p-2 text-pink-600">
+                <Sticker className="w-4 h-4 sm:w-6 sm:h-6" />
+              </div>
               <div>
-                <p className="font-semibold">ステッカー</p>
+                <p className="font-semibold text-sm sm:text-base">ステッカー</p>
                 <p className="text-xs text-gray-500">¥300〜</p>
               </div>
             </a>
-            <a href="#search" className="rounded-xl border bg-white p-4 hover:shadow transition-base flex items-center gap-3">
-              <div className="rounded-lg bg-indigo-50 p-2 text-indigo-600"><Sparkles className="w-6 h-6" /></div>
+            <a href="#search" className="rounded-xl border bg-white p-3 sm:p-4 hover:shadow transition-base flex items-center gap-2 sm:gap-3">
+              <div className="rounded-lg bg-indigo-50 p-1.5 sm:p-2 text-indigo-600">
+                <Sparkles className="w-4 h-4 sm:w-6 sm:h-6" />
+              </div>
               <div>
-                <p className="font-semibold">キャンバス/パネル</p>
+                <p className="font-semibold text-sm sm:text-base leading-tight">キャンバス/パネル</p>
                 <p className="text-xs text-gray-500">¥4,800〜</p>
               </div>
             </a>

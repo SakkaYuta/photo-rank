@@ -72,7 +72,9 @@ const GeneralDashboard: React.FC = () => {
   }, [user?.id]);
 
   const handleNavigateToSection = (section: string) => {
-    window.dispatchEvent(new CustomEvent('navigate', { detail: { view: section } }));
+    // トレンド作品はPhotoRankページ（merch）へ遷移
+    const view = section === 'trending' ? 'merch' : section
+    window.dispatchEvent(new CustomEvent('navigate', { detail: { view } }));
   };
 
   const dashboardCards = [
@@ -139,17 +141,17 @@ const GeneralDashboard: React.FC = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header Section */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-6xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                <User className="w-8 h-8 text-white" />
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                <User className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-center sm:text-left">
+                <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
                   おかえりなさい、{userProfile?.display_name || 'ユーザー'}さん
                 </h1>
-                <p className="text-gray-600 dark:text-gray-300">
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
                   素敵な作品との出会いをお楽しみください
                 </p>
               </div>
@@ -157,7 +159,7 @@ const GeneralDashboard: React.FC = () => {
             <div>
               <button
                 onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'merch' } }))}
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-md border hover:bg-gray-50 text-sm"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-md border hover:bg-gray-50 text-sm whitespace-nowrap"
                 title="ホームへ"
               >
                 <span role="img" aria-label="sparkles">✨</span> PhotoRank
@@ -168,31 +170,31 @@ const GeneralDashboard: React.FC = () => {
       </div>
 
       {/* Dashboard Content */}
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* Main Dashboard Cards */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+        <div className="mb-6 sm:mb-8">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6">
             マイダッシュボード
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {dashboardCards.map((card) => {
               const IconComponent = card.icon;
               return (
                 <div
                   key={card.id}
                   onClick={() => handleNavigateToSection(card.id)}
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 cursor-pointer hover:shadow-md transition-shadow group"
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow group"
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <div className={`p-3 rounded-lg bg-gradient-to-r ${card.color}`}>
-                      <IconComponent className="w-6 h-6 text-white" />
+                    <div className={`p-2 sm:p-3 rounded-lg bg-gradient-to-r ${card.color}`}>
+                      <IconComponent className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2">
                     {card.title}
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-3">
+                  <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm mb-3">
                     {card.description}
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -205,28 +207,28 @@ const GeneralDashboard: React.FC = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+        <div className="mb-6 sm:mb-8">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6">
             クイックアクション
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {quickActions.map((action) => {
               const IconComponent = action.icon;
               return (
                 <div
                   key={action.id}
                   onClick={() => handleNavigateToSection(action.id)}
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 cursor-pointer hover:shadow-md transition-shadow group"
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 cursor-pointer hover:shadow-md transition-shadow group"
                 >
-                  <div className="flex items-center space-x-4">
-                    <div className={`p-3 rounded-lg bg-gradient-to-r ${action.color}`}>
-                      <IconComponent className="w-6 h-6 text-white" />
+                  <div className="flex items-center space-x-3 sm:space-x-4">
+                    <div className={`p-2 sm:p-3 rounded-lg bg-gradient-to-r ${action.color}`}>
+                      <IconComponent className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">
                         {action.title}
                       </h3>
-                      <p className="text-gray-600 dark:text-gray-300 text-sm">
+                      <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">
                         {action.description}
                       </p>
                     </div>
@@ -240,10 +242,10 @@ const GeneralDashboard: React.FC = () => {
 
         {/* Recent Activity */}
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6">
             最近の活動
           </h2>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
             {loading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (

@@ -125,10 +125,10 @@ const CreatorDashboard: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">
                 クリエイターダッシュボード
               </h1>
               <p className="text-gray-600">
@@ -153,9 +153,10 @@ const CreatorDashboard: React.FC = () => {
                   </button>
                 </div>
               )}
-              <button onClick={goToCreate} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 whitespace-nowrap">
-                <Upload className="w-5 h-5" />
-                新しい作品をアップロード
+              <button onClick={goToCreate} className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 whitespace-nowrap text-sm sm:text-base">
+                <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline">新しい作品をアップロード</span>
+                <span className="sm:hidden">作品投稿</span>
               </button>
               <button
                 onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'merch' } }))}
@@ -169,13 +170,13 @@ const CreatorDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {loading ? (
             // Loading skeleton
             Array(4).fill(0).map((_, index) => (
-              <div key={index} className="bg-white p-6 rounded-lg shadow-sm animate-pulse">
+              <div key={index} className="bg-white p-4 sm:p-6 rounded-lg shadow-sm animate-pulse">
                 <div className="flex items-center justify-between mb-2">
                   <div className="h-4 bg-gray-200 rounded w-20"></div>
                   <div className="w-5 h-5 bg-gray-200 rounded"></div>
@@ -190,53 +191,53 @@ const CreatorDashboard: React.FC = () => {
             </div>
           ) : (
             <>
-              <div className="bg-white p-6 rounded-lg shadow-sm">
+              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-gray-600">総作品数</h3>
-                  <Camera className="w-5 h-5 text-blue-600" />
+                  <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                 </div>
-                <p className="text-3xl font-bold text-gray-900">{dashboardData?.stats.totalWorks || 0}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{dashboardData?.stats.totalWorks || 0}</p>
                 <p className="text-sm text-green-600">+{dashboardData?.stats.monthlyGrowth.works || 0} 今月</p>
               </div>
 
-              <div className="bg-white p-6 rounded-lg shadow-sm">
+              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-gray-600">総売上</h3>
-                  <DollarSign className="w-5 h-5 text-green-600" />
+                  <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                 </div>
-                <p className="text-3xl font-bold text-gray-900">¥{dashboardData?.stats.totalRevenue.toLocaleString() || 0}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">¥{dashboardData?.stats.totalRevenue.toLocaleString() || 0}</p>
                 <p className="text-sm text-green-600">+¥{dashboardData?.stats.monthlyGrowth.revenue.toLocaleString() || 0} 今月</p>
               </div>
 
-              <div className="bg-white p-6 rounded-lg shadow-sm">
+              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-gray-600">合計ビュー</h3>
-                  <Eye className="w-5 h-5 text-purple-600" />
+                  <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
                 </div>
-                <p className="text-3xl font-bold text-gray-900">{dashboardData?.stats.totalViews.toLocaleString() || 0}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{dashboardData?.stats.totalViews.toLocaleString() || 0}</p>
                 <p className="text-sm text-green-600">+{dashboardData?.stats.monthlyGrowth.views.toLocaleString() || 0} 今月</p>
               </div>
 
-              <div className="bg-white p-6 rounded-lg shadow-sm">
+              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-gray-600">総販売数</h3>
-                  <ShoppingCart className="w-5 h-5 text-orange-600" />
+                  <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
                 </div>
-                <p className="text-3xl font-bold text-gray-900">{dashboardData?.stats.totalSales.toLocaleString() || 0}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{dashboardData?.stats.totalSales.toLocaleString() || 0}</p>
                 <p className="text-sm text-green-600">+{dashboardData?.stats.monthlyGrowth.sales.toLocaleString() || 0} 今月</p>
               </div>
             </>
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
           {/* Recent Works */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-sm">
-              <div className="p-6 border-b">
-                <h2 className="text-lg font-semibold text-gray-900">最近の作品</h2>
+              <div className="p-4 sm:p-6 border-b">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900">最近の作品</h2>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <div className="space-y-4">
                   {loading ? (
                     // Loading skeleton for works
@@ -376,10 +377,10 @@ const CreatorDashboard: React.FC = () => {
           <div className="space-y-6">
             {/* Performance Chart */}
             <div className="bg-white rounded-lg shadow-sm">
-              <div className="p-6 border-b">
+              <div className="p-4 sm:p-6 border-b">
                 <h2 className="text-lg font-semibold text-gray-900">パフォーマンス</h2>
               </div>
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <div className="h-48 flex items-center justify-center bg-gray-50 rounded-lg">
                   <div className="text-center text-gray-500">
                     <TrendingUp className="w-8 h-8 mx-auto mb-2" />
@@ -391,7 +392,7 @@ const CreatorDashboard: React.FC = () => {
 
             {/* Quick Actions */}
             <div className="bg-white rounded-lg shadow-sm">
-              <div className="p-6 border-b">
+              <div className="p-4 sm:p-6 border-b">
                 <h2 className="text-lg font-semibold text-gray-900">クイックアクション</h2>
               </div>
               <div className="p-6 space-y-3">
