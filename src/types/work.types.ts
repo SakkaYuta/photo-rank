@@ -6,11 +6,13 @@ export type Work = {
   image_url: string
   thumbnail_url?: string | null
   price: number
+  description?: string | null
   message?: string | null
   filter_type?: string | null
   frame_type?: string | null
   is_published: boolean
   created_at: string
+  updated_at?: string
   factory_id?: string | null
 }
 
@@ -50,4 +52,3 @@ export type Vote = {
   work_id: string
   created_at: string
 }
-

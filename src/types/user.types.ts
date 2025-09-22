@@ -28,8 +28,8 @@ export type UserPrivacySettings = {
 export type UserProfileUpdate = {
   display_name?: string
   bio?: string | null
+  avatar_url?: string | null
   phone?: string | null
   notification_settings?: UserNotificationSettings
   privacy_settings?: UserPrivacySettings
 }
-

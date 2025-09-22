@@ -60,7 +60,7 @@ export function clearSessionStorage() {
 
 // ローカルデータのエクスポート
 export function exportAllData() {
-  const data = {
+  const data: { localStorage: Record<string, any>; sessionStorage: Record<string, any>; timestamp: string } = {
     localStorage: {},
     sessionStorage: {},
     timestamp: new Date().toISOString()
