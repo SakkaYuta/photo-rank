@@ -82,7 +82,7 @@ const MerchContentHub: React.FC = () => {
   // 未ログインユーザーにはLPを表示
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+      <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
         {/* Hero Section */}
         <section className="relative px-4 sm:px-6 py-12 sm:py-20 text-center">
           <div className="max-w-4xl mx-auto">
@@ -93,7 +93,7 @@ const MerchContentHub: React.FC = () => {
               </span>
               で盛り上げよう
             </h1>
-            <p className="text-base sm:text-lg lg:text-xl text-gray-600 mb-6 sm:mb-8 max-w-2xl mx-auto px-2">
+            <p className="text-base sm:text-lg lg:text-xl text-gray-900 mb-6 sm:mb-8 max-w-2xl mx-auto px-2">
               お気に入りの画像から45種類のオリジナルグッズを作成・販売。
               リアルタイムバトルで競い合い、ファンと一緒に推し活を楽しもう！
             </p>
@@ -128,7 +128,7 @@ const MerchContentHub: React.FC = () => {
                   <Globe className="w-7 h-7 sm:w-8 sm:h-8 text-purple-600" />
                 </div>
                 <h3 className="text-lg sm:text-xl font-semibold mb-3">URLから簡単グッズ化</h3>
-                <p className="text-gray-600 text-sm sm:text-base">
+                <p className="text-gray-900 text-sm sm:text-base">
                   お気に入りの画像URLを入力するだけで、自動で権利チェック。
                   45種類のグッズから選んですぐに注文できます。
                 </p>
@@ -139,7 +139,7 @@ const MerchContentHub: React.FC = () => {
                   <Gamepad2 className="w-7 h-7 sm:w-8 sm:h-8 text-blue-600" />
                 </div>
                 <h3 className="text-lg sm:text-xl font-semibold mb-3">リアルタイムバトル</h3>
-                <p className="text-gray-600 text-sm sm:text-base">
+                <p className="text-gray-900 text-sm sm:text-base">
                   クリエイター同士がリアルタイムでバトル！ファンの応援でポイント獲得。
                   勝者には売上の20%ボーナスをプレゼント。
                 </p>
@@ -150,7 +150,7 @@ const MerchContentHub: React.FC = () => {
                   <Zap className="w-7 h-7 sm:w-8 sm:h-8 text-green-600" />
                 </div>
                 <h3 className="text-lg sm:text-xl font-semibold mb-3">応援チケット・特典</h3>
-                <p className="text-gray-600 text-sm sm:text-base">
+                <p className="text-gray-900 text-sm sm:text-base">
                   100円の応援チケットでバトルをサポート。
                   サイン入りグッズ権利やカスタムオプションを獲得。
                 </p>
@@ -160,29 +160,29 @@ const MerchContentHub: React.FC = () => {
         </section>
 
         {/* Popular Categories */}
-        <section className="px-4 sm:px-6 py-12 sm:py-16 bg-gray-50">
+        <section className="px-4 sm:px-6 py-16 bg-gray-50">
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-8 sm:mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-12">
               人気のグッズカテゴリ
             </h2>
 
-            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
               {[
                 { name: 'Tシャツ・アパレル', count: '234', image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=200&fit=crop' },
                 { name: 'アクリルスタンド', count: '189', image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=300&h=200&fit=crop' },
                 { name: 'ステッカー・バッジ', count: '156', image: 'https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?w=300&h=200&fit=crop' },
                 { name: 'マグカップ・雑貨', count: '143', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=200&fit=crop' }
               ].map((category) => (
-                <div key={category.name} className="relative group cursor-pointer overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow">
+                <div key={category.name} className="relative group cursor-pointer overflow-hidden rounded-xl shadow-medium hover:shadow-large transition-all duration-300">
                   <img
                     src={category.image}
                     alt={category.name}
-                    className="w-full h-36 sm:h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-black bg-opacity-30 group-hover:bg-opacity-40 transition-opacity">
-                    <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 text-white">
-                      <h3 className="text-sm sm:text-xl font-semibold leading-tight">{category.name}</h3>
-                      <p className="text-xs sm:text-sm opacity-90">{category.count}点の作品</p>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent group-hover:from-black/70 transition-all duration-300">
+                    <div className="absolute bottom-4 left-4 text-white">
+                      <h3 className="text-lg font-bold leading-tight mb-1">{category.name}</h3>
+                      <p className="text-sm opacity-90">{category.count}点の作品</p>
                     </div>
                   </div>
                 </div>
@@ -192,48 +192,48 @@ const MerchContentHub: React.FC = () => {
         </section>
 
         {/* Stats Section */}
-        <section className="px-4 sm:px-6 py-12 sm:py-16 bg-white">
+        <section className="px-4 sm:px-6 py-16 bg-white">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-8 sm:mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-12">
               {APP_NAME}の実績
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
-              <div className="p-4 sm:p-6">
-                <div className="text-3xl sm:text-4xl font-bold text-purple-600 mb-2">1,200+</div>
-                <p className="text-gray-600 text-sm sm:text-base">作成グッズ数</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+              <div className="p-6">
+                <div className="text-4xl font-bold text-primary-600 mb-3">1,200+</div>
+                <p className="text-gray-700 text-base font-medium">作成グッズ数</p>
               </div>
-              <div className="p-4 sm:p-6">
-                <div className="text-3xl sm:text-4xl font-bold text-blue-600 mb-2">350+</div>
-                <p className="text-gray-600 text-sm sm:text-base">登録クリエイター</p>
+              <div className="p-6">
+                <div className="text-4xl font-bold text-secondary-600 mb-3">350+</div>
+                <p className="text-gray-700 text-base font-medium">登録クリエイター</p>
               </div>
-              <div className="p-4 sm:p-6">
-                <div className="text-3xl sm:text-4xl font-bold text-green-600 mb-2">85</div>
-                <p className="text-gray-600 text-sm sm:text-base">バトル開催数</p>
+              <div className="p-6">
+                <div className="text-4xl font-bold text-accent-600 mb-3">85</div>
+                <p className="text-gray-700 text-base font-medium">バトル開催数</p>
               </div>
             </div>
           </div>
         </section>
 
         {/* CTA Section */}
-        <section className="px-4 sm:px-6 py-16 sm:py-20 bg-gradient-to-r from-purple-600 to-blue-600">
+        <section className="px-4 sm:px-6 py-20 bg-gradient-to-r from-primary-600 to-secondary-600">
           <div className="max-w-4xl mx-auto text-center text-white">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6">
+            <h2 className="text-3xl lg:text-4xl font-bold mb-6">
               あなたも{APP_NAME}の一員に
             </h2>
-            <p className="text-base sm:text-lg lg:text-xl mb-6 sm:mb-8 opacity-90 px-2">
-              クリエイターとして推し活グッズを作成・販売、ファンとしてお気に入りグッズを購入・応援。みんなで推し活を盛り上げよう！
+            <p className="text-lg lg:text-xl mb-8 opacity-90 leading-relaxed max-w-3xl mx-auto">
+              クリエイターとして推し活グッズを作成・販売、ファンとしてお気に入りグッズを購入・応援。<br className="hidden sm:block" />みんなで推し活を盛り上げよう！
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <button
                 onClick={() => setIsAuthModalOpen(true)}
-                className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-white text-purple-600 font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all text-sm sm:text-base"
+                className="w-full sm:w-auto px-8 py-4 bg-white text-primary-600 font-semibold rounded-xl shadow-large hover:shadow-xl hover:scale-105 transition-all duration-300 text-base"
               >
                 クリエイター登録
               </button>
               <button
                 onClick={() => setIsAuthModalOpen(true)}
-                className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-white hover:text-purple-600 transition-all text-sm sm:text-base"
+                className="w-full sm:w-auto px-8 py-4 bg-transparent border-2 border-white text-white font-semibold rounded-xl hover:bg-white hover:text-primary-600 transition-all duration-300 text-base"
               >
                 ファン登録
               </button>
@@ -252,17 +252,17 @@ const MerchContentHub: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6 flex items-center justify-between">
-          <h1 className="text-xl sm:text-2xl font-bold">{APP_NAME}</h1>
-          <div className="flex gap-2">
-            <button onClick={() => go('search')} className="btn btn-outline flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2">
-              <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+      <div className="bg-white shadow-soft border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900">{APP_NAME}</h1>
+          <div className="flex gap-3">
+            <button onClick={() => go('search')} className="flex items-center gap-2 px-4 py-2.5 border-2 border-primary-200 text-primary-700 font-medium rounded-lg hover:bg-primary-50 hover:border-primary-300 transition-colors text-sm">
+              <Users className="w-4 h-4" />
               <span className="hidden sm:inline">クリエイター</span>
               <span className="sm:hidden">検索</span>
             </button>
-            <button onClick={() => go('battle-search')} className="btn btn-primary flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-2">
-              <Sword className="w-3 h-3 sm:w-4 sm:h-4" />
+            <button onClick={() => go('battle-search')} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-600 to-secondary-600 text-white font-medium rounded-lg hover:shadow-lg transition-all text-sm">
+              <Sword className="w-4 h-4" />
               <span className="hidden sm:inline">バトル</span>
               <span className="sm:hidden">対戦</span>
             </button>
@@ -273,7 +273,7 @@ const MerchContentHub: React.FC = () => {
       <main className="max-w-6xl mx-auto px-4 md:px-6 py-6 sm:py-8 space-y-8 sm:space-y-10">
         {/* Products overview */}
         <section>
-          <h2 className="text-base sm:text-lg font-semibold mb-3 flex items-center gap-2">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 flex items-center gap-2">
             <Package className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600" /> 販売中の商品
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
@@ -282,8 +282,8 @@ const MerchContentHub: React.FC = () => {
                 <Shirt className="w-4 h-4 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <p className="font-semibold text-sm sm:text-base">Tシャツ</p>
-                <p className="text-xs text-gray-500">¥1,500〜</p>
+                <p className="font-semibold text-base sm:text-lg text-gray-900">Tシャツ</p>
+                <p className="text-sm text-gray-900">¥1,500〜</p>
               </div>
             </a>
             <a href="#search" className="rounded-xl border bg-white p-3 sm:p-4 hover:shadow transition-base flex items-center gap-2 sm:gap-3">
@@ -291,8 +291,8 @@ const MerchContentHub: React.FC = () => {
                 <Package className="w-4 h-4 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <p className="font-semibold text-sm sm:text-base">マグカップ</p>
-                <p className="text-xs text-gray-500">¥800〜</p>
+                <p className="font-semibold text-base sm:text-lg text-gray-900">マグカップ</p>
+                <p className="text-sm text-gray-900">¥800〜</p>
               </div>
             </a>
             <a href="#search" className="rounded-xl border bg-white p-3 sm:p-4 hover:shadow transition-base flex items-center gap-2 sm:gap-3">
@@ -300,8 +300,8 @@ const MerchContentHub: React.FC = () => {
                 <Sticker className="w-4 h-4 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <p className="font-semibold text-sm sm:text-base">ステッカー</p>
-                <p className="text-xs text-gray-500">¥300〜</p>
+                <p className="font-semibold text-base sm:text-lg text-gray-900">ステッカー</p>
+                <p className="text-sm text-gray-900">¥300〜</p>
               </div>
             </a>
             <a href="#search" className="rounded-xl border bg-white p-3 sm:p-4 hover:shadow transition-base flex items-center gap-2 sm:gap-3">
@@ -309,8 +309,8 @@ const MerchContentHub: React.FC = () => {
                 <Sparkles className="w-4 h-4 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <p className="font-semibold text-sm sm:text-base leading-tight">キャンバス/パネル</p>
-                <p className="text-xs text-gray-500">¥4,800〜</p>
+                <p className="font-semibold text-base sm:text-lg leading-tight text-gray-900">キャンバス/パネル</p>
+                <p className="text-sm text-gray-900">¥4,800〜</p>
               </div>
             </a>
           </div>
@@ -322,11 +322,11 @@ const MerchContentHub: React.FC = () => {
               <div className="flex items-center gap-3">
                 <div className="rounded-lg bg-blue-50 p-2 text-blue-600"><Users className="w-6 h-6" /></div>
                 <div>
-                  <p className="text-base font-semibold">クリエイターを探す</p>
-                  <p className="text-sm text-gray-600">作品からグッズ化の相談や発注へ</p>
+                  <p className="text-base font-semibold text-gray-900">クリエイターを探す</p>
+                  <p className="text-sm text-gray-900">作品からグッズ化の相談や発注へ</p>
                 </div>
               </div>
-              <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
+              <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-700" />
             </div>
           </button>
 
@@ -335,11 +335,11 @@ const MerchContentHub: React.FC = () => {
               <div className="flex items-center gap-3">
                 <div className="rounded-lg bg-purple-50 p-2 text-purple-600"><Sword className="w-6 h-6" /></div>
                 <div>
-                  <p className="text-base font-semibold">バトルを探す</p>
-                  <p className="text-sm text-gray-600">開催中/予定の企画からコラボ募集</p>
+                  <p className="text-base font-semibold text-gray-900">バトルを探す</p>
+                  <p className="text-sm text-gray-900">開催中/予定の企画からコラボ募集</p>
                 </div>
               </div>
-              <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
+              <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-700" />
             </div>
           </button>
         </div>
@@ -347,15 +347,15 @@ const MerchContentHub: React.FC = () => {
         {/* Featured creators */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold flex items-center gap-2"><Sparkles className="w-5 h-5 text-amber-500" /> 注目のクリエイター</h2>
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2"><Sparkles className="w-5 h-5 text-amber-500" /> 注目のクリエイター</h2>
             <button onClick={() => go('search')} className="text-sm text-blue-600 hover:underline flex items-center gap-1">すべて見る <ChevronRight className="w-4 h-4" /></button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {creators.map(c => (
               <a key={c.id} href={`#creator-profile?creator=${encodeURIComponent(c.id)}`} onClick={() => { try{localStorage.setItem('selected_creator_id', c.id)}catch{} }} className="rounded-xl border bg-white p-4 block hover:shadow transition-base">
                 <img src={c.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${c.id}`} alt="" className="w-16 h-16 rounded-full mb-3" />
-                <p className="font-semibold">{c.name}</p>
-                {c.tagline && <p className="text-sm text-gray-600 line-clamp-2">{c.tagline}</p>}
+                <p className="font-semibold text-gray-900">{c.name}</p>
+                {c.tagline && <p className="text-sm text-gray-900 line-clamp-2">{c.tagline}</p>}
               </a>
             ))}
           </div>
@@ -364,7 +364,7 @@ const MerchContentHub: React.FC = () => {
         {/* Featured battles */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold flex items-center gap-2"><Search className="w-5 h-5 text-indigo-500" /> 注目のバトル</h2>
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2"><Search className="w-5 h-5 text-indigo-500" /> 注目のバトル</h2>
             <button onClick={() => go('battle-search')} className="text-sm text-blue-600 hover:underline flex items-center gap-1">すべて見る <ChevronRight className="w-4 h-4" /></button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -374,8 +374,8 @@ const MerchContentHub: React.FC = () => {
                   {b.banner && <img src={b.banner} className="w-full h-full object-cover" />}
                 </div>
                 <div className="p-4">
-                  <p className="font-semibold">{b.title}</p>
-                  <p className="text-xs mt-1 text-gray-500">{b.status === 'ongoing' ? '開催中' : b.status === 'upcoming' ? '開催予定' : '終了'}</p>
+                  <p className="font-semibold text-gray-900">{b.title}</p>
+                  <p className="text-xs mt-1 text-gray-600">{b.status === 'ongoing' ? '開催中' : b.status === 'upcoming' ? '開催予定' : '終了'}</p>
                 </div>
               </button>
             ))}
@@ -385,7 +385,7 @@ const MerchContentHub: React.FC = () => {
         {/* Your eligible online data */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold">あなたのオンラインデータ</h2>
+            <h2 className="text-lg font-semibold text-gray-900">あなたのオンラインデータ</h2>
             {userType === 'creator' ? (
               <a href="#myworks" className="text-sm text-blue-600 hover:underline">もっと見る</a>
             ) : (
@@ -403,7 +403,7 @@ const MerchContentHub: React.FC = () => {
                     <div className="p-3">
                       <p className="font-medium truncate">{w.title}</p>
                       <div className="flex items-center justify-between mt-2 text-sm">
-                        <span className="text-gray-600">¥{w.price?.toLocaleString?.() || w.price}</span>
+                        <span className="text-gray-900">¥{w.price?.toLocaleString?.() || w.price}</span>
                         <a href="#factory" className="text-blue-600 hover:underline">工場比較</a>
                       </div>
                     </div>
@@ -411,12 +411,12 @@ const MerchContentHub: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="rounded-xl border bg-white p-6 text-gray-600">
+              <div className="rounded-xl border bg-white p-6 text-gray-700">
                 まだ作品がありません。<a href="#create" className="text-blue-600 hover:underline">作品を作成</a>してグッズ化してみましょう。
               </div>
             )
           ) : (
-            <div className="rounded-xl border bg-white p-6 text-gray-600">
+            <div className="rounded-xl border bg-white p-6 text-gray-700">
               お気に入りからグッズ化候補を探せます。<a href="#favorites" className="text-blue-600 hover:underline">お気に入りを見る</a>
             </div>
           )}

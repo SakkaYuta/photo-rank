@@ -97,3 +97,24 @@ body {
   word-break: keep-all;
   hanging-punctuation: allow-end;
 }
+
+/* Global tone adjustments for body/supplementary text */
+@layer utilities {
+  /* 薄いグレー(600) → 濃いグレー(700) */
+  .text-gray-600 { color: theme('colors.gray.700'); }
+  /* 極薄グレー(500) → 中グレー(600) */
+  .text-gray-500 { color: theme('colors.gray.600'); }
+}
+
+/* Settings page stronger contrast on white cards */
+@layer components {
+  .account-settings .bg-white p,
+  .account-settings .bg-white label,
+  .account-settings .bg-white h2,
+  .account-settings .bg-white h3,
+  .account-settings .bg-white .text-sm,
+  .account-settings .bg-white .text-xs {
+    @apply text-gray-900;
+  }
+  .account-settings .btn-outline { @apply text-gray-900; }
+}

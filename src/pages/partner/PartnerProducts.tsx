@@ -131,7 +131,7 @@ export function PartnerProducts() {
     return (
       <div className="p-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">商品管理</h1>
+          <h1 className="text-2xl font-bold mb-4 text-gray-900">商品管理</h1>
           <p className="text-gray-600 dark:text-gray-400">
             承認済みパートナーのみアクセスできます。
           </p>
@@ -143,7 +143,7 @@ export function PartnerProducts() {
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-xl sm:text-3xl font-bold">商品管理</h1>
+        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">商品管理</h1>
         <button
           onClick={handleAddProduct}
           className="btn btn-primary flex items-center gap-2 transition-base hover-lift"

@@ -419,7 +419,7 @@ export const CartView: React.FC = () => {
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
           カートは空です
         </h2>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-gray-900 dark:text-gray-200">
           お気に入りの写真を見つけてカートに追加してください
         </p>
       </div>

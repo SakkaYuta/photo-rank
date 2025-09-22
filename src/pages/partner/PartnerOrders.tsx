@@ -51,12 +51,13 @@ export function PartnerOrders() {
 
   async function fetchOrders() {
     if (!partner) return
-    
+
     try {
       const data = await getPartnerOrders(partner.id)
-      setOrders(data)
+      setOrders(data || [])
     } catch (error) {
       console.error('Failed to fetch orders:', error)
+      setOrders([])
     } finally {
       setLoading(false)
     }
@@ -142,7 +143,7 @@ export function PartnerOrders() {
     return (
       <div className="p-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">受注管理</h1>
+          <h1 className="text-2xl font-bold mb-4 text-gray-900">受注管理</h1>
           <p className="text-gray-600 dark:text-gray-400">
             承認済みパートナーのみアクセスできます。
           </p>
@@ -154,7 +155,7 @@ export function PartnerOrders() {
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-xl sm:text-3xl font-bold">受注管理</h1>
+        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">受注管理</h1>
         <div className="text-sm text-gray-500 dark:text-gray-400">
           総注文数: {orders.length}件
         </div>
@@ -207,7 +208,7 @@ export function PartnerOrders() {
                 <Table.Body>
                   {filteredOrders.map((order) => (
                     <Table.Row key={order.id}>
-                      <Table.Cell className="font-medium">{order.order_id.slice(-8)}</Table.Cell>
+                      <Table.Cell className="font-medium">{order.order_id?.slice(-8) || order.id}</Table.Cell>
                       <Table.Cell>
                         <div className="text-sm text-gray-900 dark:text-gray-100">{order.request_payload?.product_type || 'N/A'}</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">数量: {order.request_payload?.quantity || 1}</div>
@@ -251,7 +252,7 @@ export function PartnerOrders() {
                 <div className="px-6 py-4 space-y-4">
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      注文ID: {selectedOrder.order_id.slice(-8)}
+                      注文ID: {selectedOrder.order_id?.slice(-8) || selectedOrder.id}
                     </p>
                   </div>
                   

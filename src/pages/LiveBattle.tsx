@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Flame, Crown, Zap, Sparkles, Heart, Timer, PartyPopper, ShoppingCart } from 'lucide-react'
+import { Flame, Crown, Zap, Sparkles, Heart, Timer, PartyPopper, ShoppingCart, Gift } from 'lucide-react'
 import { SAMPLE_BATTLES, SAMPLE_PARTICIPANTS } from '@/sample/battleSamples'
-import { purchaseCheerTicket } from '@/services/battle.service'
+import { purchaseCheerTicket, purchaseBattleGoods } from '@/services/battle.service'
+import { BATTLE_GOODS_TYPES } from '@/utils/constants'
+import { formatJPY } from '@/utils/helpers'
 
 type Side = 'challenger' | 'opponent'
 
@@ -14,6 +16,9 @@ const LiveBattle: React.FC = () => {
   const [effects, setEffects] = useState<{ burst: boolean; side?: Side }>({ burst: false })
   const [useSamples, setUseSamples] = useState<boolean>((import.meta as any).env?.VITE_ENABLE_BATTLE_SAMPLE === 'true')
   const [buying, setBuying] = useState<Side | null>(null)
+  const [selectedGoods, setSelectedGoods] = useState<string>('')
+  const [showGoodsModal, setShowGoodsModal] = useState<boolean>(false)
+  const [buyingGoods, setBuyingGoods] = useState<boolean>(false)
 
   useEffect(() => {
     const raw = window.location.hash.replace(/^#/, '')
@@ -57,7 +62,7 @@ const LiveBattle: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-purple-900 text-white">
+    <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen min-h-screen bg-gradient-to-br from-black via-gray-900 to-purple-900 text-white">
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,0,128,0.35),transparent_40%),radial-gradient(circle_at_80%_0%,rgba(0,128,255,0.35),transparent_40%)]" />
         <div className="max-w-6xl mx-auto px-6 py-10 relative">
@@ -104,9 +109,107 @@ const LiveBattle: React.FC = () => {
         )}
 
         <div className="mt-10 bg-white/5 border border-white/10 rounded-xl p-6">
-          <h3 className="font-semibold mb-3 flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> 関連アイテム</h3>
-          <div className="text-sm text-gray-300">まもなくライブ限定アイテムを販売予定。購入もポイント加算に反映されます。</div>
+          <h3 className="font-semibold mb-4 flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> ライブ限定アイテム</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            {BATTLE_GOODS_TYPES.map((item) => (
+              <div key={item.id} className="bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-colors cursor-pointer" onClick={() => { setSelectedGoods(item.id); setShowGoodsModal(true) }}>
+                <div className="flex items-start gap-3">
+                  <Gift className="w-8 h-8 text-pink-400 flex-shrink-0 mt-1" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-white text-sm">{item.label}</h4>
+                    <p className="text-xs text-gray-400 mt-1 line-clamp-2">{item.description}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-pink-300 font-bold">{formatJPY(item.basePrice)}</span>
+                      <span className="text-xs text-gray-400">+50pt</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="text-xs text-gray-400 bg-white/5 rounded-lg p-3">
+            💡 アイテム購入でも応援ポイントが加算されます！限定デザインで推しクリエイターを応援しよう
+          </div>
         </div>
+
+        {/* Goods Purchase Modal */}
+        {showGoodsModal && selectedGoods && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 max-w-md w-full">
+              {(() => {
+                const item = BATTLE_GOODS_TYPES.find(g => g.id === selectedGoods)!
+                return (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-bold text-white">アイテム購入</h3>
+                      <button onClick={() => setShowGoodsModal(false)} className="text-gray-400 hover:text-white">
+                        <Sparkles className="w-5 h-5" />
+                      </button>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Gift className="w-12 h-12 text-pink-400" />
+                        <div>
+                          <h4 className="font-medium text-white">{item.label}</h4>
+                          <p className="text-sm text-gray-300">{item.description}</p>
+                        </div>
+                      </div>
+                      <div className="bg-white/5 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-gray-300">価格</span>
+                          <span className="text-white font-bold">{formatJPY(item.basePrice)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300">応援ポイント</span>
+                          <span className="text-pink-300 font-bold">+50pt</span>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-400 bg-white/5 rounded p-3">
+                        このアイテムを購入すると、現在リードしている側に50ポイントが加算されます
+                      </div>
+                      <div className="flex gap-3">
+                        <button onClick={() => setShowGoodsModal(false)} className="flex-1 py-2 px-4 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white">
+                          キャンセル
+                        </button>
+                        <button
+                          onClick={async () => {
+                            setBuyingGoods(true)
+                            try {
+                              if (useSamples) {
+                                // サンプル環境では簡単な処理
+                                const leadingSide = scores.challenger >= scores.opponent ? 'challenger' : 'opponent'
+                                setScores(prev => ({ ...prev, [leadingSide]: prev[leadingSide] + 50 }))
+                                setEffects({ burst: true, side: leadingSide })
+                                setTimeout(() => setEffects({ burst: false }), 1200)
+                              } else {
+                                // 本番環境ではバトルグッズサービスを使用
+                                const leadingSide = scores.challenger >= scores.opponent ? 'challenger' : 'opponent'
+                                const targetId = leadingSide === 'challenger' ? challenger.id : opponent.id
+                                await purchaseBattleGoods(battleId, targetId, selectedGoods)
+                                setEffects({ burst: true, side: leadingSide })
+                                setTimeout(() => setEffects({ burst: false }), 1200)
+                              }
+                              setShowGoodsModal(false)
+                              alert(`${item.label}を購入しました！`)
+                            } catch (e) {
+                              alert('購入に失敗しました')
+                            } finally {
+                              setBuyingGoods(false)
+                            }
+                          }}
+                          disabled={buyingGoods}
+                          className="flex-1 py-2 px-4 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 transition-colors text-white font-bold disabled:opacity-50"
+                        >
+                          {buyingGoods ? '購入中...' : '購入する'}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -131,4 +234,3 @@ function SideCard({ name, avatar, score, crown, active }: { name: string; avatar
 }
 
 export default LiveBattle
-

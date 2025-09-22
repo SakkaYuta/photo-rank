@@ -125,7 +125,7 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
         </p>
 
         <div className="space-y-3">
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-center gap-3">
             <button
               className="btn btn-outline"
               onClick={onClose}
@@ -192,4 +192,3 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
     </div>
   )
 }
-

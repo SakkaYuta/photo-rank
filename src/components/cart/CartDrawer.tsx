@@ -69,7 +69,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
         <div className="flex-1 overflow-auto p-4 space-y-3">
           {items.length === 0 ? (
-            <div className="text-gray-500 dark:text-gray-400 text-center py-12">カートは空です</div>
+            <div className="text-gray-900 dark:text-gray-100 text-center py-12">カートは空です</div>
           ) : (
             items.map(it => (
               <div key={it.id} className="flex items-center gap-3 border rounded-lg p-3 dark:border-gray-700">

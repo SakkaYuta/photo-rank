@@ -24,7 +24,7 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
 
   // 一般ユーザー向けのナビゲーション
   const generalUserItems: NavItem[] = [
-    { key: 'role-based', label: 'ダッシュボード' },
+    { key: 'general-dashboard', label: 'ダッシュボード' },
     { key: 'merch', label: 'PhotoRank' },
   ]
 
@@ -37,14 +37,14 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
 
   // 工場・印刷業者向けのナビゲーション
   const factoryItems: NavItem[] = [
-    { key: 'role-based', label: 'ダッシュボード' },
+    { key: 'factory-dashboard', label: 'ダッシュボード' },
     { key: 'partner-orders', label: '受注管理' },
     { key: 'partner-products', label: '商品管理' },
   ]
 
   // オーガナイザー向けのナビゲーション
   const organizerItems: NavItem[] = [
-    { key: 'role-based', label: 'ダッシュボード' },
+    { key: 'organizer-dashboard', label: 'ダッシュボード' },
     { key: 'events', label: 'イベント管理' },
     { key: 'contests', label: 'コンテスト管理' },
   ]
@@ -97,13 +97,19 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
     }
   }
   return (
-    <nav className="sticky top-[53px] z-10 border-b border-gray-200 bg-white/80 backdrop-blur dark:border-gray-800 dark:bg-gray-900/70">
+    <nav className="sticky top-[53px] z-10 border-b border-gray-200 bg-white shadow-soft">
       <div className="mx-auto max-w-6xl overflow-x-auto px-2 sm:px-4">
         <ul className="flex gap-1 sm:gap-2 py-2 min-w-max">
-          {dedupedItems.map((it) => (
+          {dedupedItems
+            .filter((it) => {
+              // 工場のダッシュボードにいるときはダッシュボードタブを非表示
+              if (effectiveType === 'factory' && current === 'factory-dashboard' && it.key === 'factory-dashboard') return false
+              return true
+            })
+            .map((it) => (
             <li key={it.key}>
               <button
-                className={`btn btn-outline text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 whitespace-nowrap ${current === it.key ? 'bg-gray-100 dark:bg-gray-800' : ''}`}
+                className={`px-3 sm:px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${current === it.key ? 'bg-primary-100 text-primary-700 border border-primary-200' : 'text-gray-700 hover:text-primary-600 hover:bg-primary-50'}`}
                 onClick={() => onChange(it.key)}
               >
                 {it.label}

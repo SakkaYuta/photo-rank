@@ -74,11 +74,11 @@ const CreatorSearchPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b">
         <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
-          <h1 className="text-2xl font-bold flex items-center gap-2"><Users className="w-6 h-6 text-blue-600" /> クリエイター検索</h1>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Users className="w-6 h-6 text-blue-600" /> クリエイター検索</h1>
           <div className="flex items-center gap-2">
             <div className="hidden md:flex items-center gap-2 border rounded-lg px-3 py-2">
               <Filter className="w-4 h-4 text-gray-500" />
-              <select value={sort} onChange={(e) => setSort(e.target.value as any)} className="bg-transparent text-sm focus:outline-none">
+              <select value={sort} onChange={(e) => setSort(e.target.value as any)} className="bg-transparent text-sm text-gray-900 focus:outline-none">
                 <option value="name">名前順</option>
                 <option value="popular">人気順（作品数）</option>
               </select>
@@ -94,16 +94,16 @@ const CreatorSearchPage: React.FC = () => {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="クリエイター名やキーワードで検索"
-            className="w-full bg-transparent py-2 outline-none"
+            className="w-full bg-transparent py-2 outline-none text-gray-900 placeholder-gray-500"
           />
         </div>
         {/* Quick tags */}
         <div className="mb-6 flex flex-wrap gap-2">
           {['ポートレート','風景','ストリート','ネオン','モノクロ'].map((t) => (
-            <button key={t} onClick={() => setTag(prev => prev === t ? '' : t)} className={`px-3 py-1 rounded-full border text-sm ${tag===t?'bg-blue-600 text-white border-blue-600':'bg-white hover:bg-gray-50'}`}>{t}</button>
+            <button key={t} onClick={() => setTag(prev => prev === t ? '' : t)} className={`px-3 py-1 rounded-full border text-sm ${tag===t?'bg-blue-600 text-white border-blue-600':'bg-white hover:bg-gray-50 text-gray-900'}`}>{t}</button>
           ))}
           {tag && (
-            <button onClick={() => setTag('')} className="px-3 py-1 rounded-full border text-sm bg-white">クリア</button>
+            <button onClick={() => setTag('')} className="px-3 py-1 rounded-full border text-sm bg-white text-gray-900">クリア</button>
           )}
         </div>
 
@@ -114,7 +114,7 @@ const CreatorSearchPage: React.FC = () => {
               <div className="flex items-center gap-3">
                 <img src={u.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${u.id}`} className="w-14 h-14 rounded-full" />
                 <div className="min-w-0">
-                  <p className="font-semibold truncate">{u.display_name}</p>
+                  <p className="font-semibold truncate text-gray-900">{u.display_name}</p>
                   {u.bio && <p className="text-sm text-gray-600 line-clamp-2">{u.bio}</p>}
                 </div>
               </div>

@@ -109,7 +109,7 @@ export function CreateWork() {
           <span className="block text-sm font-medium">説明</span>
           <span className="text-xs text-gray-500 shrink-0 whitespace-nowrap">{description.length} /{descLimit}</span>
         </div>
-        <p className="text-xs text-gray-600 dark:text-gray-400">
+        <p className="text-xs text-gray-900 dark:text-gray-400">
           商品に関する必要な情報と魅力を伝える情報を記入してください。詳しくは、よくある質問。<br />
           例：忍者すりすりくんの公式デジタル絵本。<br />
           ※説明文はマークダウン記法。
@@ -132,7 +132,7 @@ export function CreateWork() {
             onChange={(e) => setContentUrl(e.target.value)}
           />
         </label>
-        <p className="text-xs text-gray-600 dark:text-gray-400">
+        <p className="text-xs text-gray-900 dark:text-gray-400">
           製品の説明に YouTube、Vimeo、SoundCloud、Spotify を埋め込むことができます。
         </p>
       </section>
@@ -207,7 +207,7 @@ export function CreateWork() {
           {images.map((url, idx) => (
             <div key={url + idx} className="rounded-lg border p-2">
               <img src={url} alt={`image-${idx}`} className="h-28 w-full rounded object-cover" />
-              <div className="mt-2 flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+              <div className="mt-2 flex items-center justify-between text-xs text-gray-900 dark:text-gray-400">
                 <span>{idx + 1}</span>
                 <div className="flex gap-1">
                   <Button size="sm" type="button" className="px-2 py-1" onClick={() => {
@@ -232,7 +232,7 @@ export function CreateWork() {
             </div>
           ))}
         </div>
-        <p className="text-xs text-gray-600 dark:text-gray-400">※画像の順番はドラッグ＆ドロップで変更できます</p>
+        <p className="text-xs text-gray-900 dark:text-gray-400">※画像の順番はドラッグ＆ドロップで変更できます</p>
       </section>
 
       {/* ファイル */}
@@ -250,11 +250,11 @@ export function CreateWork() {
             setFiles(next)
           }}
         />
-        <div className="rounded-lg border p-3 text-xs text-gray-700 dark:text-gray-300">
+        <div className="rounded-lg border p-3 text-xs text-gray-900 dark:text-gray-300">
           <div className="mb-2 font-medium">ショップのファイル使用状況</div>
           <div>{formatBytes(usedBytes)} / 10GB</div>
         </div>
-        <p className="text-xs text-gray-600 dark:text-gray-400">複数のファイルをアップロードできます。</p>
+        <p className="text-xs text-gray-900 dark:text-gray-400">複数のファイルをアップロードできます。</p>
       </section>
 
       {/* バリエーション */}
@@ -263,7 +263,7 @@ export function CreateWork() {
           <span className="block text-sm font-medium">バリエーション</span>
           <Button type="button" onClick={() => alert('バリエーションは近日対応予定です。')}>新しい</Button>
         </div>
-        <p className="text-xs text-gray-600 dark:text-gray-400">
+        <p className="text-xs text-gray-900 dark:text-gray-400">
           サイズ、色、その他のオプションのバリエーションを追加できます。詳しい使い方については、バリエーション機能の使い方
         </p>
       </section>
@@ -284,7 +284,7 @@ export function CreateWork() {
                 else setPrice(Math.max(0, Math.floor(Number(v) || 0)))
               }}
             />
-            <span className="text-sm text-gray-600 shrink-0 whitespace-nowrap">円</span>
+            <span className="text-sm text-gray-900 shrink-0 whitespace-nowrap">円</span>
           </div>
         </label>
       </section>
@@ -308,7 +308,7 @@ export function CreateWork() {
           {isPrivate ? '下書きとして保存' : '公開する'}
         </Button>
       </div>
-      {message && <div className="text-sm text-gray-600">{message}</div>}
+      {message && <div className="text-sm text-gray-900">{message}</div>}
     </div>
   )
 }

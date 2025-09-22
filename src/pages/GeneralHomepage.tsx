@@ -13,7 +13,7 @@ const GeneralHomepage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+    <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
       {/* Hero Section */}
       <section className="relative px-6 py-20 text-center">
         <div className="max-w-4xl mx-auto">
@@ -61,7 +61,7 @@ const GeneralHomepage: React.FC = () => {
                 <Globe className="w-8 h-8 text-purple-600" />
               </div>
               <h3 className="text-xl font-semibold mb-3">URLから簡単グッズ化</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-900">
                 お気に入りの画像URLを入力するだけで、自動で権利チェック。
                 45種類のグッズから選んですぐに注文できます。
               </p>
@@ -72,7 +72,7 @@ const GeneralHomepage: React.FC = () => {
                 <Gamepad2 className="w-8 h-8 text-blue-600" />
               </div>
               <h3 className="text-xl font-semibold mb-3">リアルタイムバトル</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-900">
                 クリエイター同士がリアルタイムでバトル！ファンの応援でポイント獲得。
                 勝者には売上の20%ボーナスをプレゼント。
               </p>
@@ -83,7 +83,7 @@ const GeneralHomepage: React.FC = () => {
                 <Zap className="w-8 h-8 text-green-600" />
               </div>
               <h3 className="text-xl font-semibold mb-3">応援チケット・特典</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-900">
                 100円の応援チケットでバトルをサポート。
                 サイン入りグッズ権利やカスタムオプションを獲得。
               </p>
@@ -134,15 +134,15 @@ const GeneralHomepage: React.FC = () => {
           <div className="grid md:grid-cols-3 gap-8">
             <div className="p-6">
               <div className="text-2xl sm:text-4xl font-bold text-purple-600 mb-2">1,200+</div>
-              <p className="text-gray-600">作成グッズ数</p>
+              <p className="text-gray-900">作成グッズ数</p>
             </div>
             <div className="p-6">
               <div className="text-2xl sm:text-4xl font-bold text-blue-600 mb-2">350+</div>
-              <p className="text-gray-600">登録クリエイター</p>
+              <p className="text-gray-900">登録クリエイター</p>
             </div>
             <div className="p-6">
               <div className="text-2xl sm:text-4xl font-bold text-green-600 mb-2">85</div>
-              <p className="text-gray-600">バトル開催数</p>
+              <p className="text-gray-900">バトル開催数</p>
             </div>
           </div>
         </div>

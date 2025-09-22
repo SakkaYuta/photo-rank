@@ -16,11 +16,11 @@ const AccountSettings: React.FC = () => {
   const [active, setActive] = useState<TabKey>('account')
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 account-settings">
       <div className="bg-white border-b">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-3">
           <Settings className="w-5 h-5 text-blue-600" />
-          <h1 className="text-2xl font-bold">設定</h1>
+          <h1 className="text-2xl font-bold text-gray-900">設定</h1>
         </div>
       </div>
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -197,9 +197,9 @@ function AccountPanel() {
         </div>
         <div className="flex-1">
           <h3 className="font-medium text-gray-900 mb-1">プロフィール画像</h3>
-          <p className="text-sm text-gray-600 mb-3">JPG、PNG形式、5MB以下のファイルをアップロードできます</p>
+          <p className="text-sm text-gray-900 mb-3">JPG、PNG形式、5MB以下のファイルをアップロードできます</p>
           <div className="flex flex-wrap gap-2">
-            <label className="btn btn-outline btn-sm cursor-pointer">
+            <label className="btn btn-outline btn-sm cursor-pointer text-gray-900">
               <Upload className="w-4 h-4 mr-1" />
               画像をアップロード
               <input
@@ -228,12 +228,12 @@ function AccountPanel() {
 
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm text-gray-600 mb-1">アカウント名</label>
-          <input className="w-full border rounded-md px-3 py-2 bg-gray-50" value={displayName} disabled />
+          <label className="block text-sm text-gray-900 mb-1 font-medium">アカウント名</label>
+          <input className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-gray-900" value={displayName} disabled />
         </div>
         <div>
-          <label className="block text-sm text-gray-600 mb-1">新しいアカウント名</label>
-          <input className="w-full border rounded-md px-3 py-2" placeholder="例: YUKIJAPAN" value={newAccountName} onChange={(e)=>setNewAccountName(e.target.value)} />
+          <label className="block text-sm text-gray-900 mb-1 font-medium">新しいアカウント名</label>
+          <input className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" placeholder="例: YUKIJAPAN" value={newAccountName} onChange={(e)=>setNewAccountName(e.target.value)} />
         </div>
       </div>
 
@@ -245,25 +245,25 @@ function AccountPanel() {
         </h3>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">現在のメールアドレス</label>
+            <label className="block text-sm text-gray-900 mb-1 font-medium">現在のメールアドレス</label>
             <input
-              className="w-full border rounded-md px-3 py-2 bg-gray-50"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-gray-900"
               value={email || '未設定'}
               disabled
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">新しいメールアドレス</label>
+            <label className="block text-sm text-gray-900 mb-1 font-medium">新しいメールアドレス</label>
             <input
               type="email"
-              className="w-full border rounded-md px-3 py-2"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
               placeholder="新しいメールアドレスを入力"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
             />
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-gray-900 mt-2">
           メールアドレスを変更する場合は、確認メールが送信されます。メール内のリンクをクリックして変更を完了してください。
         </p>
       </div>
@@ -272,8 +272,8 @@ function AccountPanel() {
         <h3 className="font-semibold mb-2">アカウント情報</h3>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">性別</label>
-            <select className="w-full border rounded-md px-3 py-2" value={gender} onChange={(e)=>setGender(e.target.value as any)}>
+            <label className="block text-sm text-gray-900 mb-1 font-medium">性別</label>
+            <select className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" value={gender} onChange={(e)=>setGender(e.target.value as any)}>
               <option>女性</option>
               <option>男性</option>
               <option>その他</option>
@@ -281,24 +281,24 @@ function AccountPanel() {
             </select>
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">生年月日</label>
-            <input type="date" className="w-full border rounded-md px-3 py-2" value={birthday} onChange={(e)=>setBirthday(e.target.value)} />
+            <label className="block text-sm text-gray-900 mb-1 font-medium">生年月日</label>
+            <input type="date" className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" value={birthday} onChange={(e)=>setBirthday(e.target.value)} />
           </div>
         </div>
         <div className="mt-4">
-          <label className="block text-sm text-gray-600 mb-2">{APP_NAME}をはじめたきっかけ（任意）</label>
+          <label className="block text-sm text-gray-900 mb-2 font-medium">{APP_NAME}をはじめたきっかけ（任意）</label>
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={reasons.create_sell} onChange={e=>setReasons({...reasons, create_sell: e.target.checked})} /> アイテムを作成・販売するため</label>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={reasons.buy_others} onChange={e=>setReasons({...reasons, buy_others: e.target.checked})} /> 誰かのアイテムを購入するため</label>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={reasons.self_buy} onChange={e=>setReasons({...reasons, self_buy: e.target.checked})} /> 自分のアイテムを作成して購入するため</label>
           </div>
-          <p className="text-xs text-gray-500 mt-2">性別、生年月日、{APP_NAME}をはじめたきっかけは他のユーザーへ公開されることはありません。サービスの品質向上のために活用させていただきます。</p>
+          <p className="text-xs text-gray-900 mt-2">性別、生年月日、{APP_NAME}をはじめたきっかけは他のユーザーへ公開されることはありません。サービスの品質向上のために活用させていただきます。</p>
         </div>
       </div>
 
       <div className="flex items-center gap-2">
         <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? '保存中...' : '保存'}</button>
-        <button className="btn btn-outline" onClick={()=>alert('パスワード変更は近日対応予定です')}>パスワード変更</button>
+        <button className="btn btn-outline text-gray-900" onClick={()=>alert('パスワード変更は近日対応予定です')}>パスワード変更</button>
       </div>
 
       {/* クリエイター: オーガナイザー所属 */}
@@ -311,9 +311,9 @@ function AccountPanel() {
             </div>
           ) : (
             <div className="space-y-2">
-              <label className="block text-sm text-gray-600">招待コード</label>
+              <label className="block text-sm text-gray-900 font-medium">招待コード</label>
               <div className="flex gap-2">
-                <input className="border rounded-md px-3 py-2 font-mono tracking-widest" value={inviteCode} onChange={e=>setInviteCode(e.target.value.toUpperCase())} placeholder="ABC123" maxLength={6} />
+                <input className="border border-gray-300 rounded-md px-3 py-2 font-mono tracking-widest bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" value={inviteCode} onChange={e=>setInviteCode(e.target.value.toUpperCase())} placeholder="ABC123" maxLength={6} />
                 <button className="btn btn-primary" disabled={joining || inviteCode.length<6} onClick={async()=>{
                   setJoining(true)
                   try {
@@ -333,11 +333,11 @@ function AccountPanel() {
 
       <div className="mt-6 border-t pt-4">
         <h3 className="font-semibold mb-2">退会</h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-gray-900">
           {APP_NAME}を退会するには、登録されているメールアドレスでの本人確認が必要です。登録メールアドレス <span className="font-medium text-gray-900">{email || '未設定'}</span> に認証コード（または確認メール）を送信します。
         </p>
         <div className="mt-3 flex items-center gap-2">
-          <button className="btn btn-outline" onClick={()=>alert('認証コードを送信しました（デモ）')}>認証コードを送信</button>
+          <button className="btn btn-outline text-gray-900" onClick={()=>alert('認証コードを送信しました（デモ）')}>認証コードを送信</button>
           <button className="btn btn-danger" onClick={async()=>{ if(confirm('本当に退会しますか？この操作は取り消せません。')) { try { await ProfileService.deleteAccount(); alert('退会手続きが完了しました'); } catch (e) { alert('退会手続きに失敗しました'); } } }}>退会する</button>
         </div>
       </div>
@@ -438,7 +438,7 @@ function PayoutPanel() {
   return (
     <div className="space-y-6">
       <div className="rounded-xl border bg-white p-6 space-y-4">
-        <h2 className="text-lg font-semibold">銀行口座</h2>
+        <h2 className="text-lg font-semibold text-gray-900">銀行口座</h2>
         {disabled && (
           <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
             <AlertTriangle className="w-5 h-5 mt-0.5" />
@@ -454,8 +454,8 @@ function PayoutPanel() {
         )}
         <form onSubmit={save} className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="md:col-span-2">
-            <label className="block text-sm text-gray-600 mb-1">銀行名</label>
-            <select className="w-full border rounded-md px-3 py-2" value={bank.bank_name} onChange={e=>setBank({...bank, bank_name: e.target.value})} disabled={disabled}>
+            <label className="block text-sm text-gray-900 mb-1 font-medium">銀行名</label>
+            <select className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" value={bank.bank_name} onChange={e=>setBank({...bank, bank_name: e.target.value})} disabled={disabled}>
               <option value="">銀行名を選択</option>
               <option>みずほ銀行</option>
               <option>三菱UFJ銀行</option>
@@ -465,23 +465,23 @@ function PayoutPanel() {
             </select>
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">支店コード</label>
-            <input className="w-full border rounded-md px-3 py-2" placeholder="000" maxLength={3} value={bank.branch_code} onChange={e=>setBank({...bank, branch_code: e.target.value.replace(/[^0-9]/g,'').slice(0,3)})} disabled={disabled} />
+            <label className="block text-sm text-gray-900 mb-1 font-medium">支店コード</label>
+            <input className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" placeholder="000" maxLength={3} value={bank.branch_code} onChange={e=>setBank({...bank, branch_code: e.target.value.replace(/[^0-9]/g,'').slice(0,3)})} disabled={disabled} />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">口座番号</label>
-            <input className="w-full border rounded-md px-3 py-2" placeholder="0000000" maxLength={7} value={bank.account_number} onChange={e=>setBank({...bank, account_number: e.target.value.replace(/[^0-9]/g,'').slice(0,7)})} disabled={disabled} />
+            <label className="block text-sm text-gray-900 mb-1 font-medium">口座番号</label>
+            <input className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" placeholder="0000000" maxLength={7} value={bank.account_number} onChange={e=>setBank({...bank, account_number: e.target.value.replace(/[^0-9]/g,'').slice(0,7)})} disabled={disabled} />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">口座種別</label>
-            <select className="w-full border rounded-md px-3 py-2" value={bank.account_type} onChange={e=>setBank({...bank, account_type: e.target.value})} disabled={disabled}>
+            <label className="block text-sm text-gray-900 mb-1 font-medium">口座種別</label>
+            <select className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" value={bank.account_type} onChange={e=>setBank({...bank, account_type: e.target.value})} disabled={disabled}>
               <option>普通</option>
               <option>当座</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">口座名義 (カタカナ・半角英数字)</label>
-            <input className="w-full border rounded-md px-3 py-2" placeholder="スリスリタロウ" value={bank.account_holder_kana} onChange={e=>setBank({...bank, account_holder_kana: e.target.value})} disabled={disabled} />
+            <label className="block text-sm text-gray-900 mb-1 font-medium">口座名義 (カタカナ・半角英数字)</label>
+            <input className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" placeholder="フォトランク" value={bank.account_holder_kana} onChange={e=>setBank({...bank, account_holder_kana: e.target.value})} disabled={disabled} />
           </div>
           <div className="md:col-span-2 text-xs text-gray-500 space-y-1">
             <p>銀行口座はご本人名義の口座のみご利用いただけます。振込申請には本人情報のご登録もお願いいたします。</p>
@@ -496,47 +496,47 @@ function PayoutPanel() {
       </div>
 
       <div className="rounded-xl border bg-white p-6 space-y-4">
-        <h2 className="text-lg font-semibold">本人情報</h2>
+        <h2 className="text-lg font-semibold text-gray-900">本人情報</h2>
         <form onSubmit={save} className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">姓</label>
-            <input className="w-full border rounded-md px-3 py-2" value={person.last_name} onChange={e=>setPerson({...person, last_name: e.target.value})} disabled={disabled} />
+            <label className="block text-sm text-gray-900 mb-1 font-medium">姓</label>
+            <input className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" value={person.last_name} onChange={e=>setPerson({...person, last_name: e.target.value})} disabled={disabled} />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">名</label>
-            <input className="w-full border rounded-md px-3 py-2" value={person.first_name} onChange={e=>setPerson({...person, first_name: e.target.value})} disabled={disabled} />
+            <label className="block text-sm text-gray-900 mb-1 font-medium">名</label>
+            <input className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" value={person.first_name} onChange={e=>setPerson({...person, first_name: e.target.value})} disabled={disabled} />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">セイ</label>
-            <input className="w-full border rounded-md px-3 py-2" value={person.last_name_kana} onChange={e=>setPerson({...person, last_name_kana: e.target.value})} disabled={disabled} />
+            <label className="block text-sm text-gray-900 mb-1 font-medium">セイ</label>
+            <input className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" value={person.last_name_kana} onChange={e=>setPerson({...person, last_name_kana: e.target.value})} disabled={disabled} />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">メイ</label>
-            <input className="w-full border rounded-md px-3 py-2" value={person.first_name_kana} onChange={e=>setPerson({...person, first_name_kana: e.target.value})} disabled={disabled} />
+            <label className="block text-sm text-gray-900 mb-1 font-medium">メイ</label>
+            <input className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" value={person.first_name_kana} onChange={e=>setPerson({...person, first_name_kana: e.target.value})} disabled={disabled} />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">生年月日</label>
-            <input type="date" className="w-full border rounded-md px-3 py-2" value={person.birthday} onChange={e=>setPerson({...person, birthday: e.target.value})} disabled={disabled} />
+            <label className="block text-sm text-gray-900 mb-1 font-medium">生年月日</label>
+            <input type="date" className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" value={person.birthday} onChange={e=>setPerson({...person, birthday: e.target.value})} disabled={disabled} />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">郵便番号</label>
-            <input className="w-full border rounded-md px-3 py-2" placeholder="123-4567" value={person.postal_code} onChange={e=>setPerson({...person, postal_code: e.target.value})} disabled={disabled} />
+            <label className="block text-sm text-gray-900 mb-1 font-medium">郵便番号</label>
+            <input className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" placeholder="123-4567" value={person.postal_code} onChange={e=>setPerson({...person, postal_code: e.target.value})} disabled={disabled} />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">都道府県</label>
-            <input className="w-full border rounded-md px-3 py-2" value={person.prefecture} onChange={e=>setPerson({...person, prefecture: e.target.value})} disabled={disabled} />
+            <label className="block text-sm text-gray-900 mb-1 font-medium">都道府県</label>
+            <input className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" value={person.prefecture} onChange={e=>setPerson({...person, prefecture: e.target.value})} disabled={disabled} />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">市区町村</label>
-            <input className="w-full border rounded-md px-3 py-2" value={person.city} onChange={e=>setPerson({...person, city: e.target.value})} disabled={disabled} />
+            <label className="block text-sm text-gray-900 mb-1 font-medium">市区町村</label>
+            <input className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" value={person.city} onChange={e=>setPerson({...person, city: e.target.value})} disabled={disabled} />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm text-gray-600 mb-1">番地など</label>
-            <input className="w-full border rounded-md px-3 py-2" value={person.address1} onChange={e=>setPerson({...person, address1: e.target.value})} disabled={disabled} />
+            <label className="block text-sm text-gray-900 mb-1 font-medium">番地など</label>
+            <input className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" value={person.address1} onChange={e=>setPerson({...person, address1: e.target.value})} disabled={disabled} />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm text-gray-600 mb-1">建物名・部屋番号</label>
-            <input className="w-full border rounded-md px-3 py-2" value={person.address2} onChange={e=>setPerson({...person, address2: e.target.value})} disabled={disabled} />
+            <label className="block text-sm text-gray-900 mb-1 font-medium">建物名・部屋番号</label>
+            <input className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" value={person.address2} onChange={e=>setPerson({...person, address2: e.target.value})} disabled={disabled} />
           </div>
           <div className="md:col-span-2">
             <button className="btn btn-primary" disabled={disabled || saving}>{saving ? '保存中...' : '保存'}</button>
@@ -551,8 +551,8 @@ function CardPanel() {
   return (
     <div className="rounded-xl border bg-white p-6 space-y-3">
       <h2 className="text-lg font-semibold">クレジットカード</h2>
-      <p className="text-sm text-gray-600">カードの追加・削除は近日対応予定です。</p>
-      <button className="btn btn-outline w-fit" onClick={()=>alert('近日対応予定です')}>カードを追加</button>
+      <p className="text-sm text-gray-900">カードの追加・削除は近日対応予定です。</p>
+      <button className="btn btn-outline w-fit text-gray-900" onClick={()=>alert('近日対応予定です')}>カードを追加</button>
     </div>
   )
 }
@@ -595,8 +595,8 @@ function AddressPanel() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium">{addr.name} {addr.is_default && <span className="ml-2 text-xs text-green-600">(既定)</span>}</div>
-                    <div className="text-sm text-gray-600">〒{addr.postal_code} {addr.prefecture || ''}{addr.city || ''}{addr.address1} {addr.address2 || ''}</div>
-                    {addr.phone && <div className="text-sm text-gray-600">TEL: {addr.phone}</div>}
+                    <div className="text-sm text-gray-900">〒{addr.postal_code} {addr.prefecture || ''}{addr.city || ''}{addr.address1} {addr.address2 || ''}</div>
+                    {addr.phone && <div className="text-sm text-gray-900">TEL: {addr.phone}</div>}
                   </div>
                 </div>
               </div>
@@ -608,13 +608,13 @@ function AddressPanel() {
       <div className="rounded-xl border bg-white p-6">
         <h3 className="font-semibold mb-3">新しい住所を追加</h3>
         <form onSubmit={save} className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <input className="border rounded-md px-3 py-2" placeholder="氏名" value={form.name} onChange={e=>setForm({...form, name: e.target.value})} required />
-          <input className="border rounded-md px-3 py-2" placeholder="郵便番号 (例: 100-0001)" value={form.postal_code} onChange={e=>setForm({...form, postal_code: e.target.value})} required />
-          <input className="border rounded-md px-3 py-2" placeholder="都道府県" value={form.prefecture || ''} onChange={e=>setForm({...form, prefecture: e.target.value})} />
-          <input className="border rounded-md px-3 py-2" placeholder="市区町村" value={form.city || ''} onChange={e=>setForm({...form, city: e.target.value})} />
-          <input className="border rounded-md px-3 py-2 md:col-span-2" placeholder="住所1" value={form.address1} onChange={e=>setForm({...form, address1: e.target.value})} required />
-          <input className="border rounded-md px-3 py-2 md:col-span-2" placeholder="住所2 (任意)" value={form.address2 || ''} onChange={e=>setForm({...form, address2: e.target.value})} />
-          <input className="border rounded-md px-3 py-2" placeholder="電話番号 (任意)" value={form.phone || ''} onChange={e=>setForm({...form, phone: e.target.value})} />
+          <input className="border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" placeholder="氏名" value={form.name} onChange={e=>setForm({...form, name: e.target.value})} required />
+          <input className="border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" placeholder="郵便番号 (例: 100-0001)" value={form.postal_code} onChange={e=>setForm({...form, postal_code: e.target.value})} required />
+          <input className="border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" placeholder="都道府県" value={form.prefecture || ''} onChange={e=>setForm({...form, prefecture: e.target.value})} />
+          <input className="border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" placeholder="市区町村" value={form.city || ''} onChange={e=>setForm({...form, city: e.target.value})} />
+          <input className="border border-gray-300 rounded-md px-3 py-2 md:col-span-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" placeholder="住所1" value={form.address1} onChange={e=>setForm({...form, address1: e.target.value})} required />
+          <input className="border border-gray-300 rounded-md px-3 py-2 md:col-span-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" placeholder="住所2 (任意)" value={form.address2 || ''} onChange={e=>setForm({...form, address2: e.target.value})} />
+          <input className="border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200" placeholder="電話番号 (任意)" value={form.phone || ''} onChange={e=>setForm({...form, phone: e.target.value})} />
           <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={Boolean(form.is_default)} onChange={e=>setForm({...form, is_default: e.target.checked})} /> 既定の住所にする</label>
           <div className="md:col-span-2">
             <button className="btn btn-primary" disabled={saving}>{saving ? '保存中...' : '追加'}</button>
@@ -684,8 +684,8 @@ function TwoFAPanel() {
   return (
     <div className="rounded-xl border bg-white p-6 space-y-3">
       <h2 className="text-lg font-semibold">二要素認証</h2>
-      <p className="text-sm text-gray-600">アカウントの安全性を高めるため、二要素認証（2FA）の設定が可能になります。現在は準備中です。</p>
-      <button className="btn btn-outline w-fit" onClick={()=>alert('近日対応予定です')}>有効化</button>
+      <p className="text-sm text-gray-900">アカウントの安全性を高めるため、二要素認証（2FA）の設定が可能になります。現在は準備中です。</p>
+      <button className="btn btn-outline w-fit text-gray-900" onClick={()=>alert('近日対応予定です')}>有効化</button>
     </div>
   )
 }

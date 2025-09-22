@@ -64,3 +64,11 @@ export async function createCheerTicketIntent(battleId: string, creatorId: strin
   const clientSecret = (data as any).clientSecret ?? (data as any).client_secret
   return { clientSecret }
 }
+
+export async function purchaseBattleGoods(battleId: string, creatorId: string, goodsType: string, quantity: number = 1): Promise<{ order_id: string; amount: number; purchased_at: string }> {
+  const { data, error } = await supabase.functions.invoke('battle-goods-purchase', {
+    body: { battle_id: battleId, creator_id: creatorId, goods_type: goodsType, quantity }
+  })
+  if (error) throw error
+  return data as any
+}

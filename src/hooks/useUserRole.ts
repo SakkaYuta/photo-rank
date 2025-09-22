@@ -96,37 +96,47 @@ export const useUserRole = () => {
             throw userError;
           }
         } else {
-          const userTypeValue = userData.user_type as UserType;
-          setUserType(userTypeValue);
+          // Detect effective user type by checking associated profiles as a fallback
+          let effectiveType = (userData.user_type as UserType) || 'general'
+          let profileData: UserWithProfiles = userData
 
-          // Fetch additional profiles based on user type
-          let profileData: UserWithProfiles = userData;
+          // Fetch both profiles to robustly infer role
+          const [factoryResult, organizerResult] = await Promise.all([
+            supabase.from('factory_profiles').select('*').eq('user_id', user.id).maybeSingle(),
+            supabase.from('organizer_profiles').select('*').eq('user_id', user.id).maybeSingle(),
+          ])
 
-          if (userTypeValue === 'factory') {
-            const { data: factoryProfile } = await supabase
-              .from('factory_profiles')
-              .select('*')
-              .eq('user_id', user.id)
-              .single();
+          const factoryProfile = factoryResult.data
+          const organizerProfile = organizerResult.data
 
-            if (factoryProfile) {
-              profileData.factory_profile = factoryProfile;
-            }
+          // Handle errors gracefully
+          if (factoryResult.error) {
+            console.log('Factory profiles table might not exist:', factoryResult.error.message);
+          }
+          if (organizerResult.error) {
+            console.log('Organizer profiles table might not exist:', organizerResult.error.message);
           }
 
-          if (userTypeValue === 'organizer') {
-            const { data: organizerProfile } = await supabase
-              .from('organizer_profiles')
-              .select('*')
-              .eq('user_id', user.id)
-              .single();
+          console.log('Profile detection:', {
+            factoryProfile,
+            organizerProfile,
+            userData,
+            userType: userData.user_type,
+            isCreator: userData.is_creator
+          })
 
-            if (organizerProfile) {
-              profileData.organizer_profile = organizerProfile;
-            }
+          if (organizerProfile) {
+            profileData.organizer_profile = organizerProfile as any
+            effectiveType = 'organizer'
+          } else if (factoryProfile) {
+            profileData.factory_profile = factoryProfile as any
+            effectiveType = 'factory'
+          } else if (userData.is_creator) {
+            effectiveType = 'creator'
           }
 
-          setUserProfile(profileData);
+          setUserType(effectiveType)
+          setUserProfile(profileData)
         }
       } catch (err) {
         console.error('Error fetching user profile:', err);
@@ -144,6 +154,37 @@ export const useUserRole = () => {
 
     try {
       setError(null);
+
+      console.log('Updating user type to:', newUserType);
+
+      // Create organizer profile if switching to organizer
+      if (newUserType === 'organizer') {
+        try {
+          const { data: existingOrganizerProfile, error: selectError } = await supabase
+            .from('organizer_profiles')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (selectError) {
+            console.log('organizer_profiles table might not exist, continuing with user_type only');
+          } else if (!existingOrganizerProfile) {
+            const { error: orgError } = await supabase
+              .from('organizer_profiles')
+              .insert({
+                user_id: user.id,
+                name: userProfile?.display_name || user.email?.split('@')[0] || 'オーガナイザー',
+                description: 'クリエイターを管理するオーガナイザーです',
+              });
+
+            if (orgError) {
+              console.log('Error creating organizer profile, continuing with user_type only:', orgError.message);
+            }
+          }
+        } catch (error) {
+          console.log('Organizer profile operations failed, continuing with user_type only:', error);
+        }
+      }
 
       const { error: updateError } = await supabase
         .from('users')

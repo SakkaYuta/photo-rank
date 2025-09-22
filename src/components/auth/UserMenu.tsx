@@ -102,8 +102,8 @@ export function UserMenu() {
             className="h-8 w-8 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
           />
         </a>
-        <span className="text-sm hidden md:inline">{profile.display_name}</span>
-        <button className="btn btn-outline text-xs md:text-sm px-2 md:px-4" onClick={() => signOut()}>ログアウト</button>
+        <span className="text-sm hidden md:inline text-gray-900">{profile.display_name}</span>
+        <button className="btn btn-outline text-xs md:text-sm px-2 md:px-4 text-black hover:text-black" onClick={() => signOut()}>ログアウト</button>
       </div>
       {profileModal}
     </>

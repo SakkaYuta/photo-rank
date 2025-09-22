@@ -86,36 +86,53 @@ function App() {
   const { profile } = useAuth()
   const { partner } = usePartnerAuth()
   const { isAdmin, isAdminOrModerator, adminUser } = useAdminAuth()
-  const { userType, user } = useUserRole()
+  const { userType, user, userProfile, loading: roleLoading } = useUserRole()
   const isPartner = Boolean(partner && partner.status === 'approved')
   const isFactoryUser = userType === 'factory'
   const isDemoMode = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
 
   // ユーザータイプに応じて初期ビューを設定
   useEffect(() => {
+    if (roleLoading) return
     if (user) {
       const viewOverride = localStorage.getItem('view_override')
+      const effectiveType = (userProfile as any)?.organizer_profile
+        ? 'organizer'
+        : (userProfile as any)?.factory_profile
+        ? 'factory'
+        : userType
 
-      switch (userType) {
+      console.log('User role debug:', {
+        userType,
+        effectiveType,
+        hasOrganizerProfile: !!(userProfile as any)?.organizer_profile,
+        hasFactoryProfile: !!(userProfile as any)?.factory_profile,
+        userProfile,
+        viewOverride,
+        view
+      })
+
+
+      switch (effectiveType) {
         case 'creator':
-          setView(viewOverride === 'general' ? 'merch' : 'creator-dashboard')
+          navigate(viewOverride === 'general' ? 'merch' : 'creator-dashboard')
           break
         case 'factory':
-          setView('factory-dashboard')
+          navigate('factory-dashboard')
           break
         case 'organizer':
-          setView(viewOverride === 'general' ? 'merch' : 'organizer-dashboard')
+          navigate(viewOverride === 'general' ? 'merch' : 'organizer-dashboard')
           break
         case 'general':
         default:
-          setView('general-dashboard')
+          navigate('general-dashboard')
           break
       }
     } else {
       // 未ログインユーザーはLPを表示
-      setView('merch')
+      navigate('merch')
     }
-  }, [userType, user])
+  }, [roleLoading, userType, user, (userProfile as any)?.organizer_profile, (userProfile as any)?.factory_profile])
 
   // セキュリティ: デモ時のみ工場ユーザーにパートナーページアクセスを許可
   const canAccessPartnerPages = isPartner || (isDemoMode && isFactoryUser)
@@ -137,6 +154,40 @@ function App() {
     setView(v)
     try { window.location.hash = v } catch {}
   }
+
+  // 役割に応じた許可ビューを制限（ハッシュで不正なビューが来た場合も強制補正）
+  const allowedViewsFor = (role: string): ViewKey[] => {
+    switch (role) {
+      case 'creator':
+        return ['creator-dashboard','create','myworks','orders','profile','merch','search','collection','favorites','cart','battle-search','account-settings'] as ViewKey[]
+      case 'factory':
+        return ['factory-dashboard','partner-orders','partner-products','partner-settings','merch','account-settings'] as ViewKey[]
+      case 'organizer':
+        return ['organizer-dashboard','events','contests','merch','account-settings'] as ViewKey[]
+      default:
+        return ['general-dashboard','merch','search','collection','favorites','cart','orders','account-settings'] as ViewKey[]
+    }
+  }
+
+  useEffect(() => {
+    const effectiveType = (userProfile as any)?.organizer_profile
+      ? 'organizer'
+      : (userProfile as any)?.factory_profile
+      ? 'factory'
+      : userType
+
+    const allowed = allowedViewsFor(effectiveType)
+    if (!allowed.includes(view)) {
+      // 強制的にロールのダッシュボードへ補正
+      const fallback: Record<string, ViewKey> = {
+        creator: 'creator-dashboard',
+        factory: 'factory-dashboard',
+        organizer: 'organizer-dashboard',
+        general: 'general-dashboard',
+      }
+      navigate(fallback[effectiveType] || 'general-dashboard')
+    }
+  }, [view, userType, (userProfile as any)?.organizer_profile, (userProfile as any)?.factory_profile])
 
   useEffect(() => {
     // 開発者ユーティリティを初期化
@@ -202,7 +253,7 @@ function App() {
             <CartProvider>
               <FavoritesProvider>
                 <NavProvider navigate={(v) => navigate(v as ViewKey)}>
-          <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
+          <div className="min-h-screen bg-gray-50">
             <PartialErrorBoundary name="ヘッダー">
               <Header />
             </PartialErrorBoundary>

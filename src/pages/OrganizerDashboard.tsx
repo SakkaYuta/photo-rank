@@ -198,17 +198,17 @@ const OrganizerDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-lg sm:text-2xl font-bold text-gray-900">
-                クリエイター管理ダッシュボード
+                オーガナイザーダッシュボード
               </h1>
               <p className="text-gray-600">
-                こんにちは、{userProfile?.display_name}さん
+                こんにちは、{userProfile?.display_name}さん（オーガナイザー）
               </p>
             </div>
             <div className="flex items-center gap-3">

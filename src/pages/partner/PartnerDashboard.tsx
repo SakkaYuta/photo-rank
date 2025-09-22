@@ -125,7 +125,7 @@ export function PartnerDashboard() {
     return (
       <div className="p-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">製造パートナーダッシュボード</h1>
+          <h1 className="text-2xl font-bold mb-4 text-gray-900">製造パートナーダッシュボード</h1>
           <p className="text-gray-600 dark:text-gray-400">
             製造パートナーとして登録されていません。
           </p>
@@ -138,7 +138,7 @@ export function PartnerDashboard() {
     return (
       <div className="p-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">製造パートナーダッシュボード</h1>
+          <h1 className="text-2xl font-bold mb-4 text-gray-900">製造パートナーダッシュボード</h1>
           <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
             <p className="text-yellow-800 dark:text-yellow-200">
               パートナー申請は審査中です。承認まで今しばらくお待ちください。
@@ -153,7 +153,7 @@ export function PartnerDashboard() {
     return (
       <div className="p-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">製造パートナーダッシュボード</h1>
+          <h1 className="text-2xl font-bold mb-4 text-gray-900">製造パートナーダッシュボード</h1>
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
             <p className="text-red-800 dark:text-red-200">
               アカウントが停止されています。サポートまでお問い合わせください。
@@ -177,7 +177,7 @@ export function PartnerDashboard() {
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-xl sm:text-3xl font-bold">製造パートナーダッシュボード</h1>
+        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">製造パートナーダッシュボード</h1>
         <div className="text-sm text-gray-500 dark:text-gray-400">
           {partner.name}
         </div>

@@ -13,13 +13,27 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ className = '' }) => {
 
   const roles = [
     { value: 'general' as UserType, label: '一般ユーザー' },
-    { value: 'creator' as UserType, label: 'クリエイター' }
+    { value: 'creator' as UserType, label: 'クリエイター' },
+    { value: 'factory' as UserType, label: '工場製造パートナー' },
+    { value: 'organizer' as UserType, label: 'オーガナイザー' }
   ];
+
+  // オーガナイザー表示時は「工場」「一般ユーザー」を候補から除外
+  const availableRoles = roles.filter(r => {
+    if (userType === 'organizer' && (r.value === 'factory' || r.value === 'general')) return false;
+    return true;
+  });
 
   const handleRoleChange = async (newRole: UserType) => {
     try {
+      console.log('Switching to role:', newRole);
       await switchRole(newRole);
       setIsOpen(false);
+
+      // Force page reload to ensure proper role detection
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     } catch (error) {
       console.error('Role switch failed:', error);
     }
@@ -53,7 +67,7 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ className = '' }) => {
     <div className={`relative ${className}`}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+        className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-gray-900"
         disabled={loading}
       >
         <Settings className="w-4 h-4" />
@@ -67,7 +81,7 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ className = '' }) => {
             <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
               ロール切り替え（テスト用）
             </div>
-            {roles.map((role) => (
+            {availableRoles.map((role) => (
               <button
                 key={role.value}
                 onClick={() => handleRoleChange(role.value)}
@@ -81,7 +95,7 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ className = '' }) => {
                 )}
               </button>
             ))}
-            {userType === 'creator' && (
+            {(userType === 'creator' || userType === 'factory' || userType === 'organizer') && (
               <>
                 <div className="my-1 border-t" />
                 <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
