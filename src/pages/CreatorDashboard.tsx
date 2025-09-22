@@ -162,7 +162,7 @@ const CreatorDashboard: React.FC = () => {
               </button>
               <button
                 onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'merch' } }))}
-                className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm"
+                className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm text-gray-900"
                 title="ホームへ"
               >
                 ✨ PhotoRank

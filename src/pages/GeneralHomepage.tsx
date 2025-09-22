@@ -8,8 +8,8 @@ const GeneralHomepage: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const handleViewWorks = () => {
-    // クリエイター検索ページに遷移
-    window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'search' } }));
+    // バトル検索ページに遷移
+    window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'battle-search' } }));
   };
 
   return (
@@ -60,7 +60,7 @@ const GeneralHomepage: React.FC = () => {
               <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Globe className="w-8 h-8 text-purple-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">URLから簡単グッズ化</h3>
+              <h3 className="text-xl font-semibold mb-3 text-gray-900">URLから簡単グッズ化</h3>
               <p className="text-gray-900">
                 お気に入りの画像URLを入力するだけで、自動で権利チェック。
                 45種類のグッズから選んですぐに注文できます。
@@ -71,7 +71,7 @@ const GeneralHomepage: React.FC = () => {
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Gamepad2 className="w-8 h-8 text-blue-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">リアルタイムバトル</h3>
+              <h3 className="text-xl font-semibold mb-3 text-gray-900">リアルタイムバトル</h3>
               <p className="text-gray-900">
                 クリエイター同士がリアルタイムでバトル！ファンの応援でポイント獲得。
                 勝者には売上の20%ボーナスをプレゼント。
@@ -82,7 +82,7 @@ const GeneralHomepage: React.FC = () => {
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Zap className="w-8 h-8 text-green-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">応援チケット・特典</h3>
+              <h3 className="text-xl font-semibold mb-3 text-gray-900">応援チケット・特典</h3>
               <p className="text-gray-900">
                 100円の応援チケットでバトルをサポート。
                 サイン入りグッズ権利やカスタムオプションを獲得。

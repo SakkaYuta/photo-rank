@@ -13,10 +13,10 @@ export function Footer() {
       <div className="mx-auto max-w-6xl px-4 flex flex-wrap gap-4 justify-between">
         <div className="space-y-2">
           <div className="font-semibold text-gray-900 dark:text-gray-200">ポリシー</div>
-          <button className="hover:underline" onClick={() => go('terms')}>利用規約</button><br />
-          <button className="hover:underline" onClick={() => go('privacy')}>プライバシーポリシー</button><br />
-          <button className="hover:underline" onClick={() => go('refunds')}>返金ポリシー</button><br />
-          <button className="hover:underline" onClick={() => go('commerce')}>特定商取引法に基づく表示</button>
+          <button className="hover:underline text-gray-900" onClick={() => go('terms')}>利用規約</button><br />
+          <button className="hover:underline text-gray-900" onClick={() => go('privacy')}>プライバシーポリシー</button><br />
+          <button className="hover:underline text-gray-900" onClick={() => go('refunds')}>返金ポリシー</button><br />
+          <button className="hover:underline text-gray-900" onClick={() => go('commerce')}>特定商取引法に基づく表示</button>
         </div>
 
         {isDev && (

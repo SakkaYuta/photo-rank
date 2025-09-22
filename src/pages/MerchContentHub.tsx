@@ -76,7 +76,7 @@ const MerchContentHub: React.FC = () => {
   const go = (view: string) => window.dispatchEvent(new CustomEvent('navigate', { detail: { view } }))
 
   const handleViewWorks = () => {
-    window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'search' } }))
+    window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'battle-search' } }))
   }
 
   // 未ログインユーザーにはLPを表示
@@ -127,7 +127,7 @@ const MerchContentHub: React.FC = () => {
                 <div className="w-14 h-14 sm:w-16 sm:h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Globe className="w-7 h-7 sm:w-8 sm:h-8 text-purple-600" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-semibold mb-3">URLから簡単グッズ化</h3>
+                <h3 className="text-lg sm:text-xl font-semibold mb-3 text-gray-900">URLから簡単グッズ化</h3>
                 <p className="text-gray-900 text-sm sm:text-base">
                   お気に入りの画像URLを入力するだけで、自動で権利チェック。
                   45種類のグッズから選んですぐに注文できます。
@@ -138,7 +138,7 @@ const MerchContentHub: React.FC = () => {
                 <div className="w-14 h-14 sm:w-16 sm:h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Gamepad2 className="w-7 h-7 sm:w-8 sm:h-8 text-blue-600" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-semibold mb-3">リアルタイムバトル</h3>
+                <h3 className="text-lg sm:text-xl font-semibold mb-3 text-gray-900">リアルタイムバトル</h3>
                 <p className="text-gray-900 text-sm sm:text-base">
                   クリエイター同士がリアルタイムでバトル！ファンの応援でポイント獲得。
                   勝者には売上の20%ボーナスをプレゼント。
@@ -149,7 +149,7 @@ const MerchContentHub: React.FC = () => {
                 <div className="w-14 h-14 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Zap className="w-7 h-7 sm:w-8 sm:h-8 text-green-600" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-semibold mb-3">応援チケット・特典</h3>
+                <h3 className="text-lg sm:text-xl font-semibold mb-3 text-gray-900">応援チケット・特典</h3>
                 <p className="text-gray-900 text-sm sm:text-base">
                   100円の応援チケットでバトルをサポート。
                   サイン入りグッズ権利やカスタムオプションを獲得。

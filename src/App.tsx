@@ -150,11 +150,11 @@ function App() {
       case 'creator':
         return ['creator-dashboard','create','myworks','orders','profile','merch','search','collection','favorites','cart','battle-search','account-settings'] as ViewKey[]
       case 'factory':
-        return ['factory-dashboard','partner-orders','partner-products','partner-settings','merch','account-settings'] as ViewKey[]
+        return ['factory-dashboard','partner-orders','partner-products','partner-settings','merch','battle-search','account-settings'] as ViewKey[]
       case 'organizer':
-        return ['organizer-dashboard','events','contests','merch','account-settings'] as ViewKey[]
+        return ['organizer-dashboard','events','contests','merch','battle-search','account-settings'] as ViewKey[]
       default:
-        return ['general-dashboard','merch','search','collection','favorites','cart','orders','account-settings'] as ViewKey[]
+        return ['general-dashboard','merch','search','collection','favorites','cart','orders','battle-search','account-settings'] as ViewKey[]
     }
   }
 
