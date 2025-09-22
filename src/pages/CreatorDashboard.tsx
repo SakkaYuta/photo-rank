@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useUserRole } from '../hooks/useUserRole';
-import { useNav } from '../hooks/useNav';
+import { useNav } from '@/contexts/NavContext';
 import { fetchCreatorDashboard, CreatorDashboardData, updateWorkStatus } from '../services/creatorService';
 import {
   Upload,
@@ -19,7 +19,7 @@ import {
 
 const CreatorDashboard: React.FC = () => {
   const { userProfile, user } = useUserRole();
-  const { navigateTo } = useNav();
+  const { navigate } = useNav();
   const [dashboardData, setDashboardData] = useState<CreatorDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
