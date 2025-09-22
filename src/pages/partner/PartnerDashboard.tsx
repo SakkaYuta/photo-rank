@@ -335,6 +335,7 @@ export function PartnerDashboard() {
           <div className="flex flex-wrap gap-3">
             <button className="btn btn-primary transition-base hover-lift">新しい商品を追加</button>
             <button className="btn btn-outline transition-base hover-lift">未処理の注文を確認</button>
+            <button className="btn btn-outline transition-base hover-lift">バトルを探す</button>
             <button className="btn btn-outline transition-base hover-lift">レビューを確認</button>
           </div>
         </Card.Body>

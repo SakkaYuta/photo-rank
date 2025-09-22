@@ -12,7 +12,8 @@ import {
   Users,
   TrendingUp,
   Star,
-  ChevronDown
+  ChevronDown,
+  Gamepad2
 } from 'lucide-react';
 
 const CreatorDashboard: React.FC = () => {
@@ -388,6 +389,10 @@ const CreatorDashboard: React.FC = () => {
                 <button className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg">
                   <BarChart3 className="w-5 h-5 text-green-600" />
                   <span className="truncate">詳細な分析を見る</span>
+                </button>
+                <button className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg">
+                  <Gamepad2 className="w-5 h-5 text-purple-600" />
+                  <span className="truncate">バトルを探す</span>
                 </button>
                 <button className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg">
                   <Star className="w-5 h-5 text-orange-600" />

@@ -10,7 +10,8 @@ import {
   TrendingUp,
   Search,
   Settings,
-  ChevronRight
+  ChevronRight,
+  Gamepad2
 } from 'lucide-react';
 
 const GeneralDashboard: React.FC = () => {
@@ -105,6 +106,13 @@ const GeneralDashboard: React.FC = () => {
       description: 'お気に入りのクリエイターを探す',
       icon: Search,
       color: 'from-indigo-500 to-indigo-600'
+    },
+    {
+      id: 'battle-search',
+      title: 'バトル検索',
+      description: '進行中・開催予定のバトルを探す',
+      icon: Gamepad2,
+      color: 'from-purple-500 to-purple-600'
     }
   ];
 
@@ -174,7 +182,7 @@ const GeneralDashboard: React.FC = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-6">
             クイックアクション
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {quickActions.map((action) => {
               const IconComponent = action.icon;
               return (
