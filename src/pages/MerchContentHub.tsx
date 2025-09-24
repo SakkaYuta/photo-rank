@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { Users, Sword, ChevronRight, Sparkles, Search, Package, Heart, ShoppingCart, TrendingUp, Zap, Globe, Gamepad2 } from 'lucide-react'
+import { Users, Sword, ChevronRight, Sparkles, Search, Package, Heart, ShoppingCart, TrendingUp, Zap, Globe, Gamepad2, RefreshCw } from 'lucide-react'
 import { APP_NAME } from '@/utils/constants'
 import { useUserRole } from '@/hooks/useUserRole'
 import { supabase } from '@/services/supabaseClient'
 import { AuthModal } from '@/components/auth/AuthModal'
+import { UserIntentModal } from '@/components/ui/UserIntentModal'
+import { userIntentUtils, type UserIntent } from '@/utils/userIntent'
 import type { Work } from '@/types'
 import { fetchTrendingProducts } from '@/services/productsService'
 
@@ -27,8 +29,39 @@ const MerchContentHub: React.FC = () => {
   const [myEligible, setMyEligible] = useState<Work[]>([])
   const [marketProducts, setMarketProducts] = useState<any[]>([])
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [isIntentModalOpen, setIsIntentModalOpen] = useState(false)
+  const [userIntent, setUserIntent] = useState<UserIntent>(null)
   const { user, userType } = useUserRole()
   const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || typeof window !== 'undefined' && !!localStorage.getItem('demoUser')
+
+  // 有効なユーザー意図を取得（stateを優先）
+  const effectiveIntent = userIntent || userIntentUtils.getEffectiveIntent(userType)
+
+  // 初回訪問時の意図選択モーダル表示制御
+  useEffect(() => {
+    const currentIntent = userIntentUtils.getUserIntent()
+    setUserIntent(currentIntent)
+
+    // 未ログイン && 初回訪問 && 意図未設定の場合はモーダル表示
+    if (!user && userIntentUtils.isFirstVisit()) {
+      setIsIntentModalOpen(true)
+    }
+  }, [user])
+
+  // ユーザー意図選択処理
+  const handleSelectIntent = (intent: UserIntent) => {
+    userIntentUtils.setUserIntent(intent)
+    setUserIntent(intent)
+    setIsIntentModalOpen(false)
+  }
+
+  // 意図切り替え処理
+  const handleToggleIntent = () => {
+    const newIntent = effectiveIntent === 'creator' ? 'fan' : 'creator'
+    // localStorageを更新
+    userIntentUtils.setUserIntent(newIntent)
+    setUserIntent(newIntent)
+  }
 
   useEffect(() => {
     // 軽量なサンプル（本番ではAPIに置き換え）
@@ -117,111 +150,299 @@ const MerchContentHub: React.FC = () => {
   // 未ログインユーザーにはLPを表示
   if (!user) {
     return (
-      <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
-        {/* Hero Section */}
-        <section className="relative px-4 sm:px-6 py-12 sm:py-20 text-center">
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight">
-              推し活を
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">
-                グッズバトル
-              </span>
-              で盛り上げよう
-            </h1>
-            <p className="text-base sm:text-lg lg:text-xl text-gray-900 mb-6 sm:mb-8 max-w-2xl mx-auto px-2">
-              お気に入りの画像から45種類のオリジナルグッズを作成・販売。
-              リアルタイムバトルで競い合い、ファンと一緒に推し活を楽しもう！
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
-              <button
-                onClick={() => setIsAuthModalOpen(true)}
-                className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all text-sm sm:text-base"
-              >
-                グッズ作成を始める
-              </button>
-              <button
-                onClick={handleViewWorks}
-                className="w-full sm:w-auto px-6 sm:px-8 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:border-gray-400 transition-colors text-sm sm:text-base"
-              >
-                バトルを見る
-              </button>
-            </div>
+      <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen min-h-screen">
+        {/* Intent switcher */}
+        {effectiveIntent && (
+          <div className="fixed top-20 right-4 z-40">
+            <button
+              onClick={handleToggleIntent}
+              className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-md rounded-full shadow-lg hover:shadow-xl transition-all text-sm font-medium text-gray-900"
+            >
+              <RefreshCw className="w-4 h-4" />
+{effectiveIntent === 'creator' ? '推してる方はこちら' : 'クリエイターの方はこちら'}
+            </button>
           </div>
-        </section>
+        )}
+
+        {effectiveIntent === 'creator' ? (
+          // クリエイター向けLP
+          <div className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 min-h-screen relative overflow-hidden">
+            {/* Background elements */}
+            <div className="absolute inset-0">
+              <div className="absolute top-0 left-0 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl animate-pulse" />
+              <div className="absolute top-1/3 right-0 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
+              <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl animate-pulse delay-2000" />
+            </div>
+
+            {/* Hero Section */}
+            <section className="relative px-4 sm:px-6 py-16 sm:py-24 text-center">
+              <div className="max-w-5xl mx-auto">
+                <div className="mb-8">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-white/80 text-sm mb-6">
+                    <Sparkles className="w-4 h-4" />
+                    クリエイター向け
+                  </div>
+                </div>
+
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+                  あなたの創作を
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-400">
+                    収益化
+                  </span>
+                  しませんか？
+                </h1>
+
+                <p className="text-lg sm:text-xl text-white/80 mb-10 max-w-3xl mx-auto leading-relaxed">
+                  作品をグッズにして販売、リアルタイムバトルでファンと盛り上がり、
+                  <br className="hidden sm:block" />
+                  <span className="text-yellow-400 font-medium">月収10万円以上</span>を目指そう！
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+                  <button
+                    onClick={() => setIsAuthModalOpen(true)}
+                    className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-400 text-black font-bold rounded-xl shadow-2xl hover:shadow-yellow-400/25 hover:scale-105 transform transition-all"
+                  >
+                    🎨 今すぐ作品を作成
+                  </button>
+                  <button
+                    onClick={handleViewWorks}
+                    className="w-full sm:w-auto px-8 py-4 bg-white/10 backdrop-blur-md text-white font-medium rounded-xl border border-white/20 hover:bg-white/20 transition-all"
+                  >
+                    ⚔️ バトルで稼ぐ方法を見る
+                  </button>
+                </div>
+
+                {/* Success stats */}
+                <div className="grid grid-cols-2 gap-8 max-w-xl mx-auto">
+                  <div className="text-center">
+                    <div className="text-2xl sm:text-3xl font-bold text-yellow-400">¥127k</div>
+                    <div className="text-white/60 text-sm">月間平均売上</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl sm:text-3xl font-bold text-blue-400">2.3x</div>
+                    <div className="text-white/60 text-sm">バトル勝率ボーナス</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        ) : (
+          // ファン向けLP
+          <div className="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 min-h-screen relative overflow-hidden">
+            {/* Background elements */}
+            <div className="absolute inset-0">
+              <div className="absolute top-0 right-0 w-72 h-72 bg-pink-300/30 rounded-full blur-3xl animate-bounce" />
+              <div className="absolute top-1/2 left-0 w-96 h-96 bg-purple-300/20 rounded-full blur-3xl animate-pulse" />
+              <div className="absolute bottom-0 right-1/3 w-80 h-80 bg-blue-300/25 rounded-full blur-3xl animate-bounce delay-1000" />
+            </div>
+
+            {/* Hero Section */}
+            <section className="relative px-4 sm:px-6 py-16 sm:py-24 text-center">
+              <div className="max-w-5xl mx-auto">
+                <div className="mb-8">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-md rounded-full text-gray-700 text-sm mb-6">
+                    <Heart className="w-4 h-4 text-pink-500" />
+                    推してる方向け
+                  </div>
+                </div>
+
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+                  推しクリエイターを
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600">
+                    見つけて応援
+                  </span>
+                  しよう！
+                </h1>
+
+                <p className="text-lg sm:text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
+                  お気に入りのクリエイターのグッズを購入して、
+                  <br className="hidden sm:block" />
+                  リアルタイムバトルで<span className="text-pink-500 font-medium">一緒に盛り上がろう！</span>
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+                  <button
+                    onClick={() => go('products-marketplace')}
+                    className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold rounded-xl shadow-2xl hover:shadow-pink-500/25 hover:scale-105 transform transition-all"
+                  >
+                    🛍️ 推しグッズを探す
+                  </button>
+                  <button
+                    onClick={handleViewWorks}
+                    className="w-full sm:w-auto px-8 py-4 bg-white/80 backdrop-blur-md text-gray-700 font-medium rounded-xl border border-gray-200 hover:bg-white transition-all"
+                  >
+                    ⚔️ バトルで応援する
+                  </button>
+                </div>
+
+                {/* Community stats */}
+                <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
+                  <div className="text-center">
+                    <div className="text-2xl sm:text-3xl font-bold text-pink-500">1,200+</div>
+                    <div className="text-gray-500 text-sm">グッズアイテム</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl sm:text-3xl font-bold text-purple-500">350+</div>
+                    <div className="text-gray-500 text-sm">クリエイター</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl sm:text-3xl font-bold text-blue-500">85</div>
+                    <div className="text-gray-500 text-sm">バトル開催数</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
 
         {/* Features Section */}
-        <section className="px-4 sm:px-6 py-12 sm:py-16 bg-white">
+        <section className={`px-4 sm:px-6 py-12 sm:py-16 ${effectiveIntent === 'creator' ? 'bg-gray-900' : 'bg-white'}`}>
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-8 sm:mb-12">
-              {APP_NAME}の特徴
+            <h2 className={`text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-12 ${effectiveIntent === 'creator' ? 'text-white' : 'text-gray-900'}`}>
+              {effectiveIntent === 'creator' ? '収益化の仕組み' : 'PhotoRankの楽しみ方'}
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-              <div className="text-center p-4 sm:p-6">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Globe className="w-7 h-7 sm:w-8 sm:h-8 text-purple-600" />
-                </div>
-                <h3 className="text-lg sm:text-xl font-semibold mb-3 text-gray-900">URLから簡単グッズ化</h3>
-                <p className="text-gray-900 text-sm sm:text-base">
-                  お気に入りの画像URLを入力するだけで、自動で権利チェック。
-                  45種類のグッズから選んですぐに注文できます。
-                </p>
-              </div>
+              {effectiveIntent === 'creator' ? (
+                // クリエイター向けFeatures
+                <>
+                  <div className="text-center p-6 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20">
+                    <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Globe className="w-8 h-8 text-black" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-3 text-white">作品をグッズ化</h3>
+                    <p className="text-white/80 text-sm leading-relaxed">
+                      画像URLを入力するだけで45種類のグッズを作成。
+                      自動権利チェックで安心して販売できます。
+                    </p>
+                  </div>
 
-              <div className="text-center p-4 sm:p-6">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Gamepad2 className="w-7 h-7 sm:w-8 sm:h-8 text-blue-600" />
-                </div>
-                <h3 className="text-lg sm:text-xl font-semibold mb-3 text-gray-900">リアルタイムバトル</h3>
-                <p className="text-gray-900 text-sm sm:text-base">
-                  クリエイター同士がリアルタイムでバトル！ファンの応援でポイント獲得。
-                  勝者には売上の20%ボーナスをプレゼント。
-                </p>
-              </div>
+                  <div className="text-center p-6 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20">
+                    <div className="w-16 h-16 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Gamepad2 className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-3 text-white">バトルで稼ぐ</h3>
+                    <p className="text-white/80 text-sm leading-relaxed">
+                      ライブバトルで他のクリエイターと競い合い。
+                      勝利すると売上20%ボーナスを獲得！
+                    </p>
+                    <div className="mt-4 text-blue-400 font-bold">最大 +20% ボーナス</div>
+                  </div>
 
-              <div className="text-center p-4 sm:p-6">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Zap className="w-7 h-7 sm:w-8 sm:h-8 text-green-600" />
-                </div>
-                <h3 className="text-lg sm:text-xl font-semibold mb-3 text-gray-900">応援チケット・特典</h3>
-                <p className="text-gray-900 text-sm sm:text-base">
-                  100円の応援チケットでバトルをサポート。
-                  サイン入りグッズ権利やカスタムオプションを獲得。
-                </p>
-              </div>
+                  <div className="text-center p-6 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20">
+                    <div className="w-16 h-16 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <TrendingUp className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-3 text-white">ファンと繋がる</h3>
+                    <p className="text-white/80 text-sm leading-relaxed">
+                      応援チケットでファンと直接交流。
+                      限定グッズや特典で関係を深めましょう。
+                    </p>
+                  </div>
+                </>
+              ) : (
+                // ファン向けFeatures
+                <>
+                  <div className="text-center p-6 bg-gradient-to-br from-pink-50 to-purple-50 rounded-2xl border border-pink-200">
+                    <div className="w-16 h-16 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Search className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-3 text-gray-900">推しを発見</h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">
+                      350+のクリエイターから、あなたの好みに
+                      ピッタリの推しを見つけよう！
+                    </p>
+                    <div className="mt-4 text-pink-500 font-bold">新作チェック機能付き</div>
+                  </div>
+
+                  <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
+                    <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <ShoppingCart className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-3 text-gray-900">グッズを購入</h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">
+                      1,200+のアイテムから選んで購入。
+                      限定グッズやサイン入りも手に入る！
+                    </p>
+                    <div className="mt-4 text-blue-500 font-bold">送料無料キャンペーン</div>
+                  </div>
+
+                  <div className="text-center p-6 bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl border border-orange-200">
+                    <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Heart className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-3 text-gray-900">バトルで応援</h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">
+                      リアルタイムバトルで推しを応援！
+                      チケット購入で特別な特典をゲット。
+                    </p>
+                    <div className="mt-4 text-orange-500 font-bold">無料応援 30回/時</div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </section>
 
-        {/* Popular Content */}
-        <section className="px-4 sm:px-6 py-16 bg-gray-50">
+        {/* Content/Success Stories Section */}
+        <section className={`px-4 sm:px-6 py-16 ${effectiveIntent === 'creator' ? 'bg-gradient-to-r from-purple-900 to-blue-900' : 'bg-gray-50'}`}>
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-12">
-              人気のコンテンツ
+            <h2 className={`text-2xl sm:text-3xl font-bold text-center mb-12 ${effectiveIntent === 'creator' ? 'text-white' : 'text-gray-900'}`}>
+              {effectiveIntent === 'creator' ? '成功事例' : '人気のコンテンツ'}
             </h2>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                { name: '配信者', count: '234', image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&h=200&fit=crop', persona: 'streamer' },
-                { name: '俳優・女優', count: '189', image: 'https://images.unsplash.com/photo-1579952363873-27d3bfad9c0d?w=300&h=200&fit=crop', persona: 'actor' },
-                { name: 'グラビア', count: '156', image: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=300&h=200&fit=crop', persona: 'gravure' },
-                { name: 'クリエイター', count: '143', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=200&fit=crop', persona: 'creator' }
-              ].map((contentType) => (
-                <div key={contentType.name} onClick={() => handleContentTypeClick(contentType.persona)} className="relative group cursor-pointer overflow-hidden rounded-xl shadow-medium hover:shadow-large transition-all duration-300">
-                  <img
-                    src={contentType.image}
-                    alt={contentType.name}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent group-hover:from-black/70 transition-all duration-300">
-                    <div className="absolute bottom-4 left-4 text-white">
-                      <h3 className="text-lg font-bold leading-tight mb-1">{contentType.name}</h3>
-                      <p className="text-sm opacity-90">{contentType.count}点の作品</p>
+              {effectiveIntent === 'creator' ? (
+                // クリエイター向け成功事例
+                [
+                  { name: 'アートクリエイター結', earnings: '¥127k/月', image: 'https://images.unsplash.com/photo-1494790108755-2616b332c66a?w=300&h=200&fit=crop', tag: 'イラスト' },
+                  { name: 'フォトグラファーりく', earnings: '¥89k/月', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=200&fit=crop', tag: '写真' },
+                  { name: 'デザイナーみお', earnings: '¥156k/月', image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=300&h=200&fit=crop', tag: 'デザイン' },
+                  { name: 'アニメーターカイ', earnings: '¥203k/月', image: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=300&h=200&fit=crop', tag: 'アニメ' }
+                ].map((creator) => (
+                  <div key={creator.name} className="relative group cursor-pointer overflow-hidden rounded-xl shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 transform hover:scale-105">
+                    <img
+                      src={creator.image}
+                      alt={creator.name}
+                      className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                      <div className="absolute top-3 left-3">
+                        <span className="px-2 py-1 bg-yellow-400 text-black text-xs font-bold rounded-full">
+                          {creator.tag}
+                        </span>
+                      </div>
+                      <div className="absolute bottom-4 left-4 text-white">
+                        <h3 className="text-sm font-bold leading-tight mb-1">{creator.name}</h3>
+                        <p className="text-yellow-400 font-bold text-lg">{creator.earnings}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                // ファン向けコンテンツカテゴリ
+                [
+                  { name: '配信者', count: '234', image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&h=200&fit=crop', persona: 'streamer' },
+                  { name: '俳優・女優', count: '189', image: 'https://images.unsplash.com/photo-1579952363873-27d3bfad9c0d?w=300&h=200&fit=crop', persona: 'actor' },
+                  { name: 'グラビア', count: '156', image: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=300&h=200&fit=crop', persona: 'gravure' },
+                  { name: 'クリエイター', count: '143', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=200&fit=crop', persona: 'creator' }
+                ].map((contentType) => (
+                  <div key={contentType.name} onClick={() => handleContentTypeClick(contentType.persona)} className="relative group cursor-pointer overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                    <img
+                      src={contentType.image}
+                      alt={contentType.name}
+                      className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent">
+                      <div className="absolute bottom-4 left-4 text-white">
+                        <h3 className="text-lg font-bold leading-tight mb-1">{contentType.name}</h3>
+                        <p className="text-sm opacity-90">{contentType.count}点の作品</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </section>
@@ -433,6 +654,23 @@ const MerchContentHub: React.FC = () => {
           )}
         </section>
       </main>
+
+      {/* UserIntent Modal */}
+      <UserIntentModal
+        isOpen={isIntentModalOpen}
+        onClose={() => setIsIntentModalOpen(false)}
+        onSelectIntent={(intent) => {
+          userIntentUtils.setUserIntent(intent)
+          setUserIntent(intent)
+          setIsIntentModalOpen(false)
+        }}
+      />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </div>
   )
 }
