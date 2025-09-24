@@ -667,10 +667,11 @@ const MerchContentHub: React.FC = () => {
       />
 
       {/* Auth Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-      />
+      {isAuthModalOpen && (
+        <AuthModal
+          onClose={() => setIsAuthModalOpen(false)}
+        />
+      )}
     </div>
   )
 }
