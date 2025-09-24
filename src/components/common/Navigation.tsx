@@ -26,12 +26,14 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
   const generalUserItems: NavItem[] = [
     { key: 'general-dashboard', label: 'ダッシュボード' },
     { key: 'merch', label: 'PhotoRank' },
+    { key: 'products-marketplace', label: '商品を探す' },
   ]
 
   // クリエイター向けのナビゲーション
   const creatorItems: NavItem[] = [
     { key: 'create', label: '作品作成' },
     { key: 'myworks', label: 'マイ作品' },
+    { key: 'products-marketplace', label: '商品を探す' },
     // 仕様変更により工場比較/製造発注タブを削除
   ]
 
@@ -40,6 +42,7 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
     { key: 'factory-dashboard', label: 'ダッシュボード' },
     { key: 'partner-orders', label: '受注管理' },
     { key: 'partner-products', label: '商品管理' },
+    { key: 'products-marketplace', label: '商品を探す' },
   ]
 
   // オーガナイザー向けのナビゲーション
@@ -47,6 +50,7 @@ export function Navigation({ current, onChange, isAdmin = false, isPartner = fal
     { key: 'organizer-dashboard', label: 'ダッシュボード' },
     { key: 'events', label: 'イベント管理' },
     { key: 'contests', label: 'コンテスト管理' },
+    { key: 'products-marketplace', label: '商品を探す' },
   ]
 
   // 管理者・パートナー向けの追加ナビゲーション

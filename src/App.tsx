@@ -44,6 +44,8 @@ import LocalDataViewer from './pages/dev/LocalDataViewer'
 import { registerDevUtils } from './utils/devUtils'
 import LiveBattle from './pages/LiveBattle'
 import AccountSettings from './pages/AccountSettings'
+import ProductsMarketplace from './pages/ProductsMarketplace'
+import GoodsItemSelector from './pages/GoodsItemSelector'
 
 type ViewKey =
   | 'trending'
@@ -80,6 +82,8 @@ type ViewKey =
   | 'local-data'
   | 'live-battle'
   | 'account-settings'
+  | 'products-marketplace'
+  | 'goods-item-selector'
 
 function App() {
   const [view, setView] = useState<ViewKey>('merch')
@@ -91,37 +95,16 @@ function App() {
   const isFactoryUser = userType === 'factory'
   const isDemoMode = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
 
-  // ユーザータイプに応じて初期ビューを設定
+  // ログイン後のデフォルト遷移先を「商品を探す」に統一
   useEffect(() => {
     if (roleLoading) return
     if (user) {
-      const viewOverride = localStorage.getItem('view_override')
-      const effectiveType = (userProfile as any)?.organizer_profile
-        ? 'organizer'
-        : (userProfile as any)?.factory_profile
-        ? 'factory'
-        : userType
-
-      switch (effectiveType) {
-        case 'creator':
-          navigate(viewOverride === 'general' ? 'merch' : 'creator-dashboard')
-          break
-        case 'factory':
-          navigate('factory-dashboard')
-          break
-        case 'organizer':
-          navigate(viewOverride === 'general' ? 'merch' : 'organizer-dashboard')
-          break
-        case 'general':
-        default:
-          navigate('general-dashboard')
-          break
-      }
+      navigate('products-marketplace')
     } else {
       // 未ログインユーザーはLPを表示
       navigate('merch')
     }
-  }, [roleLoading, userType, user, (userProfile as any)?.organizer_profile, (userProfile as any)?.factory_profile])
+  }, [roleLoading, user])
 
   // セキュリティ: デモ時のみ工場ユーザーにパートナーページアクセスを許可
   const canAccessPartnerPages = isPartner || (isDemoMode && isFactoryUser)
@@ -135,7 +118,7 @@ function App() {
   // ナビゲーション関数
   const isValidView = (v: string): v is ViewKey => {
     return [
-      'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','battle-search','creator-profile','local-data','live-battle','account-settings'
+      'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','battle-search','creator-profile','local-data','live-battle','account-settings','products-marketplace','goods-item-selector'
     ].includes(v)
   }
 
@@ -148,13 +131,13 @@ function App() {
   const allowedViewsFor = (role: string): ViewKey[] => {
     switch (role) {
       case 'creator':
-        return ['creator-dashboard','create','myworks','orders','profile','merch','search','collection','favorites','cart','battle-search','account-settings'] as ViewKey[]
+        return ['creator-dashboard','create','myworks','orders','profile','merch','search','collection','favorites','cart','battle-search','live-battle','account-settings','products-marketplace','goods-item-selector'] as ViewKey[]
       case 'factory':
-        return ['factory-dashboard','partner-orders','partner-products','partner-settings','merch','battle-search','account-settings'] as ViewKey[]
+        return ['factory-dashboard','partner-orders','partner-products','partner-orders','partner-settings','merch','battle-search','live-battle','account-settings','products-marketplace','goods-item-selector'] as ViewKey[]
       case 'organizer':
-        return ['organizer-dashboard','events','contests','merch','battle-search','account-settings'] as ViewKey[]
+        return ['organizer-dashboard','events','contests','merch','battle-search','live-battle','account-settings','products-marketplace','goods-item-selector'] as ViewKey[]
       default:
-        return ['general-dashboard','merch','search','collection','favorites','cart','orders','battle-search','account-settings'] as ViewKey[]
+        return ['general-dashboard','merch','search','collection','favorites','cart','orders','battle-search','live-battle','account-settings','products-marketplace','goods-item-selector'] as ViewKey[]
     }
   }
 
@@ -442,6 +425,16 @@ function App() {
               {view === 'merch' && (
                 <PartialErrorBoundary name="PhotoRank">
                   <MerchContentHub />
+                </PartialErrorBoundary>
+              )}
+              {view === 'products-marketplace' && (
+                <PartialErrorBoundary name="商品マーケットプレイス">
+                  <ProductsMarketplace />
+                </PartialErrorBoundary>
+              )}
+              {view === 'goods-item-selector' && (
+                <PartialErrorBoundary name="グッズアイテム選択">
+                  <GoodsItemSelector />
                 </PartialErrorBoundary>
               )}
               {view === 'local-data' && (
