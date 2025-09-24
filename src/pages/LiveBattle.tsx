@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Flame, Crown, Zap, Sparkles, Heart, Timer, PartyPopper, ShoppingCart, Gift } from 'lucide-react'
 import { SAMPLE_BATTLES, SAMPLE_PARTICIPANTS } from '@/sample/battleSamples'
-import { purchaseCheerTicket, purchaseBattleGoods } from '@/services/battle.service'
+import { purchaseCheerTicket, purchaseBattleGoods, getBattleStatus, purchaseCheerPoints } from '@/services/battle.service'
 import { BATTLE_GOODS_TYPES } from '@/utils/constants'
 import { formatJPY } from '@/utils/helpers'
+import { supabase } from '@/services/supabaseClient'
 
 type Side = 'challenger' | 'opponent'
 
@@ -17,8 +18,92 @@ const LiveBattle: React.FC = () => {
   const [useSamples, setUseSamples] = useState<boolean>((import.meta as any).env?.VITE_ENABLE_BATTLE_SAMPLE === 'true')
   const [buying, setBuying] = useState<Side | null>(null)
   const [selectedGoods, setSelectedGoods] = useState<string>('')
+  const [selectedPlayer, setSelectedPlayer] = useState<Side | null>(null)
   const [showGoodsModal, setShowGoodsModal] = useState<boolean>(false)
   const [buyingGoods, setBuyingGoods] = useState<boolean>(false)
+  const [loading, setLoading] = useState<boolean>(false)
+  const [error, setError] = useState<string>('')
+  const [userId, setUserId] = useState<string>('')
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(3600)
+  const lastCheerTsRef = useRef<number>(0)
+
+  // 無料応援システム
+  const [freeCheerCount, setFreeCheerCount] = useState<number>(30)
+  const [lastResetTime, setLastResetTime] = useState<number>(Date.now())
+  const [showPointPurchaseModal, setShowPointPurchaseModal] = useState<boolean>(false)
+  const [selectedCheerSide, setSelectedCheerSide] = useState<Side | null>(null)
+
+  // ポイント購入オプション
+  const pointPurchaseOptions = [
+    { points: 100, price: 100, label: '100pt' },
+    { points: 1000, price: 800, label: '1,000pt', bonus: '20%お得!' },
+    { points: 10000, price: 7000, label: '10,000pt', bonus: '30%お得!' },
+    { points: 100000, price: 60000, label: '100,000pt', bonus: '40%お得!' }
+  ]
+
+  // ユーザーIDの取得
+  useEffect(() => {
+    ;(async () => {
+      try { const { data: { user } } = await supabase.auth.getUser(); setUserId(user?.id || '') } catch {}
+    })()
+  }, [])
+
+  const cheerKey = (bid: string, uid: string) => `battleCheerData_${bid || 'noid'}_${uid || 'anon'}`
+
+  // 無料応援カウントの初期化と60分リセット
+  useEffect(() => {
+    const savedCheerData = battleId ? localStorage.getItem(cheerKey(battleId, userId)) : null
+    if (savedCheerData) {
+      try {
+        const data = JSON.parse(savedCheerData)
+        const timeDiff = Math.max(0, Date.now() - (Number(data.lastResetTime) || Date.now()))
+        // 60分（3600000ms）経過していたらリセット
+        if (timeDiff >= 3600000) {
+          setFreeCheerCount(30)
+          setLastResetTime(Date.now())
+        } else {
+          const cnt = Number(data.freeCheerCount)
+          setFreeCheerCount(Number.isFinite(cnt) ? Math.min(30, Math.max(0, cnt)) : 30)
+          setLastResetTime(Number(data.lastResetTime) || Date.now())
+          setRemainingSeconds(Math.ceil((3600000 - timeDiff)/1000))
+        }
+      } catch {
+        setFreeCheerCount(30)
+        setLastResetTime(Date.now())
+        setRemainingSeconds(3600)
+      }
+    } else {
+      // 初期化
+      setFreeCheerCount(30)
+      setLastResetTime(Date.now())
+      setRemainingSeconds(3600)
+    }
+  }, [battleId, userId])
+
+  // 無料応援データをlocalStorageに保存
+  useEffect(() => {
+    if (battleId) {
+      localStorage.setItem(cheerKey(battleId, userId), JSON.stringify({
+        freeCheerCount,
+        lastResetTime
+      }))
+    }
+  }, [freeCheerCount, lastResetTime, battleId, userId])
+
+  // 1秒ごとに残り時間を更新し、0になったら自動リセット
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      const diff = Math.max(0, 3600000 - (Date.now() - lastResetTime))
+      const sec = Math.ceil(diff / 1000)
+      setRemainingSeconds(sec)
+      if (diff <= 0) {
+        setFreeCheerCount(30)
+        setLastResetTime(Date.now())
+        setRemainingSeconds(3600)
+      }
+    }, 1000)
+    return () => window.clearInterval(t)
+  }, [lastResetTime])
 
   useEffect(() => {
     const raw = window.location.hash.replace(/^#/, '')
@@ -35,29 +120,113 @@ const LiveBattle: React.FC = () => {
         setOpponent({ id: b.opponent_id, name: SAMPLE_PARTICIPANTS[b.opponent_id]?.display_name || 'Opponent', avatar: SAMPLE_PARTICIPANTS[b.opponent_id]?.avatar_url || '' })
         setScores({ challenger: 15600, opponent: 14800 })
       }
+    } else if (id) {
+      (async () => {
+        try {
+          setLoading(true)
+          await refreshFromBackend(id)
+        } catch (e: any) {
+          setError(e?.message || 'バトル情報の取得に失敗しました')
+        } finally {
+          setLoading(false)
+        }
+      })()
     }
   }, [])
+
+  // 本番モードではリアルタイムにスコア/状態を追従
+  useEffect(() => {
+    if (!battleId || (import.meta as any).env?.VITE_ENABLE_BATTLE_SAMPLE === 'true') return
+    const channel = supabase
+      .channel(`live-battle-${battleId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cheer_tickets', filter: `battle_id=eq.${battleId}` }, async () => {
+        try { await refreshFromBackend(battleId) } catch {}
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'battles', filter: `id=eq.${battleId}` }, async () => {
+        try { await refreshFromBackend(battleId) } catch {}
+      })
+      .subscribe()
+
+    return () => { try { supabase.removeChannel(channel) } catch {} }
+  }, [battleId])
+
+  const refreshFromBackend = async (id: string) => {
+    const res = await getBattleStatus(id)
+    setTitle('グッズバトル')
+    const ch = res.battle.challenger_id
+    const op = res.battle.opponent_id
+    const p = res.participants || {}
+    setChallenger({ id: ch, name: p[ch]?.display_name || ch.slice(0, 8), avatar: p[ch]?.avatar_url || '' })
+    setOpponent({ id: op, name: p[op]?.display_name || op.slice(0, 8), avatar: p[op]?.avatar_url || '' })
+    setScores({
+      challenger: res.scores?.[ch] || 0,
+      opponent: res.scores?.[op] || 0,
+    })
+  }
 
   const total = useMemo(() => scores.challenger + scores.opponent, [scores])
   const pct = (side: Side) => total === 0 ? 50 : Math.round((scores[side] / total) * 100)
 
   const cheer = async (side: Side) => {
+    // 短時間の連打防止（500ms）
+    const now = Date.now()
+    if (now - (lastCheerTsRef.current || 0) < 500) return
+    lastCheerTsRef.current = now
+    // 無料応援回数をチェック
+    if (freeCheerCount <= 0) {
+      // 無料応援回数がない場合はポイント購入モーダルを表示
+      setSelectedCheerSide(side)
+      setShowPointPurchaseModal(true)
+      return
+    }
+
     setBuying(side)
     try {
+      // 無料応援を1回減らす
+      setFreeCheerCount(prev => prev - 1)
+
       if (useSamples) {
         setScores(prev => ({ ...prev, [side]: prev[side] + 100 }))
         setEffects({ burst: true, side })
         setTimeout(() => setEffects({ burst: false }), 1200)
       } else {
         const target = side === 'challenger' ? challenger.id : opponent.id
-        await purchaseCheerTicket(battleId, target)
+        await purchaseCheerTicket(battleId, target, { mode: 'free' })
+        await refreshFromBackend(battleId)
         setEffects({ burst: true, side })
         setTimeout(() => setEffects({ burst: false }), 1200)
       }
     } catch (e) {
-      alert('購入に失敗しました')
+      alert('応援に失敗しました')
+      // エラー時は減らした回数を戻す
+      setFreeCheerCount(prev => prev + 1)
     } finally {
       setBuying(null)
+    }
+  }
+
+  const purchasePoints = async (option: typeof pointPurchaseOptions[0]) => {
+    if (!selectedCheerSide) return
+
+    try {
+      // ここで実際の課金処理を実装
+      if (useSamples) {
+        setScores(prev => ({ ...prev, [selectedCheerSide]: prev[selectedCheerSide] + option.points }))
+        setEffects({ burst: true, side: selectedCheerSide })
+        setTimeout(() => setEffects({ burst: false }), 1200)
+      } else {
+        const target = selectedCheerSide === 'challenger' ? challenger.id : opponent.id
+        await purchaseCheerPoints(battleId, target, option.points)
+        await refreshFromBackend(battleId)
+        setEffects({ burst: true, side: selectedCheerSide })
+        setTimeout(() => setEffects({ burst: false }), 1200)
+      }
+
+      setShowPointPurchaseModal(false)
+      setSelectedCheerSide(null)
+      alert(`${option.label}を購入しました！`)
+    } catch (e) {
+      alert('購入に失敗しました')
     }
   }
 
@@ -88,12 +257,52 @@ const LiveBattle: React.FC = () => {
           <SideCard name={opponent.name} avatar={opponent.avatar} score={scores.opponent} crown={scores.opponent>=scores.challenger} active={effects.burst && effects.side==='opponent'} />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-          <button onClick={()=>cheer('challenger')} disabled={buying!==null} className="w-full py-4 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 transition-all font-bold flex items-center justify-center gap-2">
-            <Heart className="w-5 h-5" /> {challenger.name} を応援（+100pt / ¥300）
+        {/* 無料応援回数表示 */}
+        <div className="mt-6 bg-white/10 rounded-lg p-4 text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Heart className="w-5 h-5 text-pink-300" />
+            <span className="text-pink-300 font-semibold">無料応援回数</span>
+          </div>
+          <div className="text-2xl font-bold text-white mb-1">{freeCheerCount}/30回</div>
+          <div className="text-xs text-gray-400">
+            {freeCheerCount > 0
+              ? `あと${freeCheerCount}回無料で応援できます`
+              : '無料応援回数がありません。追加ポイントをご購入ください'
+            }
+          </div>
+          {freeCheerCount <= 0 && (
+            <div className="text-xs text-yellow-300 mt-1">
+              ⏰ リセットまで約 {Math.floor(remainingSeconds/60)}分{remainingSeconds%60}秒
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+          <button
+            onClick={()=>cheer('challenger')}
+            disabled={buying!==null}
+            className="w-full py-4 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 transition-all font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <Heart className="w-5 h-5" />
+            <div className="text-center">
+              <div>{challenger.name} を応援</div>
+              <div className="text-xs opacity-90">
+                {freeCheerCount > 0 ? '+100pt（無料）' : '追加ポイント購入'}
+              </div>
+            </div>
           </button>
-          <button onClick={()=>cheer('opponent')} disabled={buying!==null} className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 transition-all font-bold flex items-center justify-center gap-2">
-            <Heart className="w-5 h-5" /> {opponent.name} を応援（+100pt / ¥300）
+          <button
+            onClick={()=>cheer('opponent')}
+            disabled={buying!==null}
+            className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 transition-all font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <Heart className="w-5 h-5" />
+            <div className="text-center">
+              <div>{opponent.name} を応援</div>
+              <div className="text-xs opacity-90">
+                {freeCheerCount > 0 ? '+100pt（無料）' : '追加ポイント購入'}
+              </div>
+            </div>
           </button>
         </div>
 
@@ -109,49 +318,113 @@ const LiveBattle: React.FC = () => {
         )}
 
         <div className="mt-10 bg-white/5 border border-white/10 rounded-xl p-6">
-          <h3 className="font-semibold mb-4 flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> ライブ限定アイテム</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-            {BATTLE_GOODS_TYPES.map((item) => (
-              <div key={item.id} className="bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-colors cursor-pointer" onClick={() => { setSelectedGoods(item.id); setShowGoodsModal(true) }}>
-                <div className="flex items-start gap-3">
-                  <Gift className="w-8 h-8 text-pink-400 flex-shrink-0 mt-1" />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-white text-sm">{item.label}</h4>
-                    <p className="text-xs text-gray-400 mt-1 line-clamp-2">{item.description}</p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-pink-300 font-bold">{formatJPY(item.basePrice)}</span>
-                      <span className="text-xs text-gray-400">+50pt</span>
+          <h3 className="font-semibold mb-6 flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> ライブ限定アイテム</h3>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Challenger Items */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 mb-4">
+                <img src={challenger.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(challenger.name)}`} className="w-8 h-8 rounded-full border-2 border-pink-400/50" />
+                <h4 className="font-bold text-pink-300">{challenger.name} 応援アイテム</h4>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {BATTLE_GOODS_TYPES.slice(0, 3).map((item, index) => (
+                  <div key={`challenger-${item.id}`} className="bg-pink-500/10 border border-pink-400/20 rounded-lg p-3 hover:bg-pink-500/20 transition-colors cursor-pointer" onClick={() => { setSelectedGoods(item.id); setSelectedPlayer('challenger'); setShowGoodsModal(true) }}>
+                    <div className="flex items-start gap-3">
+                      <Gift className="w-6 h-6 text-pink-400 flex-shrink-0 mt-1" />
+                      <div className="flex-1 min-w-0">
+                        <h5 className="font-medium text-white text-sm">{item.label}</h5>
+                        <p className="text-xs text-gray-300 mt-1 line-clamp-2">{challenger.name}限定デザイン - {item.description}</p>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-pink-300 font-bold text-sm">{formatJPY(item.basePrice)}</span>
+                          <span className="text-xs text-pink-200">+50pt</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
+            </div>
+
+            {/* Opponent Items */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 mb-4">
+                <img src={opponent.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(opponent.name)}`} className="w-8 h-8 rounded-full border-2 border-teal-400/50" />
+                <h4 className="font-bold text-teal-300">{opponent.name} 応援アイテム</h4>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {BATTLE_GOODS_TYPES.slice(3, 6).map((item, index) => (
+                  <div key={`opponent-${item.id}`} className="bg-teal-500/10 border border-teal-400/20 rounded-lg p-3 hover:bg-teal-500/20 transition-colors cursor-pointer" onClick={() => { setSelectedGoods(item.id); setSelectedPlayer('opponent'); setShowGoodsModal(true) }}>
+                    <div className="flex items-start gap-3">
+                      <Gift className="w-6 h-6 text-teal-400 flex-shrink-0 mt-1" />
+                      <div className="flex-1 min-w-0">
+                        <h5 className="font-medium text-white text-sm">{item.label}</h5>
+                        <p className="text-xs text-gray-300 mt-1 line-clamp-2">{opponent.name}限定デザイン - {item.description}</p>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-teal-300 font-bold text-sm">{formatJPY(item.basePrice)}</span>
+                          <span className="text-xs text-teal-200">+50pt</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="text-xs text-gray-400 bg-white/5 rounded-lg p-3">
-            💡 アイテム購入でも応援ポイントが加算されます！限定デザインで推しクリエイターを応援しよう
+
+          <div className="text-xs text-gray-400 bg-white/5 rounded-lg p-3 mt-6">
+            💡 アイテム購入で応援するプレイヤーに50ポイントが加算されます！限定デザインで推しクリエイターを応援しよう
           </div>
         </div>
 
         {/* Goods Purchase Modal */}
-        {showGoodsModal && selectedGoods && (
+        {showGoodsModal && selectedGoods && selectedPlayer && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
             <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 max-w-md w-full">
               {(() => {
                 const item = BATTLE_GOODS_TYPES.find(g => g.id === selectedGoods)!
+                const targetPlayer = selectedPlayer === 'challenger' ? challenger : opponent
+                const playerColor = selectedPlayer === 'challenger' ? 'pink' : 'teal'
                 return (
                   <>
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-bold text-white">アイテム購入</h3>
-                      <button onClick={() => setShowGoodsModal(false)} className="text-gray-400 hover:text-white">
+                      <button onClick={() => { setShowGoodsModal(false); setSelectedPlayer(null); }} className="text-gray-400 hover:text-white">
                         <Sparkles className="w-5 h-5" />
                       </button>
                     </div>
                     <div className="space-y-4">
+                      {/* 応援するプレイヤーを明確に表示 */}
+                      <div className={selectedPlayer === 'challenger'
+                        ? "bg-pink-500/20 border border-pink-400/30 rounded-lg p-4"
+                        : "bg-teal-500/20 border border-teal-400/30 rounded-lg p-4"
+                      }>
+                        <div className="flex items-center gap-3 mb-2">
+                          <img
+                            src={targetPlayer.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(targetPlayer.name)}`}
+                            className={selectedPlayer === 'challenger'
+                              ? "w-8 h-8 rounded-full border-2 border-pink-400/50"
+                              : "w-8 h-8 rounded-full border-2 border-teal-400/50"
+                            }
+                          />
+                          <div>
+                            <h4 className={selectedPlayer === 'challenger'
+                              ? "font-bold text-pink-300"
+                              : "font-bold text-teal-300"
+                            }>{targetPlayer.name} を応援</h4>
+                            <p className="text-xs text-gray-300">このプレイヤーに50ポイントが加算されます</p>
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="flex items-center gap-3">
-                        <Gift className="w-12 h-12 text-pink-400" />
+                        <Gift className={selectedPlayer === 'challenger'
+                          ? "w-12 h-12 text-pink-400"
+                          : "w-12 h-12 text-teal-400"
+                        } />
                         <div>
                           <h4 className="font-medium text-white">{item.label}</h4>
-                          <p className="text-sm text-gray-300">{item.description}</p>
+                          <p className="text-sm text-gray-300">{targetPlayer.name}限定デザイン - {item.description}</p>
                         </div>
                       </div>
                       <div className="bg-white/5 rounded-lg p-4">
@@ -159,13 +432,20 @@ const LiveBattle: React.FC = () => {
                           <span className="text-gray-300">価格</span>
                           <span className="text-white font-bold">{formatJPY(item.basePrice)}</span>
                         </div>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between mb-2">
                           <span className="text-gray-300">応援ポイント</span>
-                          <span className="text-pink-300 font-bold">+50pt</span>
+                          <span className={selectedPlayer === 'challenger'
+                            ? "text-pink-300 font-bold"
+                            : "text-teal-300 font-bold"
+                          }>+50pt</span>
                         </div>
-                      </div>
-                      <div className="text-xs text-gray-400 bg-white/5 rounded p-3">
-                        このアイテムを購入すると、現在リードしている側に50ポイントが加算されます
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300">応援先</span>
+                          <span className={selectedPlayer === 'challenger'
+                            ? "text-pink-300 font-bold"
+                            : "text-teal-300 font-bold"
+                          }>{targetPlayer.name}</span>
+                        </div>
                       </div>
                       <div className="flex gap-3">
                         <button onClick={() => setShowGoodsModal(false)} className="flex-1 py-2 px-4 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white">
@@ -176,21 +456,21 @@ const LiveBattle: React.FC = () => {
                             setBuyingGoods(true)
                             try {
                               if (useSamples) {
-                                // サンプル環境では簡単な処理
-                                const leadingSide = scores.challenger >= scores.opponent ? 'challenger' : 'opponent'
-                                setScores(prev => ({ ...prev, [leadingSide]: prev[leadingSide] + 50 }))
-                                setEffects({ burst: true, side: leadingSide })
+                                // サンプル環境では選択されたプレイヤーにポイントを追加
+                                setScores(prev => ({ ...prev, [selectedPlayer]: prev[selectedPlayer] + 50 }))
+                                setEffects({ burst: true, side: selectedPlayer })
                                 setTimeout(() => setEffects({ burst: false }), 1200)
                               } else {
-                                // 本番環境ではバトルグッズサービスを使用
-                                const leadingSide = scores.challenger >= scores.opponent ? 'challenger' : 'opponent'
-                                const targetId = leadingSide === 'challenger' ? challenger.id : opponent.id
+                                // 本番環境では選択されたプレイヤーのIDを使用
+                                const targetId = selectedPlayer === 'challenger' ? challenger.id : opponent.id
                                 await purchaseBattleGoods(battleId, targetId, selectedGoods)
-                                setEffects({ burst: true, side: leadingSide })
+                                await refreshFromBackend(battleId)
+                                setEffects({ burst: true, side: selectedPlayer })
                                 setTimeout(() => setEffects({ burst: false }), 1200)
                               }
                               setShowGoodsModal(false)
-                              alert(`${item.label}を購入しました！`)
+                              setSelectedPlayer(null)
+                              alert(`${item.label}を購入しました！${targetPlayer.name}に50ポイントが追加されました！`)
                             } catch (e) {
                               alert('購入に失敗しました')
                             } finally {
@@ -198,15 +478,94 @@ const LiveBattle: React.FC = () => {
                             }
                           }}
                           disabled={buyingGoods}
-                          className="flex-1 py-2 px-4 rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 transition-colors text-white font-bold disabled:opacity-50"
+                          className={`flex-1 py-2 px-4 rounded-lg bg-gradient-to-r ${
+                            selectedPlayer === 'challenger'
+                              ? 'from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600'
+                              : 'from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600'
+                          } transition-colors text-white font-bold disabled:opacity-50`}
                         >
-                          {buyingGoods ? '購入中...' : '購入する'}
+                          {buyingGoods ? '購入中...' : `${targetPlayer.name}を応援して購入`}
                         </button>
                       </div>
                     </div>
                   </>
                 )
               })()}
+            </div>
+          </div>
+        )}
+
+        {/* Point Purchase Modal */}
+        {showPointPurchaseModal && selectedCheerSide && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 max-w-lg w-full">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-white">追加ポイント購入</h3>
+                <button
+                  onClick={() => {
+                    setShowPointPurchaseModal(false)
+                    setSelectedCheerSide(null)
+                  }}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <Sparkles className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mb-6 text-center">
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <img
+                    src={(selectedCheerSide === 'challenger' ? challenger : opponent).avatar ||
+                      `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent((selectedCheerSide === 'challenger' ? challenger : opponent).name)}`}
+                    className="w-10 h-10 rounded-full border-2 border-pink-400/50"
+                  />
+                  <div>
+                    <h4 className="font-bold text-pink-300">
+                      {selectedCheerSide === 'challenger' ? challenger.name : opponent.name} を応援
+                    </h4>
+                    <p className="text-sm text-gray-400">無料応援回数がありません</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {pointPurchaseOptions.map((option, index) => (
+                  <div
+                    key={index}
+                    className="bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-colors cursor-pointer"
+                    onClick={() => purchasePoints(option)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${
+                          index === 0 ? 'from-blue-500 to-blue-600' :
+                          index === 1 ? 'from-purple-500 to-purple-600' :
+                          index === 2 ? 'from-orange-500 to-orange-600' :
+                          'from-yellow-500 to-yellow-600'
+                        } flex items-center justify-center`}>
+                          <Zap className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h5 className="font-bold text-white">{option.label}</h5>
+                          {option.bonus && (
+                            <span className="text-xs bg-green-500/20 text-green-300 px-2 py-1 rounded-full">
+                              {option.bonus}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-white">¥{option.price.toLocaleString()}</div>
+                        <div className="text-xs text-gray-400">1pt = {(option.price / option.points).toFixed(1)}円</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 text-xs text-gray-400 bg-white/5 rounded-lg p-3">
+                💡 購入したポイントで即座に応援できます！大きなパッケージほどお得です。
+              </div>
             </div>
           </div>
         )}

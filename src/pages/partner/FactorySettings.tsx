@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { usePartnerAuth } from '@/hooks/usePartnerAuth'
-import { getPartnerProducts } from '@/services/partner.service'
+import { getPartnerProducts, updatePartnerSettings } from '@/services/partner.service'
 import { useNav } from '@/contexts/NavContext'
 
 const FactorySettings: React.FC = () => {
@@ -33,8 +33,17 @@ const FactorySettings: React.FC = () => {
         alert('（サンプル）設定を保存しました')
         return
       }
-      // TODO: 実装（設定テーブルに保存、またはEdge Functionへ）
-      alert('設定の保存は準備中です（本番DB適用後に有効化）')
+      if (!partner?.id) {
+        alert('パートナー情報が見つかりません')
+        return
+      }
+
+      await updatePartnerSettings(partner.id, {
+        contact_email: notificationEmail || null,
+        webhook_url: webhookUrl || null,
+      })
+
+      alert('設定を保存しました')
     } finally {
       setSaving(false)
     }
@@ -97,4 +106,3 @@ const FactorySettings: React.FC = () => {
 }
 
 export default FactorySettings
-

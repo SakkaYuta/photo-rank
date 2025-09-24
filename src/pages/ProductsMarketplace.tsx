@@ -19,6 +19,8 @@ interface Product {
   sales: number;
   rating: number;
   created_at: string;
+  sale_start_at?: string | null;
+  sale_end_at?: string | null;
   is_trending?: boolean;
   discount_percentage?: number;
   stock_quantity: number;
@@ -37,6 +39,26 @@ const ProductsMarketplace: React.FC = () => {
   const { add, remove, has } = useFavorites();
   const { showToast } = useToast();
 
+  // 残り販売時間の簡易計算（作成日時 + 7日を仮の販売期限とみなす）
+  const formatRemaining = (createdAt?: string, endAt?: string | null) => {
+    try {
+      let end: Date
+      if (endAt) {
+        end = new Date(endAt)
+      } else {
+        const start = createdAt ? new Date(createdAt) : new Date()
+        end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000)
+      }
+      const diff = end.getTime() - Date.now()
+      if (diff <= 0) return '販売終了'
+      const days = Math.floor(diff / (24 * 60 * 60 * 1000))
+      const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
+      return `残り ${days}日${hours}時間`
+    } catch {
+      return ''
+    }
+  }
+
   // カテゴリー（新）: 配信者/俳優・女優/グラビア/アイドル/コスプレ/モデル/クリエイター
   const categories = [
     { id: 'all', name: 'すべて' },
@@ -49,13 +71,38 @@ const ProductsMarketplace: React.FC = () => {
     { id: 'creator', name: 'クリエイター' },
   ] as const
 
+  // URLパラメータから初期ペルソナフィルターを設定
+  useEffect(() => {
+    const checkPersonaFromNavigation = (event?: any) => {
+      const persona = event?.detail?.persona
+      if (persona && categories.some(cat => cat.id === persona)) {
+        setSelectedCategory(persona)
+      }
+    }
+
+    // 初期ロード時にURLをチェック
+    const hash = window.location.hash
+    if (hash.includes('persona=')) {
+      const personaMatch = hash.match(/persona=([^&]+)/)
+      if (personaMatch && categories.some(cat => cat.id === personaMatch[1])) {
+        setSelectedCategory(personaMatch[1])
+      }
+    }
+
+    // カスタムナビゲーションイベントをリッスン
+    const handleNavigate = (event: CustomEvent) => checkPersonaFromNavigation(event)
+    window.addEventListener('navigate', handleNavigate as any)
+
+    return () => window.removeEventListener('navigate', handleNavigate as any)
+  }, [])
+
   // モックデータの生成（新カテゴリ: persona を付与）
   useEffect(() => {
     const mockProducts: Product[] = [
       {
         id: '1',
-        title: '推しの夢幻アート Tシャツ',
-        description: '幻想的なデザインが特徴的な推し活グッズ。高品質プリントで色褪せしにくい。',
+        title: 'アニメイラスト Tシャツ',
+        description: '美しいアニメ風イラストで作られたオリジナルグッズ。高品質プリントで色褪せしにくい。',
         price: 3500,
         image_url: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400&h=400&fit=crop',
         creator_id: 'creator1',
@@ -213,6 +260,25 @@ const ProductsMarketplace: React.FC = () => {
   // フィルタリングと検索の処理
   useEffect(() => {
     let filtered = [...products];
+
+    // 本番環境では販売終了の商品を非表示
+    if (import.meta.env.PROD) {
+      filtered = filtered.filter(product => {
+        try {
+          let end: Date
+          if (product.sale_end_at) {
+            end = new Date(product.sale_end_at)
+          } else {
+            const start = product.created_at ? new Date(product.created_at) : new Date()
+            end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000)
+          }
+          return end.getTime() > Date.now()
+        } catch {
+          // 日付解析エラーの場合は表示する
+          return true
+        }
+      });
+    }
 
     // カテゴリーフィルタ（新カテゴリ: persona）。該当しない場合は全件表示。
     if (selectedCategory !== 'all') {
@@ -411,6 +477,7 @@ const ProductsMarketplace: React.FC = () => {
                 <div className={viewMode === 'grid' ? 'p-4' : 'flex-1 p-4 flex flex-col justify-between'}>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">{product.title}</h3>
+                    <p className="text-xs text-red-600">{formatRemaining(product.created_at, (product as any).sale_end_at)}</p>
                     <p className="text-sm text-gray-600 mb-2 line-clamp-2">{product.description}</p>
 
                     {/* Creator Info */}

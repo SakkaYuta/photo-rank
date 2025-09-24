@@ -35,6 +35,15 @@ interface ScoreNormalization {
 export const getManufacturingPartners = async (
   status?: 'approved' | 'pending' | 'suspended'
 ): Promise<ManufacturingPartner[]> => {
+  // サンプルモードの簡易パートナー
+  if (isSampleMode()) {
+    const now = new Date().toISOString()
+    return [
+      { id: 'demo-factory-1', name: 'デモ工場 東京', contact_email: 'tokyo@example.com', status: 'approved', average_rating: 4.6, total_orders: 120, created_at: now, updated_at: now } as any,
+      { id: 'demo-factory-2', name: 'デモ工場 大阪', contact_email: 'osaka@example.com', status: 'approved', average_rating: 4.4, total_orders: 95, created_at: now, updated_at: now } as any,
+      { id: 'demo-factory-3', name: 'デモ工場 名古屋', contact_email: 'nagoya@example.com', status: 'approved', average_rating: 4.2, total_orders: 60, created_at: now, updated_at: now } as any,
+    ]
+  }
   // DB定義: v5.0では列名が avg_rating（numeric）/ ratings_count（int）
   // UI型: average_rating / total_orders を使用
   // 並び順は rating 相当の降順（avg_rating を優先。無ければcreated_atで代替）
@@ -73,9 +82,90 @@ export const getFactoryQuotes = async (
   requiredDate?: Date
 ): Promise<FactoryQuote[]> => {
   try {
+    // サンプルモードはDB照会を行わず、完全にデモ見積もりを返す
+    if (isSampleMode()) {
+      const now = new Date().toISOString()
+      const demoPartners: ManufacturingPartner[] = [
+        { id: 'demo-factory-1', name: 'デモ工場 東京', contact_email: 'tokyo@example.com', status: 'approved', average_rating: 4.6, total_orders: 120, created_at: now, updated_at: now } as any,
+        { id: 'demo-factory-2', name: 'デモ工場 大阪', contact_email: 'osaka@example.com', status: 'approved', average_rating: 4.4, total_orders: 95, created_at: now, updated_at: now } as any,
+        { id: 'demo-factory-3', name: 'デモ工場 名古屋', contact_email: 'nagoya@example.com', status: 'approved', average_rating: 4.2, total_orders: 60, created_at: now, updated_at: now } as any,
+      ]
+      const quotes = demoPartners.map((partner, idx) => {
+        const product: FactoryProduct = {
+          id: `demo-prod-${idx+1}`,
+          partner_id: partner.id,
+          product_type: productType,
+          base_cost: productType === 'tshirt' ? 1500 + idx * 50 : productType === 'mug' ? 800 + idx * 30 : 1200 + idx * 40,
+          lead_time_days: 5 + idx * 2,
+          minimum_quantity: 1,
+          maximum_quantity: 1000,
+          options: null,
+          is_active: true,
+          created_at: now,
+          updated_at: now,
+        }
+        const unitPrice = product.base_cost
+        const totalAmount = unitPrice * quantity
+        const features = ['高発色プリント', '国内出荷']
+        return {
+          partner,
+          product,
+          unitPrice,
+          totalAmount,
+          leadTime: product.lead_time_days,
+          isExpress: false,
+          expressSurcharge: 0,
+          score: 0,
+          features,
+        } as FactoryQuote
+      })
+      calculateNormalizedScores(quotes)
+      return quotes.sort((a, b) => b.score - a.score)
+    }
     // 1) 承認済みパートナーを一括取得
     const partners = await getManufacturingPartners('approved')
-    if (partners.length === 0) return []
+    if (partners.length === 0) {
+      // パートナーが居ない環境ではサンプルで見積もりを返却
+      if (isSampleMode()) {
+        const now = new Date().toISOString()
+        const demoPartners: ManufacturingPartner[] = [
+          { id: 'demo-factory-1', name: 'デモ工場 東京', contact_email: 'tokyo@example.com', status: 'approved', average_rating: 4.6, total_orders: 120, created_at: now, updated_at: now } as any,
+          { id: 'demo-factory-2', name: 'デモ工場 大阪', contact_email: 'osaka@example.com', status: 'approved', average_rating: 4.4, total_orders: 95, created_at: now, updated_at: now } as any,
+        ]
+        const quotes = demoPartners.map((partner, idx) => {
+          const product: FactoryProduct = {
+            id: `demo-prod-${idx+1}`,
+            partner_id: partner.id,
+            product_type: productType,
+            base_cost: productType === 'tshirt' ? 1500 : productType === 'mug' ? 800 : 1200,
+            lead_time_days: 5 + idx * 2,
+            minimum_quantity: 1,
+            maximum_quantity: 1000,
+            options: null,
+            is_active: true,
+            created_at: now,
+            updated_at: now,
+          }
+          const unitPrice = product.base_cost
+          const totalAmount = unitPrice * quantity
+          const features = ['高発色プリント', '国内出荷']
+          return {
+            partner,
+            product,
+            unitPrice,
+            totalAmount,
+            leadTime: product.lead_time_days,
+            isExpress: false,
+            expressSurcharge: 0,
+            score: 0,
+            features,
+          } as FactoryQuote
+        })
+        calculateNormalizedScores(quotes)
+        return quotes.sort((a, b) => b.score - a.score)
+      }
+      return []
+    }
     const partnerIds = partners.map((p) => p.id)
 
     // 2) 対象商品の一括取得
@@ -86,10 +176,32 @@ export const getFactoryQuotes = async (
       .eq('product_type', productType)
       .eq('is_active', true)
     if (error) throw error
-    if (!products || products.length === 0) return []
+    let productsData = (products || []) as FactoryProduct[]
+    if (productsData.length === 0) {
+      if (isSampleMode()) {
+        // パートナーは居るが対象商品が無い → サンプル製品を合成
+        const now = new Date().toISOString()
+        const synthetic: FactoryProduct[] = partners.map((p, i) => ({
+          id: `demo-prod-${i+1}`,
+          partner_id: p.id,
+          product_type: productType,
+          base_cost: productType === 'tshirt' ? 1600 : productType === 'mug' ? 850 : 1300,
+          lead_time_days: 7 + i,
+          minimum_quantity: 1,
+          maximum_quantity: 1000,
+          options: null,
+          is_active: true,
+          created_at: now,
+          updated_at: now,
+        }))
+        productsData = synthetic
+      } else {
+        return []
+      }
+    }
 
     // 3) パートナーIDでグルーピング
-    const productsByPartner = (products as FactoryProduct[]).reduce(
+    const productsByPartner = (productsData as FactoryProduct[]).reduce(
       (acc, product) => {
         ;(acc[product.partner_id] ||= []).push(product)
         return acc
@@ -160,6 +272,24 @@ export const createManufacturingOrder = async (
 ): Promise<{ ok: boolean; data?: any; error?: string }> => {
   try {
     if (!workId) return { ok: false, error: 'workId is required' }
+
+    // サンプルモードではEdge Functionを呼ばずに成功レスポンスを返す
+    if (isSampleMode()) {
+      return {
+        ok: true,
+        data: {
+          id: `demo-mo-${Date.now()}`,
+          orderId,
+          partner_id: quote.partner.id,
+          product_type: quote.product.product_type,
+          quantity,
+          unit_price: quote.unitPrice,
+          total_amount: quote.unitPrice * quantity,
+          status: 'submitted',
+          created_at: new Date().toISOString(),
+        }
+      }
+    }
 
     const { data, error } = await supabase.functions.invoke('manufacturing-order', {
       body: {
@@ -316,4 +446,10 @@ const extractPartnerFeatures = (
   if (Number(rating) >= 4.5) features.push('高評価')
 
   return features
+}
+// サンプルモード判定（環境変数 or ローカルのデモユーザー）
+const isSampleMode = (): boolean => {
+  // deno-lint-ignore no-explicit-any
+  if (((import.meta as any).env?.VITE_ENABLE_SAMPLE) === 'true') return true
+  try { return typeof window !== 'undefined' && !!localStorage.getItem('demoUser') } catch { return false }
 }

@@ -355,9 +355,11 @@ const BattleSearch: React.FC = () => {
             {isLive ? (
               <button
                 onClick={() => {
-                  // ライブバトルページにナビゲート
-                  window.location.hash = `live-battle?battle=${encodeURIComponent(battle.id)}`;
-                  navigate('live-battle');
+                  // ハッシュにバトルIDを保持したまま画面遷移
+                  const hash = `live-battle?battle=${encodeURIComponent(battle.id)}`
+                  try { window.location.hash = hash } catch {}
+                  // Appのカスタムナビゲーションイベントでビュー切替（navigate()はクエリを消すため使わない）
+                  window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'live-battle' } }))
                 }}
                 className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 px-4 rounded-lg font-bold flex items-center justify-center gap-2 hover:from-red-600 hover:to-pink-600 transition-all transform hover:scale-105"
               >

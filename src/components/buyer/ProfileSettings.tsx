@@ -7,6 +7,7 @@ import { joinOrganizerWithCode } from '../../services/organizerService'
 import type { User as UserType, UserNotificationSettings, UserPrivacySettings } from '../../types/user.types'
 import { useToast } from '../../contexts/ToastContext'
 import Modal from '@/components/ui/Modal'
+import { supabase } from '@/services/supabaseClient'
 
 export function ProfileSettings() {
   const { profile } = useAuth()
@@ -233,10 +234,32 @@ export function ProfileSettings() {
 
   const loadOrganizerInfo = async () => {
     if (!profile) return
+    try {
+      // ユーザーがオーガナイザーとしてのプロフィールを持つか確認
+      const { data, error } = await supabase
+        .from('organizer_profiles')
+        .select('organization_name, name')
+        .eq('user_id', profile.id)
+        .maybeSingle()
 
-    // TODO: オーガナイザー情報を取得する実装
-    // 現在のユーザーがオーガナイザーに所属しているかチェック
-    // setCurrentOrganizer(organizerName)
+      if (error) {
+        // テーブル未作成・未整備などは無視して安全にスキップ
+        if (import.meta.env.DEV) console.debug('organizer_profiles lookup error:', error.message)
+        setCurrentOrganizer(null)
+        return
+      }
+
+      if (data) {
+        const organizerName = (data as any).organization_name || (data as any).name || 'オーガナイザー'
+        setCurrentOrganizer(organizerName)
+      } else {
+        setCurrentOrganizer(null)
+      }
+    } catch (e) {
+      // 取得に失敗しても他機能への影響は避ける
+      if (import.meta.env.DEV) console.debug('loadOrganizerInfo failed', e)
+      setCurrentOrganizer(null)
+    }
   }
 
   const handleJoinOrganizer = async () => {

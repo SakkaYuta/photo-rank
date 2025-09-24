@@ -121,7 +121,7 @@ const CreatorSearchPage: React.FC = () => {
               <div className="mt-3 flex items-center justify-between text-sm text-gray-500">
                 <span className="inline-flex items-center gap-1"><Star className="w-4 h-4 text-amber-500" /> 作品数: {workCounts[u.id] || (isSample ? Math.floor(Math.random()*30)+1 : 0)}</span>
                 <a
-                  href={`#creator-profile?creator=${encodeURIComponent(u.id)}`}
+                  href={`#creator-goods?creator=${encodeURIComponent(u.id)}`}
                   onClick={() => {
                     try { localStorage.setItem('selected_creator_id', u.id) } catch {}
                   }}

@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { Users, Sword, ChevronRight, Sparkles, Search, Package, Shirt, Sticker, Heart, ShoppingCart, TrendingUp, Zap, Globe, Gamepad2 } from 'lucide-react'
+import { Users, Sword, ChevronRight, Sparkles, Search, Package, Heart, ShoppingCart, TrendingUp, Zap, Globe, Gamepad2 } from 'lucide-react'
 import { APP_NAME } from '@/utils/constants'
 import { useUserRole } from '@/hooks/useUserRole'
 import { supabase } from '@/services/supabaseClient'
 import { AuthModal } from '@/components/auth/AuthModal'
 import type { Work } from '@/types'
+import { fetchTrendingProducts } from '@/services/productsService'
 
 type FeaturedCreator = {
   id: string
@@ -24,6 +25,7 @@ const MerchContentHub: React.FC = () => {
   const [creators, setCreators] = useState<FeaturedCreator[]>([])
   const [battles, setBattles] = useState<FeaturedBattle[]>([])
   const [myEligible, setMyEligible] = useState<Work[]>([])
+  const [marketProducts, setMarketProducts] = useState<any[]>([])
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const { user, userType } = useUserRole()
   const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || typeof window !== 'undefined' && !!localStorage.getItem('demoUser')
@@ -73,10 +75,43 @@ const MerchContentHub: React.FC = () => {
     })()
   }, [user?.id, userType])
 
+  // マーケットプレイス風の商品（トレンド商品）
+  useEffect(() => {
+    (async () => {
+      try {
+        const items = await fetchTrendingProducts(8)
+        setMarketProducts(items)
+      } catch {
+        setMarketProducts([])
+      }
+    })()
+  }, [])
+
+  const formatRemaining = (createdAt?: string, endAt?: string | null) => {
+    try {
+      let end: Date
+      if (endAt) {
+        end = new Date(endAt)
+      } else {
+        const start = createdAt ? new Date(createdAt) : new Date()
+        end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000)
+      }
+      const diff = end.getTime() - Date.now()
+      if (diff <= 0) return '販売終了'
+      const days = Math.floor(diff / (24 * 60 * 60 * 1000))
+      const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
+      return `残り ${days}日${hours}時間`
+    } catch { return '' }
+  }
+
   const go = (view: string) => window.dispatchEvent(new CustomEvent('navigate', { detail: { view } }))
 
   const handleViewWorks = () => {
     window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'battle-search' } }))
+  }
+
+  const handleContentTypeClick = (persona: string) => {
+    window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'products-marketplace', persona } }))
   }
 
   // 未ログインユーザーにはLPを表示
@@ -159,30 +194,30 @@ const MerchContentHub: React.FC = () => {
           </div>
         </section>
 
-        {/* Popular Categories */}
+        {/* Popular Content */}
         <section className="px-4 sm:px-6 py-16 bg-gray-50">
           <div className="max-w-6xl mx-auto">
             <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-12">
-              人気のグッズカテゴリ
+              人気のコンテンツ
             </h2>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { name: 'Tシャツ・アパレル', count: '234', image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=200&fit=crop' },
-                { name: 'アクリルスタンド', count: '189', image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=300&h=200&fit=crop' },
-                { name: 'ステッカー・バッジ', count: '156', image: 'https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?w=300&h=200&fit=crop' },
-                { name: 'マグカップ・雑貨', count: '143', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=200&fit=crop' }
-              ].map((category) => (
-                <div key={category.name} className="relative group cursor-pointer overflow-hidden rounded-xl shadow-medium hover:shadow-large transition-all duration-300">
+                { name: '配信者', count: '234', image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&h=200&fit=crop', persona: 'streamer' },
+                { name: '俳優・女優', count: '189', image: 'https://images.unsplash.com/photo-1579952363873-27d3bfad9c0d?w=300&h=200&fit=crop', persona: 'actor' },
+                { name: 'グラビア', count: '156', image: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=300&h=200&fit=crop', persona: 'gravure' },
+                { name: 'クリエイター', count: '143', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=200&fit=crop', persona: 'creator' }
+              ].map((contentType) => (
+                <div key={contentType.name} onClick={() => handleContentTypeClick(contentType.persona)} className="relative group cursor-pointer overflow-hidden rounded-xl shadow-medium hover:shadow-large transition-all duration-300">
                   <img
-                    src={category.image}
-                    alt={category.name}
+                    src={contentType.image}
+                    alt={contentType.name}
                     className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent group-hover:from-black/70 transition-all duration-300">
                     <div className="absolute bottom-4 left-4 text-white">
-                      <h3 className="text-lg font-bold leading-tight mb-1">{category.name}</h3>
-                      <p className="text-sm opacity-90">{category.count}点の作品</p>
+                      <h3 className="text-lg font-bold leading-tight mb-1">{contentType.name}</h3>
+                      <p className="text-sm opacity-90">{contentType.count}点の作品</p>
                     </div>
                   </div>
                 </div>
@@ -249,6 +284,16 @@ const MerchContentHub: React.FC = () => {
     )
   }
 
+  const goToDashboard = () => {
+    const target: Record<string, string> = {
+      creator: 'creator-dashboard',
+      factory: 'factory-dashboard',
+      organizer: 'organizer-dashboard',
+      general: 'general-dashboard',
+    }
+    go(target[userType] || 'general-dashboard')
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -256,93 +301,59 @@ const MerchContentHub: React.FC = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">{APP_NAME}</h1>
           <div className="flex gap-3">
-            <button onClick={() => go('search')} className="flex items-center gap-2 px-4 py-2.5 border-2 border-primary-200 text-primary-700 font-medium rounded-lg hover:bg-primary-50 hover:border-primary-300 transition-colors text-sm">
-              <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">クリエイター</span>
-              <span className="sm:hidden">検索</span>
-            </button>
-            <button onClick={() => go('battle-search')} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-600 to-secondary-600 text-white font-medium rounded-lg hover:shadow-lg transition-all text-sm">
-              <Sword className="w-4 h-4" />
-              <span className="hidden sm:inline">バトル</span>
-              <span className="sm:hidden">対戦</span>
+            <button onClick={goToDashboard} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-600 to-secondary-600 text-white font-medium rounded-lg hover:shadow-lg transition-all text-sm">
+              <Sparkles className="w-4 h-4" />
+              <span>ダッシュボード</span>
             </button>
           </div>
         </div>
       </div>
 
       <main className="max-w-6xl mx-auto px-4 md:px-6 py-6 sm:py-8 space-y-8 sm:space-y-10">
-        {/* Products overview */}
+        {/* Products overview (マーケットプレイス風プレビュー) */}
         <section>
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <Package className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600" /> 販売中の商品
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-            <a href="#search" className="rounded-xl border bg-white p-3 sm:p-4 hover:shadow transition-base flex items-center gap-2 sm:gap-3">
-              <div className="rounded-lg bg-emerald-50 p-1.5 sm:p-2 text-emerald-600">
-                <Shirt className="w-4 h-4 sm:w-6 sm:h-6" />
-              </div>
-              <div>
-                <p className="font-semibold text-base sm:text-lg text-gray-900">Tシャツ</p>
-                <p className="text-sm text-gray-900">¥1,500〜</p>
-              </div>
-            </a>
-            <a href="#search" className="rounded-xl border bg-white p-3 sm:p-4 hover:shadow transition-base flex items-center gap-2 sm:gap-3">
-              <div className="rounded-lg bg-orange-50 p-1.5 sm:p-2 text-orange-600">
-                <Package className="w-4 h-4 sm:w-6 sm:h-6" />
-              </div>
-              <div>
-                <p className="font-semibold text-base sm:text-lg text-gray-900">マグカップ</p>
-                <p className="text-sm text-gray-900">¥800〜</p>
-              </div>
-            </a>
-            <a href="#search" className="rounded-xl border bg-white p-3 sm:p-4 hover:shadow transition-base flex items-center gap-2 sm:gap-3">
-              <div className="rounded-lg bg-pink-50 p-1.5 sm:p-2 text-pink-600">
-                <Sticker className="w-4 h-4 sm:w-6 sm:h-6" />
-              </div>
-              <div>
-                <p className="font-semibold text-base sm:text-lg text-gray-900">ステッカー</p>
-                <p className="text-sm text-gray-900">¥300〜</p>
-              </div>
-            </a>
-            <a href="#search" className="rounded-xl border bg-white p-3 sm:p-4 hover:shadow transition-base flex items-center gap-2 sm:gap-3">
-              <div className="rounded-lg bg-indigo-50 p-1.5 sm:p-2 text-indigo-600">
-                <Sparkles className="w-4 h-4 sm:w-6 sm:h-6" />
-              </div>
-              <div>
-                <p className="font-semibold text-base sm:text-lg leading-tight text-gray-900">キャンバス/パネル</p>
-                <p className="text-sm text-gray-900">¥4,800〜</p>
-              </div>
-            </a>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2">
+              <Package className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600" /> グッズ化可能な商品
+            </h2>
+            <button onClick={() => go('products-marketplace')} className="text-sm text-blue-600 hover:underline flex items-center gap-1">
+              もっと見る <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            {marketProducts.map((p) => (
+              <div key={p.id} className="rounded-xl border bg-white overflow-hidden hover:shadow transition-base">
+                <div className="aspect-square bg-gray-100">
+                  <img src={p.image_url} alt={p.title} className="w-full h-full object-cover" />
+                </div>
+                <div className="p-3">
+                  <p className="font-semibold text-gray-900 line-clamp-1">{p.title}</p>
+                  <p className="text-xs text-red-600 mt-0.5">{formatRemaining(p.created_at, (p as any).sale_end_at)}</p>
+                  <div className="flex items-center justify-between text-xs text-gray-600 mt-2">
+                    <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3" />{(p.sales ?? 0).toLocaleString()}</span>
+                    <span className="flex items-center gap-1"><Heart className="w-3 h-3" />{p.likes ?? 0}</span>
+                    <span className="flex items-center gap-1"><ShoppingCart className="w-3 h-3" />{p.views ?? 0}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      try {
+                        const encoded = encodeURIComponent(JSON.stringify(p))
+                        window.location.hash = `goods-item-selector?productId=${p.id}&data=${encoded}`
+                      } catch {
+                        window.location.hash = `goods-item-selector`
+                      }
+                    }}
+                    className="w-full mt-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors"
+                  >
+                    グッズ化する
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          
         </section>
-        {/* Quick tabs (tappable) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button onClick={() => go('search')} className="group rounded-xl border bg-white p-5 text-left shadow hover:shadow-md transition-base">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-blue-50 p-2 text-blue-600"><Users className="w-6 h-6" /></div>
-                <div>
-                  <p className="text-base font-semibold text-gray-900">クリエイターを探す</p>
-                  <p className="text-sm text-gray-900">作品からグッズ化の相談や発注へ</p>
-                </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-700" />
-            </div>
-          </button>
-
-          <button onClick={() => go('battle-search')} className="group rounded-xl border bg-white p-5 text-left shadow hover:shadow-md transition-base">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-purple-50 p-2 text-purple-600"><Sword className="w-6 h-6" /></div>
-                <div>
-                  <p className="text-base font-semibold text-gray-900">バトルを探す</p>
-                  <p className="text-sm text-gray-900">開催中/予定の企画からコラボ募集</p>
-                </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-700" />
-            </div>
-          </button>
-        </div>
+        {/* Quick tabs removed as requested */}
 
         {/* Featured creators */}
         <section>

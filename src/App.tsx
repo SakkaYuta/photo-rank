@@ -5,6 +5,7 @@ import { TrendingView } from './components/buyer/TrendingView'
 import CreatorSearchPage from './pages/buyer/CreatorSearch'
 import MerchContentHub from './pages/MerchContentHub'
 import CreatorProfilePage from './pages/buyer/CreatorProfile'
+import CreatorGoodsPage from './pages/buyer/CreatorGoods'
 import CollectionPage from './pages/buyer/Collection'
 import { CreateWork } from './components/creator/CreateWork'
 import { MyWorks } from './components/creator/MyWorks'
@@ -82,6 +83,7 @@ type ViewKey =
   | 'local-data'
   | 'live-battle'
   | 'account-settings'
+  | 'creator-goods'
   | 'products-marketplace'
   | 'goods-item-selector'
 
@@ -95,11 +97,11 @@ function App() {
   const isFactoryUser = userType === 'factory'
   const isDemoMode = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
 
-  // ログイン後のデフォルト遷移先を「商品を探す」に統一
+  // ログイン後のデフォルト遷移先を「PhotoRank(merch)」に統一
   useEffect(() => {
     if (roleLoading) return
     if (user) {
-      navigate('products-marketplace')
+      navigate('merch')
     } else {
       // 未ログインユーザーはLPを表示
       navigate('merch')
@@ -118,7 +120,7 @@ function App() {
   // ナビゲーション関数
   const isValidView = (v: string): v is ViewKey => {
     return [
-      'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','battle-search','creator-profile','local-data','live-battle','account-settings','products-marketplace','goods-item-selector'
+      'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','battle-search','creator-profile','local-data','live-battle','account-settings','products-marketplace','goods-item-selector','creator-goods'
     ].includes(v)
   }
 
@@ -131,13 +133,13 @@ function App() {
   const allowedViewsFor = (role: string): ViewKey[] => {
     switch (role) {
       case 'creator':
-        return ['creator-dashboard','create','myworks','orders','profile','merch','search','collection','favorites','cart','battle-search','live-battle','account-settings','products-marketplace','goods-item-selector'] as ViewKey[]
+        return ['creator-dashboard','create','myworks','orders','profile','merch','search','collection','favorites','cart','battle-search','live-battle','factory-order','account-settings','products-marketplace','goods-item-selector','creator-goods'] as ViewKey[]
       case 'factory':
-        return ['factory-dashboard','partner-orders','partner-products','partner-orders','partner-settings','merch','battle-search','live-battle','account-settings','products-marketplace','goods-item-selector'] as ViewKey[]
+        return ['factory-dashboard','partner-orders','partner-products','partner-orders','partner-settings','merch','battle-search','live-battle','factory-order','account-settings','products-marketplace','goods-item-selector','creator-goods'] as ViewKey[]
       case 'organizer':
-        return ['organizer-dashboard','events','contests','merch','battle-search','live-battle','account-settings','products-marketplace','goods-item-selector'] as ViewKey[]
+        return ['organizer-dashboard','events','contests','merch','battle-search','live-battle','factory-order','account-settings','products-marketplace','goods-item-selector','creator-goods'] as ViewKey[]
       default:
-        return ['general-dashboard','merch','search','collection','favorites','cart','orders','battle-search','live-battle','account-settings','products-marketplace','goods-item-selector'] as ViewKey[]
+        return ['general-dashboard','merch','search','collection','favorites','cart','orders','battle-search','live-battle','factory-order','account-settings','products-marketplace','goods-item-selector','creator-goods'] as ViewKey[]
     }
   }
 
@@ -176,7 +178,13 @@ function App() {
       setView('factory-order')
     }
     const navHandler = (e: any) => {
-      if (e?.detail?.view) setView(e.detail.view as ViewKey)
+      if (e?.detail?.view) {
+        setView(e.detail.view as ViewKey)
+        // persona パラメータがある場合、URLハッシュに追加
+        if (e.detail.view === 'products-marketplace' && e.detail.persona) {
+          window.location.hash = `${e.detail.view}?persona=${e.detail.persona}`
+        }
+      }
     }
     ;(window as any).navigateTo = (v: string) => setView(v as ViewKey)
     window.addEventListener('start-factory-order', handler as any)
@@ -227,7 +235,7 @@ function App() {
                 <NavProvider navigate={(v) => navigate(v as ViewKey)}>
           <div className="min-h-screen bg-gray-50">
             <PartialErrorBoundary name="ヘッダー">
-              <Header />
+              <Header currentView={view} />
             </PartialErrorBoundary>
 
             <PartialErrorBoundary name="ナビゲーション">
@@ -430,6 +438,11 @@ function App() {
               {view === 'products-marketplace' && (
                 <PartialErrorBoundary name="商品マーケットプレイス">
                   <ProductsMarketplace />
+                </PartialErrorBoundary>
+              )}
+              {view === 'creator-goods' && (
+                <PartialErrorBoundary name="クリエイター作品一覧">
+                  <CreatorGoodsPage />
                 </PartialErrorBoundary>
               )}
               {view === 'goods-item-selector' && (

@@ -56,8 +56,133 @@ export interface OrganizerDashboardData {
 
 export const fetchOrganizerDashboard = async (organizerId: string): Promise<OrganizerDashboardData> => {
   try {
-    // モックデータを使用（Supabaseテーブルが存在しない場合のため）
-    console.log('Using mock data for organizer dashboard');
+    // 本番モードではSupabaseから集計し、失敗時のみモックへフォールバック
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE !== 'true') {
+      const now = new Date()
+      const oneMonthAgo = new Date(); oneMonthAgo.setMonth(now.getMonth() - 1)
+
+      // 売上（全期間/直近）の取得（organizer紐付け）
+      const [allSalesRes, monthSalesRes, pendingRes] = await Promise.all([
+        supabase
+          .from('sales')
+          .select('creator_id, work_id, net_amount, created_at')
+          .eq('organizer_id', organizerId),
+        supabase
+          .from('sales')
+          .select('creator_id, work_id, net_amount, created_at')
+          .eq('organizer_id', organizerId)
+          .gte('created_at', oneMonthAgo.toISOString()),
+        supabase
+          .from('publishing_approvals')
+          .select('id, work_id, requested_at, works(id, title, image_url, creator_id, price, created_at)')
+          .eq('status', 'pending')
+          .eq('organizer_id', organizerId)
+          .order('requested_at', { ascending: false })
+      ])
+
+      const allSales = (allSalesRes.data || []) as Array<{ creator_id: string; work_id: string; net_amount: number; created_at: string }>
+      const monthSales = (monthSalesRes.data || []) as Array<{ creator_id: string; work_id: string; net_amount: number; created_at: string }>
+      const pendingRows = (pendingRes.data || []) as Array<any>
+
+      // 関与しているクリエイター集合
+      const creatorIds = Array.from(
+        new Set([
+          ...allSales.map(s => s.creator_id),
+          ...pendingRows.map(r => r?.works?.creator_id).filter(Boolean)
+        ])
+      ) as string[]
+
+      // プロフィール解決
+      let profileMap = new Map<string, { display_name?: string; avatar_url?: string; email?: string }>()
+      if (creatorIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('user_public_profiles')
+          .select('id, display_name, avatar_url')
+          .in('id', creatorIds)
+        for (const p of (profiles || []) as any[]) {
+          profileMap.set(p.id, { display_name: p.display_name, avatar_url: p.avatar_url })
+        }
+      }
+
+      // クリエイター別集計
+      const byCreatorAll = new Map<string, { revenue: number; works: Set<string>; lastActivity?: string }>()
+      for (const s of allSales) {
+        const cur = byCreatorAll.get(s.creator_id) || { revenue: 0, works: new Set<string>(), lastActivity: undefined }
+        cur.revenue += s.net_amount || 0
+        cur.works.add(s.work_id)
+        if (!cur.lastActivity || new Date(s.created_at) > new Date(cur.lastActivity)) cur.lastActivity = s.created_at
+        byCreatorAll.set(s.creator_id, cur)
+      }
+      const byCreatorMonth = new Map<string, { revenue: number; works: Set<string> }>()
+      for (const s of monthSales) {
+        const cur = byCreatorMonth.get(s.creator_id) || { revenue: 0, works: new Set<string>() }
+        cur.revenue += s.net_amount || 0
+        cur.works.add(s.work_id)
+        byCreatorMonth.set(s.creator_id, cur)
+      }
+
+      const creators: OrganizerCreator[] = creatorIds.map((cid) => {
+        const prof = profileMap.get(cid)
+        const all = byCreatorAll.get(cid) || { revenue: 0, works: new Set<string>(), lastActivity: undefined }
+        const mon = byCreatorMonth.get(cid) || { revenue: 0, works: new Set<string>() }
+        const joinedAt = new Date(now.getFullYear(), now.getMonth(), 1).toISOString() // 不明時は当月初日で代替
+        const status: OrganizerCreator['status'] = mon.revenue > 0 ? 'active' : 'inactive'
+        return {
+          id: cid,
+          name: prof?.display_name || cid.slice(0,8),
+          email: '',
+          avatar_url: prof?.avatar_url,
+          status,
+          joined_at: joinedAt,
+          total_works: all.works.size,
+          total_revenue: all.revenue,
+          monthly_revenue: mon.revenue,
+          monthly_works: mon.works.size,
+          approval_rating: 100,
+          last_activity: (all.lastActivity && new Date(all.lastActivity).toISOString()) || joinedAt,
+        }
+      })
+
+      // ペンディング作品
+      const pendingWorks: PendingWork[] = pendingRows.map((r) => ({
+        id: r.work_id,
+        title: r?.works?.title || '作品',
+        creator_name: profileMap.get(r?.works?.creator_id || '')?.display_name || 'Creator',
+        creator_id: r?.works?.creator_id,
+        image_url: r?.works?.image_url,
+        price: r?.works?.price || 0,
+        submitted_at: r?.requested_at,
+        description: '',
+        status: 'pending',
+        quality_score: 80,
+      }))
+
+      const stats: OrganizerStats = {
+        totalCreators: creators.length,
+        activeCreators: creators.filter(c => c.status === 'active').length,
+        pendingCreators: creators.filter(c => c.status === 'pending').length,
+        totalRevenue: creators.reduce((s, c) => s + c.total_revenue, 0),
+        monthlyRevenue: creators.reduce((s, c) => s + c.monthly_revenue, 0),
+        totalWorks: creators.reduce((s, c) => s + c.total_works, 0),
+        monthlyWorks: creators.reduce((s, c) => s + c.monthly_works, 0),
+        pendingApprovals: pendingWorks.length,
+        qualityIssues: 0,
+      }
+
+      const topPerformers = [...creators].sort((a,b) => b.monthly_revenue - a.monthly_revenue).slice(0,5)
+      const recentActivities = monthSales.slice(0,5).map((s, i) => ({
+        id: String(i+1),
+        type: 'sale_made' as const,
+        creator_name: profileMap.get(s.creator_id)?.display_name || 'Creator',
+        description: '作品が購入されました',
+        timestamp: new Date(s.created_at).toISOString(),
+      }))
+
+      return { stats, creators, pendingWorks, topPerformers, recentActivities }
+    }
+
+    // ここからはモック（サンプル）
+    console.log('Using mock data for organizer dashboard')
 
     // オーガナイザーに所属するクリエイターを取得
     const organizerCreators = [

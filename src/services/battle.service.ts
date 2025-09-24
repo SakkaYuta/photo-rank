@@ -72,3 +72,16 @@ export async function purchaseBattleGoods(battleId: string, creatorId: string, g
   if (error) throw error
   return data as any
 }
+
+// 追加ポイント購入（100/1,000/10,000/100,000など）
+export async function purchaseCheerPoints(
+  battleId: string,
+  creatorId: string,
+  points: number
+): Promise<{ success: boolean; points: number; purchased_at: string }> {
+  const { data, error } = await supabase.functions.invoke('purchase-cheer-points', {
+    body: { battle_id: battleId, creator_id: creatorId, points }
+  })
+  if (error) throw error
+  return data as any
+}

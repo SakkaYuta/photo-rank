@@ -22,13 +22,28 @@ serve(async (req) => {
 
     // Rate limit per user
     try {
-      const { data: canProceed } = await supabase.rpc('check_rate_limit', {
-        p_user_id: user.id,
-        p_action: 'cheer_ticket',
-        p_limit: 100,
-        p_window_minutes: 60
-      })
-      if (canProceed === false) return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), { status: 429, headers: { 'content-type': 'application/json' } })
+      // Free cheer strict limit: enforce via dedicated counter for stronger guarantees
+      const isFree = options && (options as any).mode === 'free'
+      if (isFree) {
+        const { data: res } = await supabase.rpc('use_free_cheer', {
+          p_user_id: user.id,
+          p_battle_id: battleId,
+          p_limit: 30,
+          p_window_minutes: 60
+        })
+        const allowed = Array.isArray(res) ? (res[0]?.allowed ?? res?.allowed) : (res as any)?.allowed
+        if (!allowed) {
+          return new Response(JSON.stringify({ error: 'Free cheer limit exceeded' }), { status: 429, headers: { 'content-type': 'application/json' } })
+        }
+      } else {
+        const { data: canProceed } = await supabase.rpc('check_rate_limit', {
+          p_user_id: user.id,
+          p_action: 'cheer_ticket',
+          p_limit: 100,
+          p_window_minutes: 60
+        })
+        if (canProceed === false) return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), { status: 429, headers: { 'content-type': 'application/json' } })
+      }
     } catch (_) {}
 
     const { data, error } = await supabase
@@ -44,4 +59,3 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: e?.message ?? 'unknown error' }), { status: 500, headers: { 'content-type': 'application/json' } })
   }
 })
-

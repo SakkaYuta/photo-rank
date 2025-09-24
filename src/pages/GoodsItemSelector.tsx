@@ -39,9 +39,15 @@ const GoodsItemSelector: React.FC = () => {
 
   // URLパラメータから商品IDを取得
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const productId = params.get('productId');
-    const productData = params.get('data');
+    // ハッシュ (#goods-item-selector?data=...) からクエリを取得（フォールバックでsearchも見る）
+    let qs = ''
+    try {
+      const raw = window.location.hash.replace(/^#/, '')
+      qs = raw.includes('?') ? raw.split('?')[1] : ''
+    } catch {}
+    const params = new URLSearchParams(qs || window.location.search)
+    const productId = params.get('productId')
+    const productData = params.get('data')
 
     if (productData) {
       try {
@@ -350,29 +356,23 @@ const GoodsItemSelector: React.FC = () => {
 
     // サイズとカラーの検証
     if (selectedItem.sizes && !selectedSize) {
-      showToast('サイズを選択してください', 'error');
+      showToast({ message: 'サイズを選択してください', variant: 'error' })
       return;
     }
     if (selectedItem.colors && !selectedColor) {
-      showToast('カラーを選択してください', 'error');
+      showToast({ message: 'カラーを選択してください', variant: 'error' })
       return;
     }
 
     const cartItem = {
-      id: `${selectedProduct?.id}-${selectedItem.id}-${Date.now()}`,
-      work_id: selectedProduct?.id || '',
-      title: `${selectedProduct?.title} - ${selectedItem.name}`,
+      id: `${selectedProduct?.id || 'goods'}-${selectedItem.id}-${Date.now()}`,
+      title: `${selectedProduct?.title || '商品'} - ${selectedItem.name}`,
       price: calculatePrice(),
-      image_url: selectedProduct?.image_url || selectedItem.image,
-      quantity: quantity,
-      creator_name: selectedProduct?.creator_name || '',
-      itemType: selectedItem.name,
-      size: selectedSize,
-      color: selectedColor
-    };
+      imageUrl: selectedProduct?.image_url || selectedItem.image,
+    }
 
-    addToCart(cartItem);
-    showToast('カートに追加しました', 'success');
+    addToCart(cartItem, quantity)
+    showToast({ message: 'カートに追加しました', variant: 'success' })
 
     // 選択をリセット
     setSelectedItem(null);

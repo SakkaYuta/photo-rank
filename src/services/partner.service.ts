@@ -251,6 +251,38 @@ export async function getPartnerStats(partnerId: string) {
   }
 }
 
+// ===== パートナー設定の更新 =====
+export async function updatePartnerSettings(
+  partnerId: string,
+  updates: { contact_email?: string | null; webhook_url?: string | null }
+): Promise<ManufacturingPartner> {
+  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || partnerId.startsWith('demo')) {
+    // サンプル環境ではローカルで即時反映する体裁のみ
+    return {
+      id: partnerId,
+      name: 'デモ製造パートナー',
+      contact_email: updates.contact_email || 'partner@example.com',
+      status: 'approved',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as any
+  }
+
+  const { data, error } = await supabase
+    .from('manufacturing_partners')
+    .update({
+      contact_email: updates.contact_email ?? null,
+      webhook_url: updates.webhook_url ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', partnerId)
+    .select('*')
+    .single()
+
+  if (error) throw error
+  return data as ManufacturingPartner
+}
+
 // ===== レビュー関連サービス =====
 
 export async function getPartnerReviews(partnerId: string): Promise<PartnerReview[]> {

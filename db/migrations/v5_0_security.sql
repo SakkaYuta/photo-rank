@@ -26,6 +26,17 @@ DROP INDEX IF EXISTS idx_rate_limits_cleanup;     -- contained now() in predicat
 CREATE INDEX IF NOT EXISTS idx_rate_limits_expires_at 
 ON public.rate_limits(expires_at);
 
+-- Ensure upsert target for (user_id, action_type, window_start)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes 
+    WHERE schemaname = 'public' AND indexname = 'uniq_rate_limits_user_action_window'
+  ) THEN
+    CREATE UNIQUE INDEX uniq_rate_limits_user_action_window
+    ON public.rate_limits(user_id, action_type, window_start);
+  END IF;
+END $$;
+
 -- Rate limit check function
 CREATE OR REPLACE FUNCTION public.check_rate_limit(
   p_user_id uuid,

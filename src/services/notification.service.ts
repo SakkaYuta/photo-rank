@@ -209,26 +209,26 @@ export class NotificationService {
   /**
    * 失敗した通知を再送信
    */
-  static async retryNotification(notificationId: string): Promise<{
-    success: boolean
-    error?: string
-  }> {
+  static async retryNotification(notificationId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const { data, error } = await supabase.functions.invoke('retry-notification', {
-        body: { notification_id: notificationId }
-      })
+      // 1) ステータスをretryに更新し、直ちに再処理対象にする
+      const now = new Date().toISOString()
+      const { error: updateErr } = await supabase
+        .from('partner_notifications')
+        .update({ status: 'retry', next_retry_at: now })
+        .eq('id', notificationId)
 
-      if (error) {
-        throw error
-      }
+      if (updateErr) throw updateErr
 
-      return data
+      // 2) 可能であれば通知キュー処理をトリガー（失敗しても致命的ではない）
+      try {
+        await supabase.functions.invoke('process-notification-queue', { body: {} })
+      } catch { /* noop */ }
+
+      return { success: true }
     } catch (error: any) {
       console.error('Failed to retry notification:', error)
-      return {
-        success: false,
-        error: error?.message || 'Unknown error'
-      }
+      return { success: false, error: error?.message || 'Unknown error' }
     }
   }
 

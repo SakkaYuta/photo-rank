@@ -7,6 +7,7 @@ import Modal from '@/components/ui/Modal'
 import { purchaseService } from '@/services/purchase.service'
 import { StripeCheckout } from '@/components/checkout/StripeCheckout'
 import { useToast } from '@/contexts/ToastContext'
+import { SAMPLE_WORKS } from '@/sample/worksSamples'
 
 export function Favorites() {
   const { ids, toggle } = useFavorites()
@@ -19,14 +20,20 @@ export function Favorites() {
   const { showToast } = useToast()
   const [q, setQ] = useState('')
   const [sort, setSort] = useState<'new' | 'priceAsc' | 'priceDesc' | 'title'>('new')
+  const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || (typeof window !== 'undefined' && !!localStorage.getItem('demoUser'))
 
   useEffect(() => {
     let active = true
     ;(async () => {
       setLoading(true)
       try {
-        const ws = await listWorksByIds(Array.from(ids))
-        if (active) setWorks(ws)
+        // サンプルモードでお気に入りが空の場合は、サンプル作品を表示
+        if (isSample && ids.size === 0) {
+          if (active) setWorks(SAMPLE_WORKS.slice(0, 8) as any)
+        } else {
+          const ws = await listWorksByIds(Array.from(ids))
+          if (active) setWorks(ws)
+        }
       } finally {
         if (active) setLoading(false)
       }

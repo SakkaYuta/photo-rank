@@ -14,6 +14,9 @@ export function CreateWork() {
   const [contentUrl, setContentUrl] = useState('')
   const [price, setPrice] = useState<number | ''>(1000)
   const [isPrivate, setIsPrivate] = useState(true)
+  // 販売期間（開始・終了）
+  const [saleStart, setSaleStart] = useState<string>('')
+  const [saleEnd, setSaleEnd] = useState<string>('')
 
   // タグ
   const [tagInput, setTagInput] = useState('')
@@ -59,6 +62,8 @@ export function CreateWork() {
         price: typeof price === 'number' ? price : 0,
         message: description,
         is_published: !isPrivate,
+        sale_start_at: saleStart ? new Date(saleStart).toISOString() : null,
+        sale_end_at: saleEnd ? new Date(saleEnd).toISOString() : null,
       } as any)
       setMessage(isPrivate ? '下書きとして保存しました' : '作品を公開しました')
       // 簡易リセット（必要に応じて保持）
@@ -68,6 +73,8 @@ export function CreateWork() {
       setTags([])
       setFiles([])
       setImageInput('')
+      setSaleStart('')
+      setSaleEnd('')
     } catch (e: any) {
       setMessage(e.message)
     } finally {
@@ -135,6 +142,25 @@ export function CreateWork() {
         <p className="text-xs text-gray-900 dark:text-gray-400">
           製品の説明に YouTube、Vimeo、SoundCloud、Spotify を埋め込むことができます。
         </p>
+      </section>
+
+      {/* 販売期間 */}
+      <section className="card space-y-3 p-4">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="block text-sm font-medium">販売期間</span>
+          <span className="text-xs text-gray-500 shrink-0 whitespace-nowrap">任意</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label className="block">
+            <span className="mb-1 block text-xs text-gray-600">販売開始日時</span>
+            <Input type="datetime-local" value={saleStart} onChange={(e) => setSaleStart(e.target.value)} />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs text-gray-600">販売終了日時</span>
+            <Input type="datetime-local" value={saleEnd} onChange={(e) => setSaleEnd(e.target.value)} />
+          </label>
+        </div>
+        <p className="text-xs text-gray-900 dark:text-gray-400">未設定の場合は常時販売となります。終了日時を過ぎると自動的に販売停止します。</p>
       </section>
 
       {/* タグ */}
