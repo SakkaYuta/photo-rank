@@ -109,9 +109,7 @@ export function registerDevUtils() {
       clearLocalStorage,
       clearSessionStorage,
       exportAllData,
-      goToDataViewer: () => {
-        window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'local-data' } }))
-      }
+      goToDataViewer: () => exportAllData()
     }
     // 静かな登録（コンソール出力は行わない）
   }

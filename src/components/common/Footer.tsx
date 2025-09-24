@@ -19,18 +19,7 @@ export function Footer() {
           <button className="hover:underline text-gray-900" onClick={() => go('commerce')}>特定商取引法に基づく表示</button>
         </div>
 
-        {isDev && (
-          <div className="space-y-2">
-            <div className="font-semibold text-gray-900 dark:text-gray-200">開発者ツール</div>
-            <button
-              className="hover:underline text-blue-600 dark:text-blue-400"
-              onClick={() => go('local-data')}
-              title="ローカルストレージとサンプルデータを確認"
-            >
-              📊 ローカルデータビューアー
-            </button>
-          </div>
-        )}
+        {/* 開発者ツール（ローカルデータビューアー）は削除 */}
 
         <div className="space-y-2">
           <div>© {new Date().getFullYear()} Photo-Rank</div>
@@ -47,4 +36,3 @@ export function Footer() {
 }
 
 export default Footer
-

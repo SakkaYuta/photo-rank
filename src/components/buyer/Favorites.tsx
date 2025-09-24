@@ -2,21 +2,15 @@ import { useEffect, useState } from 'react'
 import { useFavorites } from '@/contexts/FavoritesContext'
 import { listWorksByIds } from '@/services/work.service'
 import type { Work } from '@/types/work.types'
-import { ProductCard } from '@/components/product/ProductCard'
-import Modal from '@/components/ui/Modal'
-import { purchaseService } from '@/services/purchase.service'
-import { StripeCheckout } from '@/components/checkout/StripeCheckout'
 import { useToast } from '@/contexts/ToastContext'
 import { SAMPLE_WORKS } from '@/sample/worksSamples'
+import { TrendingUp, Heart as HeartIcon, ShoppingCart } from 'lucide-react'
 
 export function Favorites() {
   const { ids, toggle } = useFavorites()
   const [works, setWorks] = useState<Work[]>([])
   const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState<Work | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [clientSecret, setClientSecret] = useState<string | null>(null)
-  const [errMsg, setErrMsg] = useState<string | null>(null)
+  // 購入モーダルはグッズ化フローに切り替えるため廃止
   const { showToast } = useToast()
   const [q, setQ] = useState('')
   const [sort, setSort] = useState<'new' | 'priceAsc' | 'priceDesc' | 'title'>('new')
@@ -53,6 +47,51 @@ export function Favorites() {
     return a.title.localeCompare(b.title)
   })
 
+  const formatRemaining = (createdAt?: string, endAt?: string | null) => {
+    try {
+      let end: Date
+      if (endAt) end = new Date(endAt)
+      else {
+        const start = createdAt ? new Date(createdAt) : new Date()
+        end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000)
+      }
+      const diff = end.getTime() - Date.now()
+      if (diff <= 0) return '販売終了'
+      const days = Math.floor(diff / (24 * 60 * 60 * 1000))
+      const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
+      return `残り ${days}日${hours}時間`
+    } catch { return '' }
+  }
+
+  const handleGoodsify = (w: Work) => {
+    const product = {
+      id: w.id,
+      title: w.title,
+      description: (w as any).description || (w as any).message || '',
+      price: w.price,
+      image_url: w.thumbnail_url || w.image_url,
+      creator_id: w.creator_id,
+      creator_name: '',
+      category: (w as any).category || 'other',
+      views: 0,
+      likes: 0,
+      sales: 0,
+      rating: 0,
+      created_at: w.created_at,
+      sale_end_at: (w as any).sale_end_at || null,
+      is_active: true,
+      stock_quantity: 0,
+      product_types: []
+    }
+    try {
+      const encoded = encodeURIComponent(JSON.stringify(product))
+      window.location.hash = `goods-item-selector?productId=${w.id}&data=${encoded}`
+      showToast({ message: 'グッズアイテムを選択してください', variant: 'success' })
+    } catch {
+      window.location.hash = `goods-item-selector`
+    }
+  }
+
   if (loading) return <div className="p-4">読み込み中...</div>
 
   return (
@@ -80,85 +119,35 @@ export function Favorites() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       {sorted.map(w => (
-        <ProductCard
-          key={w.id}
-          id={w.id}
-          imageUrl={w.thumbnail_url || w.image_url}
-          title={w.title}
-          price={w.price}
-          onClick={() => setSelected(w)}
-          badgeText={w.created_at ? new Date(w.created_at).toLocaleDateString('ja-JP') : undefined}
-        />
+        <div key={w.id} className="rounded-xl border bg-white overflow-hidden hover:shadow transition-base">
+          <div className="aspect-square bg-gray-100">
+            <img src={w.thumbnail_url || w.image_url} alt={w.title} className="w-full h-full object-cover" />
+          </div>
+          <div className="p-3">
+            <p className="font-semibold text-gray-900 line-clamp-1">{w.title}</p>
+            <p className="text-xs text-red-600 mt-0.5">{formatRemaining(w.created_at, (w as any).sale_end_at)}</p>
+            <div className="flex items-center justify-between text-xs text-gray-600 mt-2">
+              <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3" />0</span>
+              <span className="flex items-center gap-1"><HeartIcon className="w-3 h-3" />{/* お気に入り数は非表示/0 */}0</span>
+              <span className="flex items-center gap-1"><ShoppingCart className="w-3 h-3" />0</span>
+            </div>
+            <div className="flex items-center gap-2 mt-3">
+              <button
+                onClick={() => handleGoodsify(w)}
+                className="flex-1 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors"
+              >
+                グッズ化する
+              </button>
+              <button
+                onClick={() => { toggle(w.id); showToast({ variant: 'success', message: 'お気に入りを解除しました' }) }}
+                className="px-3 py-2 rounded-lg border text-sm text-gray-700 hover:bg-gray-50"
+              >解除</button>
+            </div>
+          </div>
+        </div>
       ))}
       {sorted.length === 0 && (
         <div className="p-4 text-gray-500">お気に入りはまだありません。</div>
-      )}
-
-      {selected && (
-        <Modal
-          isOpen={true}
-          onClose={() => { setSelected(null); setClientSecret(null); setErrMsg(null); setBusy(false) }}
-          title="作品プレビュー"
-          initialFocusSelector="[data-close]"
-        >
-          <div className="space-y-4">
-            <img src={selected.thumbnail_url || selected.image_url} alt={selected.title} className="w-full rounded-lg object-cover" />
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold jp-text">{selected.title}</h3>
-              <div className="text-lg font-bold">¥{selected.price.toLocaleString()}</div>
-            </div>
-            {errMsg && <div className="rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-600">{errMsg}</div>}
-            {!clientSecret && (
-              <div className="flex gap-2 justify-end">
-                <button
-                  className="btn btn-outline"
-                  onClick={() => {
-                    if (!selected) return
-                    toggle(selected.id)
-                    setSelected(null)
-                    showToast({ variant: 'success', message: 'お気に入りを解除しました' })
-                  }}
-                >
-                  お気に入り解除
-                </button>
-              </div>
-            )}
-            {!clientSecret ? (
-              <div className="flex justify-end">
-                <button
-                  className="btn btn-primary"
-                  disabled={busy}
-                  onClick={async () => {
-                    if (!selected) return
-                    setBusy(true)
-                    setErrMsg(null)
-                    const res = await purchaseService.initiatePurchase(selected.id)
-                    if (res.status === 'requires_payment' && res.clientSecret) {
-                      setClientSecret(res.clientSecret)
-                    } else {
-                      setErrMsg(res.error || '購入の準備に失敗しました')
-                    }
-                    setBusy(false)
-                  }}
-                >
-                  {busy ? '準備中...' : '購入'}
-                </button>
-              </div>
-            ) : (
-              <StripeCheckout
-                clientSecret={clientSecret}
-                workId={selected.id}
-                onSuccess={() => {
-                  setSelected(null)
-                  setClientSecret(null)
-                  showToast({ variant: 'success', message: '購入が完了しました。ありがとうございます！' })
-                }}
-                onError={(m) => setErrMsg(m)}
-                onCancel={() => { setClientSecret(null); showToast({ variant: 'warning', message: '決済をキャンセルしました' }) }}
-              />
-            )}
-          </div>
-        </Modal>
       )}
       </div>
     </div>

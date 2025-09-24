@@ -41,7 +41,6 @@ import CreatorDashboard from './pages/CreatorDashboard'
 import FactoryDashboard from './pages/FactoryDashboard'
 import OrganizerDashboard from './pages/OrganizerDashboard'
 import BattleSearch from './pages/BattleSearch'
-import LocalDataViewer from './pages/dev/LocalDataViewer'
 import { registerDevUtils } from './utils/devUtils'
 import LiveBattle from './pages/LiveBattle'
 import AccountSettings from './pages/AccountSettings'
@@ -80,7 +79,6 @@ type ViewKey =
   | 'organizer-dashboard'
   | 'battle-search'
   | 'creator-profile'
-  | 'local-data'
   | 'live-battle'
   | 'account-settings'
   | 'creator-goods'
@@ -97,16 +95,25 @@ function App() {
   const isFactoryUser = userType === 'factory'
   const isDemoMode = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
 
-  // ログイン後のデフォルト遷移先を「PhotoRank(merch)」に統一
+  // ログイン後のデフォルト遷移先をユーザータイプに応じて設定
   useEffect(() => {
     if (roleLoading) return
     if (user) {
-      navigate('merch')
+      // オーガナイザーの場合はオーガナイザーダッシュボードに遷移
+      if ((userProfile as any)?.organizer_profile) {
+        navigate('organizer-dashboard')
+      }
+      // 工場製造パートナーの場合はファクトリーダッシュボードに遷移
+      else if ((userProfile as any)?.factory_profile || userType === 'factory') {
+        navigate('factory-dashboard')
+      } else {
+        navigate('merch')
+      }
     } else {
       // 未ログインユーザーはLPを表示
       navigate('merch')
     }
-  }, [roleLoading, user])
+  }, [roleLoading, user, userProfile, userType])
 
   // セキュリティ: デモ時のみ工場ユーザーにパートナーページアクセスを許可
   const canAccessPartnerPages = isPartner || (isDemoMode && isFactoryUser)
@@ -120,7 +127,7 @@ function App() {
   // ナビゲーション関数
   const isValidView = (v: string): v is ViewKey => {
     return [
-      'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','battle-search','creator-profile','local-data','live-battle','account-settings','products-marketplace','goods-item-selector','creator-goods'
+      'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','battle-search','creator-profile','live-battle','account-settings','products-marketplace','goods-item-selector','creator-goods'
     ].includes(v)
   }
 
@@ -448,11 +455,6 @@ function App() {
               {view === 'goods-item-selector' && (
                 <PartialErrorBoundary name="グッズアイテム選択">
                   <GoodsItemSelector />
-                </PartialErrorBoundary>
-              )}
-              {view === 'local-data' && (
-                <PartialErrorBoundary name="ローカルデータビューアー">
-                  <LocalDataViewer />
                 </PartialErrorBoundary>
               )}
             </main>
