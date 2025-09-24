@@ -159,7 +159,7 @@ const MerchContentHub: React.FC = () => {
               className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-md rounded-full shadow-lg hover:shadow-xl transition-all text-sm font-medium text-gray-900"
             >
               <RefreshCw className="w-4 h-4" />
-{effectiveIntent === 'creator' ? '推してる方はこちら' : 'クリエイターの方はこちら'}
+{effectiveIntent === 'creator' ? '推してる方向けで見る' : 'クリエイターの方はこちら'}
             </button>
           </div>
         )}

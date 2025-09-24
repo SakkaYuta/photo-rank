@@ -4,16 +4,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import Stripe from 'https://esm.sh/stripe@13.10.0?target=deno';
 import { sendEmail } from '../_shared/email.ts'
 import { renderPurchaseSuccessEmail, renderPaymentFailedEmail, renderRefundEmail } from '../_shared/emailTemplates.ts'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders, corsPreflightResponse } from '../_shared/cors.ts'
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return corsPreflightResponse()
 
   const signature = req.headers.get('stripe-signature');
   let rawBody: string = '';

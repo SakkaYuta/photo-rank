@@ -1,6 +1,8 @@
 // CORS設定の共通定義
+// Prefer explicit origins via env; fallback to '*'
+const DEFAULT_ORIGIN = Deno.env.get('FRONTEND_URL') || '*'
 export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': DEFAULT_ORIGIN,
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, DELETE'
 }

@@ -20,38 +20,7 @@ const authenticateUser = async (req, res, next) => {
       });
     }
 
-    // JWT署名検証（環境変数からJWT_SECRETを取得）
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) {
-      console.error('JWT_SECRET environment variable is not set');
-      return res.status(500).json({ 
-        error: 'Server configuration error' 
-      });
-    }
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, jwtSecret);
-    } catch (jwtError) {
-      if (jwtError.name === 'TokenExpiredError') {
-        return res.status(401).json({ 
-          error: 'Token has expired',
-          details: 'Please refresh your authentication token' 
-        });
-      } else if (jwtError.name === 'JsonWebTokenError') {
-        return res.status(401).json({ 
-          error: 'Invalid token format',
-          details: 'Token signature verification failed' 
-        });
-      } else {
-        return res.status(401).json({ 
-          error: 'Token verification failed',
-          details: jwtError.message 
-        });
-      }
-    }
-
-    // Supabaseでユーザー検証（オプション）
+    // Supabaseでユーザー検証（最優先）
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_ANON_KEY;
     
@@ -62,29 +31,42 @@ const authenticateUser = async (req, res, next) => {
             'Authorization': `Bearer ${token}`,
             'apikey': supabaseKey
           },
-          timeout: 5000 // 5秒タイムアウト
+          timeout: 5000
         });
 
         if (userResponse.data && userResponse.data.id) {
-          // Supabaseユーザー情報をリクエストに追加
           req.user = {
             id: userResponse.data.id,
             email: userResponse.data.email,
-            ...decoded
+            isAuthenticated: true
           };
         } else {
-          return res.status(401).json({ 
-            error: 'User not found in authentication system' 
-          });
+          return res.status(401).json({ error: 'User not found in authentication system' });
         }
       } catch (supabaseError) {
         console.error('Supabase authentication error:', supabaseError.message);
-        // Supabaseエラーの場合はJWTデコード結果を使用（フォールバック）
-        req.user = decoded;
+        return res.status(401).json({ error: 'Unauthorized' });
       }
     } else {
-      // Supabase設定がない場合はJWTデコード結果のみ使用
-      req.user = decoded;
+      // Supabase設定がない場合のみ、ローカルJWT検証を許可（明示的に設定された場合）
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        console.error('Missing SUPABASE_URL/SUPABASE_ANON_KEY and JWT_SECRET');
+        return res.status(500).json({ error: 'Server configuration error' });
+      }
+      try {
+        const decoded = jwt.verify(token, jwtSecret);
+        req.user = {
+          id: decoded.sub || decoded.id,
+          ...decoded,
+          isAuthenticated: true
+        };
+      } catch (jwtError) {
+        const message = jwtError?.name === 'TokenExpiredError'
+          ? 'Token has expired'
+          : 'Token verification failed';
+        return res.status(401).json({ error: message });
+      }
     }
 
     // Rate limitingのためにユーザーIDをヘッダーに追加
