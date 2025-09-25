@@ -4,6 +4,8 @@ import { OrderService } from '../../services/order.service'
 import { PurchaseService } from '../../services/purchase.service'
 import type { Purchase, OrderStatus } from '../../types/work.types'
 import Modal from '@/components/ui/Modal'
+import { useUserRole } from '@/hooks/useUserRole'
+import { ArrowLeft } from 'lucide-react'
 
 type OrderWithWork = Purchase & { work: any }
 
@@ -13,6 +15,7 @@ export function OrderHistory() {
   const [selectedOrder, setSelectedOrder] = useState<OrderWithWork | null>(null)
   const [statusHistory, setStatusHistory] = useState<OrderStatus[]>([])
   const [loadingDetail, setLoadingDetail] = useState(false)
+  const { userType } = useUserRole()
 
   useEffect(() => {
     loadOrders()
@@ -64,22 +67,55 @@ export function OrderHistory() {
     }
   }
 
+  const getDashboardRoute = () => {
+    switch (userType) {
+      case 'creator':
+        return 'creator-dashboard'
+      case 'factory':
+        return 'factory-dashboard'
+      case 'organizer':
+        return 'organizer-dashboard'
+      default:
+        return 'general-dashboard'
+    }
+  }
+
   if (loading) {
     return <div className="p-4">読み込み中...</div>
   }
 
   if (orders.length === 0) {
     return (
-      <div className="p-4 text-center text-gray-500">
-        <div className="mb-4">📦</div>
-        <div>注文履歴はありません</div>
-        <div className="text-sm mt-2">商品を購入すると、こちらに履歴が表示されます</div>
+      <div className="p-4">
+        <div className="mb-4">
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: getDashboardRoute() } }))}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            マイダッシュボードに戻る
+          </button>
+        </div>
+        <div className="text-center text-gray-500">
+          <div className="mb-4">📦</div>
+          <div>注文履歴はありません</div>
+          <div className="text-sm mt-2">商品を購入すると、こちらに履歴が表示されます</div>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="p-4 space-y-4">
+      <div className="mb-4">
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: getDashboardRoute() } }))}
+          className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          マイダッシュボードに戻る
+        </button>
+      </div>
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold jp-text">注文履歴</h2>
         {orders.length > 0 && (
@@ -251,12 +287,7 @@ export function OrderHistory() {
               <div className="flex gap-2 justify-end">
                 <button
                   className="btn btn-outline btn-sm"
-                  onClick={() => {
-                    // 注文をもう一度購入する機能
-                    window.dispatchEvent(new CustomEvent('navigate', {
-                      detail: { view: 'trending' }
-                    }))
-                  }}
+                  onClick={() => { import('@/utils/navigation').then(m => m.navigate('trending')) }}
                 >
                   同じ商品を再注文
                 </button>

@@ -330,11 +330,11 @@ const CheckoutForm: React.FC<{
         <label className="inline-flex items-center gap-2">
           <input type="checkbox" className="rounded" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
           <span>
-            <button type="button" className="underline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'terms' } }))}>利用規約</button>
+            <button type="button" className="underline" onClick={() => import('@/utils/navigation').then(m => m.navigate('terms'))}>利用規約</button>
             ・
-            <button type="button" className="underline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'privacy' } }))}>プライバシーポリシー</button>
+            <button type="button" className="underline" onClick={() => import('@/utils/navigation').then(m => m.navigate('privacy'))}>プライバシーポリシー</button>
             ・
-            <button type="button" className="underline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'refunds' } }))}>返金ポリシー</button>
+            <button type="button" className="underline" onClick={() => import('@/utils/navigation').then(m => m.navigate('refunds'))}>返金ポリシー</button>
             に同意します
           </span>
         </label>
@@ -416,10 +416,10 @@ export const CartView: React.FC = () => {
     return (
       <div className="text-center py-12">
         <ShoppingBag className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">
           カートは空です
         </h2>
-        <p className="text-gray-900 dark:text-gray-200">
+        <p className="text-gray-900">
           お気に入りの写真を見つけてカートに追加してください
         </p>
       </div>
@@ -464,19 +464,12 @@ export const CartView: React.FC = () => {
             ショッピングカート
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            {shippingCalculation.totalItems}点の商品 • {shippingCalculation.factoryGroups.length}つの工場
+            {shippingCalculation.totalItems}点の商品
           </p>
         </div>
 
         {items.length > 0 && (
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setShowGrouped(!showGrouped)}
-              className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1"
-            >
-              <Package className="w-4 h-4" />
-              {showGrouped ? '一覧表示' : '工場別表示'}
-            </button>
             <button
               onClick={clearCart}
               className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
@@ -507,27 +500,15 @@ export const CartView: React.FC = () => {
       )}
 
       <div className="space-y-4 mb-8">
-        {showGrouped ? (
-          // 工場別グループ表示
-          shippingCalculation.factoryGroups.map((group, index) => (
-            <FactoryGroupCard
-              key={group.factoryId || `unknown-${index}`}
-              group={group}
-              onUpdateQty={updateQty}
-              onRemove={removeFromCart}
-            />
-          ))
-        ) : (
-          // 通常のリスト表示
-          items.map(item => (
-            <CartItemCard
-              key={item.id}
-              item={item}
-              onUpdateQty={updateQty}
-              onRemove={removeFromCart}
-            />
-          ))
-        )}
+        {items.map(item => (
+          <CartItemCard
+            key={item.id}
+            item={item}
+            onUpdateQty={updateQty}
+            onRemove={removeFromCart}
+            showFactory={false}
+          />
+        ))}
       </div>
 
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">

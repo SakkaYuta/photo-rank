@@ -12,6 +12,8 @@ import { useCart } from '@/contexts/CartContext'
 import { useFavorites } from '@/contexts/FavoritesContext'
 import { Analytics } from '@/services/analytics.service'
 import { AddressService, type UserAddress } from '@/services/address.service'
+import { useUserRole } from '@/hooks/useUserRole'
+import { ArrowLeft } from 'lucide-react'
 
 type PurchaseItem = { id: string, purchased_at: string, work: Work }
 
@@ -27,6 +29,7 @@ export function Collection() {
   const { showToast } = useToast()
   const { addToCart } = useCart()
   const { toggle, has } = useFavorites()
+  const { userType } = useUserRole()
   React.useEffect(() => {
     (async () => {
       if (selected) {
@@ -56,10 +59,33 @@ export function Collection() {
     return () => { active = false }
   }, [])
 
+  const getDashboardRoute = () => {
+    switch (userType) {
+      case 'creator':
+        return 'creator-dashboard'
+      case 'factory':
+        return 'factory-dashboard'
+      case 'organizer':
+        return 'organizer-dashboard'
+      default:
+        return 'general-dashboard'
+    }
+  }
+
   if (loading) return <div className="p-4">読み込み中...</div>
 
   return (
-    <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="p-4">
+      <div className="mb-4">
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: getDashboardRoute() } }))}
+          className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          マイダッシュボードに戻る
+        </button>
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       {items.map(p => (
         <ProductCard
           id={p.work.id}
@@ -75,6 +101,7 @@ export function Collection() {
       {items.length === 0 && (
         <div className="p-4 text-gray-500">購入した作品はまだありません。</div>
       )}
+      </div>
 
       {selected && (
         <Modal
@@ -155,11 +182,11 @@ export function Collection() {
                 </div>
                 <div className="text-xs text-gray-500 text-right">
                   購入ボタンを押すと
-                  <button className="underline ml-1" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'terms' } }))}>利用規約</button>
+                  <button className="underline ml-1" onClick={() => import('@/utils/navigation').then(m => m.navigate('terms'))}>利用規約</button>
                   ・
-                  <button className="underline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'privacy' } }))}>プライバシー</button>
+                  <button className="underline" onClick={() => import('@/utils/navigation').then(m => m.navigate('privacy'))}>プライバシー</button>
                   ・
-                  <button className="underline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'refunds' } }))}>返金</button>
+                  <button className="underline" onClick={() => import('@/utils/navigation').then(m => m.navigate('refunds'))}>返金</button>
                   に同意したものとみなします
                 </div>
                 <div className="flex justify-end">
@@ -213,11 +240,11 @@ export function Collection() {
           itemCount={1}
           actionLabel="注文履歴を見る"
           onAction={() => {
-            window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'orders' } }))
+            import('@/utils/navigation').then(m => m.navigate('orders'))
           }}
           secondaryActionLabel="続けてショッピング"
           onSecondaryAction={() => {
-            window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'trending' } }))
+            import('@/utils/navigation').then(m => m.navigate('trending'))
           }}
         />
       )}

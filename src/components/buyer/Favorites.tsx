@@ -4,7 +4,8 @@ import { listWorksByIds } from '@/services/work.service'
 import type { Work } from '@/types/work.types'
 import { useToast } from '@/contexts/ToastContext'
 import { SAMPLE_WORKS } from '@/sample/worksSamples'
-import { TrendingUp, Heart as HeartIcon, ShoppingCart } from 'lucide-react'
+import { TrendingUp, Heart as HeartIcon, ShoppingCart, ArrowLeft } from 'lucide-react'
+import { useUserRole } from '@/hooks/useUserRole'
 
 export function Favorites() {
   const { ids, toggle } = useFavorites()
@@ -15,6 +16,7 @@ export function Favorites() {
   const [q, setQ] = useState('')
   const [sort, setSort] = useState<'new' | 'priceAsc' | 'priceDesc' | 'title'>('new')
   const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || (typeof window !== 'undefined' && !!localStorage.getItem('demoUser'))
+  const { userType } = useUserRole()
 
   useEffect(() => {
     let active = true
@@ -85,10 +87,23 @@ export function Favorites() {
     }
     try {
       const encoded = encodeURIComponent(JSON.stringify(product))
-      window.location.hash = `goods-item-selector?productId=${w.id}&data=${encoded}`
+      import('@/utils/navigation').then(m => m.navigate('goods-item-selector', { productId: w.id, data: encoded }))
       showToast({ message: 'グッズアイテムを選択してください', variant: 'success' })
     } catch {
-      window.location.hash = `goods-item-selector`
+      import('@/utils/navigation').then(m => m.navigate('goods-item-selector'))
+    }
+  }
+
+  const getDashboardRoute = () => {
+    switch (userType) {
+      case 'creator':
+        return 'creator-dashboard'
+      case 'factory':
+        return 'factory-dashboard'
+      case 'organizer':
+        return 'organizer-dashboard'
+      default:
+        return 'general-dashboard'
     }
   }
 
@@ -96,6 +111,15 @@ export function Favorites() {
 
   return (
     <div className="p-4">
+      <div className="mb-4">
+        <button
+          onClick={() => import('@/utils/navigation').then(m => m.navigate(getDashboardRoute()))}
+          className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          マイダッシュボードに戻る
+        </button>
+      </div>
       <div className="mb-3 flex items-center gap-2">
         <input
           aria-label="お気に入り検索"
