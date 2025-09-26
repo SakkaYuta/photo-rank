@@ -89,7 +89,7 @@ export function OrderHistory() {
       <div className="p-4">
         <div className="mb-4">
           <button
-            onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: getDashboardRoute() } }))}
+            onClick={() => import('@/utils/navigation').then(m => m.navigate(getDashboardRoute()))}
             className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -109,7 +109,7 @@ export function OrderHistory() {
     <div className="p-4 space-y-4">
       <div className="mb-4">
         <button
-          onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: getDashboardRoute() } }))}
+          onClick={() => import('@/utils/navigation').then(m => m.navigate(getDashboardRoute()))}
           className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />

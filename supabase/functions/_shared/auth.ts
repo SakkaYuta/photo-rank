@@ -66,3 +66,14 @@ export function createServiceRoleClient() {
     }
   )
 }
+
+// 内部用の簡易シークレット検証（Scheduled/内部呼出専用）
+export function requireInternalSecret(req: Request): Response | null {
+  const required = Deno.env.get('INTERNAL_CRON_SECRET')
+  if (!required) return null // 未設定ならチェック無効（環境で有効化）
+  const header = req.headers.get('x-internal-auth') || ''
+  if (header !== required) {
+    return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), { status: 401 })
+  }
+  return null
+}

@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from 'react'
-import { Users, Sword, ChevronRight, Sparkles, Search, Package, Heart, ShoppingCart, TrendingUp, Zap, Globe, Gamepad2, RefreshCw } from 'lucide-react'
+import React, { useEffect, useRef, useState } from 'react'
+import { Users, Sword, ChevronRight, Sparkles, Search, Package, Heart, ShoppingCart, TrendingUp, Zap, Globe, Gamepad2, RefreshCw, Home, Store, LayoutDashboard, Building2, Calendar, Trophy, Shield, PlusSquare, Images } from 'lucide-react'
 import { APP_NAME } from '@/utils/constants'
 import { useUserRole } from '@/hooks/useUserRole'
 import { supabase } from '@/services/supabaseClient'
 import { AuthModal } from '@/components/auth/AuthModal'
 import { UserIntentModal } from '@/components/ui/UserIntentModal'
 import { userIntentUtils, type UserIntent } from '@/utils/userIntent'
+import { navigate as navTo } from '@/utils/navigation'
 import type { Work } from '@/types'
 import { fetchTrendingProducts } from '@/services/productsService'
+import { allowedViews as ROUTES, ROUTES_META, type RoleKey } from '@/routes'
 
 type FeaturedCreator = {
   id: string
@@ -31,8 +33,46 @@ const MerchContentHub: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [isIntentModalOpen, setIsIntentModalOpen] = useState(false)
   const [userIntent, setUserIntent] = useState<UserIntent>(null)
-  const { user, userType } = useUserRole()
+  const { user, userType, userProfile } = useUserRole()
   const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || typeof window !== 'undefined' && !!localStorage.getItem('demoUser')
+
+  // Supabase Storage からサンプル画像を読み込む（存在すれば優先）
+  const SAMPLE_BUCKET = (import.meta as any).env?.VITE_SAMPLE_BUCKET || 'user-content'
+  const CREATOR_PREFIX = (import.meta as any).env?.VITE_SAMPLE_CREATOR_PREFIX || 'samples/creators'
+  const CONTENT_PREFIX = (import.meta as any).env?.VITE_SAMPLE_CONTENT_PREFIX || 'samples/contents'
+  const DEFAULT_CREATOR_PATH = (import.meta as any).env?.VITE_DEFAULT_CREATOR_IMAGE_PATH || 'defaults/creator.jpg'
+  const DEFAULT_CONTENT_PATH = (import.meta as any).env?.VITE_DEFAULT_CONTENT_IMAGE_PATH || 'defaults/content.jpg'
+  const [sampleCreatorImages, setSampleCreatorImages] = useState<string[]>([])
+  const [sampleContentImages, setSampleContentImages] = useState<string[]>([])
+  const defaultCreatorUrl = supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(DEFAULT_CREATOR_PATH).data.publicUrl
+  const defaultContentUrl = supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(DEFAULT_CONTENT_PATH).data.publicUrl
+
+  useEffect(() => {
+    (async () => {
+      try {
+        // クリエイター向けサンプル画像（最大4件）
+        const { data: creatorList } = await supabase.storage
+          .from(SAMPLE_BUCKET)
+          .list(CREATOR_PREFIX, { limit: 10, sortBy: { column: 'name', order: 'asc' } })
+        const creatorUrls = (creatorList || [])
+          .filter(it => it.name && !it.name.endsWith('/'))
+          .slice(0, 4)
+          .map(it => supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(`${CREATOR_PREFIX}/${it.name}`).data.publicUrl)
+        if (creatorUrls.length) setSampleCreatorImages(creatorUrls)
+      } catch { /* noop */ }
+      try {
+        // ファン向けカテゴリサンプル画像（最大4件）
+        const { data: contentList } = await supabase.storage
+          .from(SAMPLE_BUCKET)
+          .list(CONTENT_PREFIX, { limit: 10, sortBy: { column: 'name', order: 'asc' } })
+        const contentUrls = (contentList || [])
+          .filter(it => it.name && !it.name.endsWith('/'))
+          .slice(0, 4)
+          .map(it => supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(`${CONTENT_PREFIX}/${it.name}`).data.publicUrl)
+        if (contentUrls.length) setSampleContentImages(contentUrls)
+      } catch { /* noop */ }
+    })()
+  }, [])
 
   // 有効なユーザー意図を取得（stateを優先）
   const effectiveIntent = userIntent || userIntentUtils.getEffectiveIntent(userType)
@@ -137,20 +177,94 @@ const MerchContentHub: React.FC = () => {
     } catch { return '' }
   }
 
-  const go = (view: string) => window.dispatchEvent(new CustomEvent('navigate', { detail: { view } }))
+  const go = (view: string) => navTo(view)
 
   const handleViewWorks = () => {
-    window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'battle-search' } }))
+    navTo('battle-search')
   }
 
   const handleContentTypeClick = (persona: string) => {
-    window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'products-marketplace', persona } }))
+    navTo('products-marketplace', { persona })
+  }
+
+  // メニュー（ページ内）の状態と項目構築（全表示で共通利用）
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null as HTMLDivElement | null)
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (!menuRef.current) return
+      if (!menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false) }
+    document.addEventListener('click', onClick)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('click', onClick); document.removeEventListener('keydown', onKey) }
+  }, [])
+
+  type NavItem = { key: string; label: string }
+  const viewOverride = typeof window !== 'undefined' ? localStorage.getItem('view_override') : null
+  const effectiveType = viewOverride === 'general' ? 'general' : (userType || 'general')
+  let role: RoleKey = (effectiveType as RoleKey) || 'general'
+  const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+    Home, Store, LayoutDashboard, Users, Building2, Calendar, Trophy, Shield, PlusSquare, Images, Gamepad2, Heart, Package
+  }
+  const items: NavItem[] = (ROUTES as readonly string[])
+    .filter((key) => {
+      const meta = ROUTES_META[key as keyof typeof ROUTES_META]
+      if (!meta?.showInNav) return false
+      if (meta.requireAuth && !userProfile) return false
+      if (meta.roles && !meta.roles.includes(role)) return false
+      return true
+    })
+    .map((key) => ({ key, label: ROUTES_META[key as keyof typeof ROUTES_META]?.title || key }))
+    .sort((a, b) => {
+      const ao = ROUTES_META[a.key as keyof typeof ROUTES_META]?.navOrder ?? 999
+      const bo = ROUTES_META[b.key as keyof typeof ROUTES_META]?.navOrder ?? 999
+      return ao - bo
+    })
+  const dedupedItems: NavItem[] = []
+  const seen = new Set<string>()
+  for (const it of items) {
+    if (!seen.has(it.key)) { dedupedItems.push(it); seen.add(it.key) }
   }
 
   // 未ログインユーザーにはLPを表示
   if (!user) {
     return (
       <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen min-h-screen">
+        {/* Global Menu (guest) */}
+        <div className="fixed top-4 right-4 z-40" ref={menuRef}>
+          <button
+            onClick={() => setMenuOpen(v => !v)}
+            className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm text-gray-900"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            title="メニュー"
+          >
+            メニュー
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 mt-2 w-64 rounded-lg border bg-white shadow-lg z-50">
+              <ul className="py-2 max-h-[70vh] overflow-y-auto">
+                {dedupedItems.map((it) => (
+                  <li key={it.key}>
+                    <button
+                      className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors text-gray-900 hover:bg-gray-50`}
+                      onClick={() => { navTo(it.key); setMenuOpen(false) }}
+                    >
+                      {(() => {
+                        const iconKey = ROUTES_META[it.key as keyof typeof ROUTES_META]?.icon
+                        const IconComp = iconKey ? iconMap[iconKey] : undefined
+                        return IconComp ? <IconComp className="w-4 h-4" /> : null
+                      })()}
+                      <span className="truncate">{it.label}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
         {/* Intent switcher */}
         {effectiveIntent && (
           <div className="fixed top-20 right-4 z-40">
@@ -158,8 +272,7 @@ const MerchContentHub: React.FC = () => {
               onClick={handleToggleIntent}
               className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-md rounded-full shadow-lg hover:shadow-xl transition-all text-sm font-medium text-gray-900"
             >
-              <RefreshCw className="w-4 h-4" />
-{effectiveIntent === 'creator' ? '推してる方向けで見る' : 'クリエイターの方はこちら'}
+{effectiveIntent === 'creator' ? '推し探しの方はこちら' : 'クリエイターの方はこちら'}
             </button>
           </div>
         )}
@@ -179,8 +292,7 @@ const MerchContentHub: React.FC = () => {
               <div className="max-w-5xl mx-auto">
                 <div className="mb-8">
                   <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-white/80 text-sm mb-6">
-                    <Sparkles className="w-4 h-4" />
-                    クリエイター向け
+推し探しの方向け
                   </div>
                 </div>
 
@@ -203,13 +315,13 @@ const MerchContentHub: React.FC = () => {
                     onClick={() => setIsAuthModalOpen(true)}
                     className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-400 text-black font-bold rounded-xl shadow-2xl hover:shadow-yellow-400/25 hover:scale-105 transform transition-all"
                   >
-                    🎨 今すぐ作品を作成
+今すぐ作品を作成
                   </button>
                   <button
                     onClick={handleViewWorks}
                     className="w-full sm:w-auto px-8 py-4 bg-white/10 backdrop-blur-md text-white font-medium rounded-xl border border-white/20 hover:bg-white/20 transition-all"
                   >
-                    ⚔️ バトルで稼ぐ方法を見る
+バトルで稼ぐ方法を見る
                   </button>
                 </div>
 
@@ -242,8 +354,7 @@ const MerchContentHub: React.FC = () => {
               <div className="max-w-5xl mx-auto">
                 <div className="mb-8">
                   <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-md rounded-full text-gray-700 text-sm mb-6">
-                    <Heart className="w-4 h-4 text-pink-500" />
-                    推してる方向け
+推し探しの方向け
                   </div>
                 </div>
 
@@ -266,13 +377,13 @@ const MerchContentHub: React.FC = () => {
                     onClick={() => go('products-marketplace')}
                     className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold rounded-xl shadow-2xl hover:shadow-pink-500/25 hover:scale-105 transform transition-all"
                   >
-                    🛍️ 推しグッズを探す
+推しグッズを探す
                   </button>
                   <button
                     onClick={handleViewWorks}
                     className="w-full sm:w-auto px-8 py-4 bg-white/80 backdrop-blur-md text-gray-700 font-medium rounded-xl border border-gray-200 hover:bg-white transition-all"
                   >
-                    ⚔️ バトルで応援する
+バトルで応援する
                   </button>
                 </div>
 
@@ -396,10 +507,10 @@ const MerchContentHub: React.FC = () => {
               {effectiveIntent === 'creator' ? (
                 // クリエイター向け成功事例
                 [
-                  { name: 'アートクリエイター結', earnings: '¥127k/月', image: 'https://images.unsplash.com/photo-1494790108755-2616b332c66a?w=300&h=200&fit=crop', tag: 'イラスト' },
-                  { name: 'フォトグラファーりく', earnings: '¥89k/月', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=200&fit=crop', tag: '写真' },
-                  { name: 'デザイナーみお', earnings: '¥156k/月', image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=300&h=200&fit=crop', tag: 'デザイン' },
-                  { name: 'アニメーターカイ', earnings: '¥203k/月', image: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=300&h=200&fit=crop', tag: 'アニメ' }
+                  { name: 'アートクリエイター結', earnings: '¥127k/月', image: sampleCreatorImages[0] || defaultCreatorUrl, tag: 'イラスト' },
+                  { name: 'フォトグラファーりく', earnings: '¥89k/月', image: sampleCreatorImages[1] || defaultCreatorUrl, tag: '写真' },
+                  { name: 'デザイナーみお', earnings: '¥156k/月', image: sampleCreatorImages[2] || defaultCreatorUrl, tag: 'デザイン' },
+                  { name: 'アニメーターカイ', earnings: '¥203k/月', image: sampleCreatorImages[3] || defaultCreatorUrl, tag: 'アニメ' }
                 ].map((creator) => (
                   <div key={creator.name} className="relative group cursor-pointer overflow-hidden rounded-xl shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 transform hover:scale-105">
                     <img
@@ -423,10 +534,10 @@ const MerchContentHub: React.FC = () => {
               ) : (
                 // ファン向けコンテンツカテゴリ
                 [
-                  { name: '配信者', count: '234', image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&h=200&fit=crop', persona: 'streamer' },
-                  { name: '俳優・女優', count: '189', image: 'https://images.unsplash.com/photo-1579952363873-27d3bfad9c0d?w=300&h=200&fit=crop', persona: 'actor' },
-                  { name: 'グラビア', count: '156', image: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=300&h=200&fit=crop', persona: 'gravure' },
-                  { name: 'クリエイター', count: '143', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=200&fit=crop', persona: 'creator' }
+                  { name: '配信者', count: '234', image: sampleContentImages[0] || defaultContentUrl, persona: 'streamer' },
+                  { name: '俳優・女優', count: '189', image: sampleContentImages[1] || defaultContentUrl, persona: 'actor' },
+                  { name: 'グラビア', count: '156', image: sampleContentImages[2] || defaultContentUrl, persona: 'gravure' },
+                  { name: 'クリエイター', count: '143', image: sampleContentImages[3] || defaultContentUrl, persona: 'creator' }
                 ].map((contentType) => (
                   <div key={contentType.name} onClick={() => handleContentTypeClick(contentType.persona)} className="relative group cursor-pointer overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                     <img
@@ -521,11 +632,42 @@ const MerchContentHub: React.FC = () => {
       <div className="bg-white shadow-soft border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">{APP_NAME}</h1>
-          <div className="flex gap-3">
+          <div className="flex gap-3 items-center">
             <button onClick={goToDashboard} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-600 to-secondary-600 text-white font-medium rounded-lg hover:shadow-lg transition-all text-sm">
-              <Sparkles className="w-4 h-4" />
               <span>ダッシュボード</span>
             </button>
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen(v => !v)}
+                className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm text-gray-900"
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                title="メニュー"
+              >
+                メニュー
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-64 rounded-lg border bg-white shadow-lg z-50">
+                  <ul className="py-2 max-h-[70vh] overflow-y-auto">
+                    {dedupedItems.map((it) => (
+                      <li key={it.key}>
+                        <button
+                          className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors text-gray-900 hover:bg-gray-50`}
+                          onClick={() => { navTo(it.key); setMenuOpen(false) }}
+                        >
+                          {(() => {
+                            const iconKey = ROUTES_META[it.key as keyof typeof ROUTES_META]?.icon
+                            const IconComp = iconKey ? iconMap[iconKey] : undefined
+                            return IconComp ? <IconComp className="w-4 h-4" /> : null
+                          })()}
+                          <span className="truncate">{it.label}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -559,9 +701,9 @@ const MerchContentHub: React.FC = () => {
                     onClick={() => {
                       try {
                         const encoded = encodeURIComponent(JSON.stringify(p))
-                        window.location.hash = `goods-item-selector?productId=${p.id}&data=${encoded}`
+                        import('@/utils/navigation').then(m => m.navigate('goods-item-selector', { productId: p.id, data: encoded }))
                       } catch {
-                        window.location.hash = `goods-item-selector`
+                        import('@/utils/navigation').then(m => m.navigate('goods-item-selector'))
                       }
                     }}
                     className="w-full mt-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors"
@@ -585,7 +727,7 @@ const MerchContentHub: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {creators.map(c => (
               <a key={c.id} href={`#creator-profile?creator=${encodeURIComponent(c.id)}`} onClick={() => { try{localStorage.setItem('selected_creator_id', c.id)}catch{} }} className="rounded-xl border bg-white p-4 block hover:shadow transition-base">
-                <img src={c.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${c.id}`} alt="" className="w-16 h-16 rounded-full mb-3" />
+                <img src={resolveImageUrl(c.avatar, [supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(DEFAULT_AVATAR_PATH || 'defaults/avatar.jpg').data.publicUrl])} alt="" className="w-16 h-16 rounded-full mb-3" />
                 <p className="font-semibold text-gray-900">{c.name}</p>
                 {c.tagline && <p className="text-sm text-gray-900 line-clamp-2">{c.tagline}</p>}
               </a>
@@ -603,7 +745,7 @@ const MerchContentHub: React.FC = () => {
             {battles.map(b => (
               <button key={b.id} onClick={() => { try{localStorage.setItem('battle_query', b.title)}catch{}; go('battle-search') }} className="rounded-xl border bg-white overflow-hidden text-left hover:shadow transition-base">
                 <div className="aspect-[3/1] bg-gray-100">
-                  {b.banner && <img src={b.banner} className="w-full h-full object-cover" />}
+                  {<img src={resolveImageUrl(b.banner, [defaultContentUrl])} className="w-full h-full object-cover" />}
                 </div>
                 <div className="p-4">
                   <p className="font-semibold text-gray-900">{b.title}</p>
@@ -630,7 +772,7 @@ const MerchContentHub: React.FC = () => {
                 {myEligible.map((w) => (
                   <div key={w.id} className="rounded-xl border bg-white overflow-hidden hover:shadow transition-base">
                     <div className="aspect-[4/3] bg-gray-100">
-                      <img src={(w as any).thumbnail_url || (w as any).image_url} className="w-full h-full object-cover" />
+                      <img src={resolveImageUrl((w as any).thumbnail_url || (w as any).image_url, [defaultContentUrl, defaultCreatorUrl])} className="w-full h-full object-cover" />
                     </div>
                     <div className="p-3">
                       <p className="font-medium truncate">{w.title}</p>

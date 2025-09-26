@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { TrendingUp, Heart, ShoppingCart } from 'lucide-react'
 import { fetchProductsByCreator } from '@/services/productsService'
 import { useToast } from '@/contexts/ToastContext'
+import { resolveImageUrl } from '@/utils/imageFallback'
+import { defaultImages } from '@/utils/defaultImages'
 
 type Product = {
   id: string
@@ -80,10 +82,10 @@ const CreatorGoodsPage: React.FC = () => {
   const handleGoodsify = (product: Product) => {
     try {
       const encoded = encodeURIComponent(JSON.stringify(product))
-      window.location.hash = `goods-item-selector?productId=${product.id}&data=${encoded}`
+      import('@/utils/navigation').then(m => m.navigate('goods-item-selector', { productId: product.id, data: encoded }))
       showToast({ message: 'グッズアイテムを選択してください', variant: 'success' })
     } catch {
-      window.location.hash = `goods-item-selector`
+      import('@/utils/navigation').then(m => m.navigate('goods-item-selector'))
     }
   }
 
@@ -107,7 +109,7 @@ const CreatorGoodsPage: React.FC = () => {
             {items.map((p) => (
               <div key={p.id} className="rounded-xl border bg-white overflow-hidden hover:shadow transition-base">
                 <div className="aspect-square bg-gray-100">
-                  <img src={p.image_url} alt={p.title} className="w-full h-full object-cover" />
+                  <img src={resolveImageUrl(p.image_url, [defaultImages.product, defaultImages.work])} alt={p.title} className="w-full h-full object-cover" />
                 </div>
                 <div className="p-3">
                   <p className="font-semibold text-gray-900 line-clamp-1">{p.title}</p>
@@ -134,4 +136,3 @@ const CreatorGoodsPage: React.FC = () => {
 }
 
 export default CreatorGoodsPage
-

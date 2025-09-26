@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { listBattles } from '@/services/battle.service'
 import { SAMPLE_BATTLES, SAMPLE_PARTICIPANTS } from '@/sample/battleSamples'
+import { resolveImageUrl } from '@/utils/imageFallback'
+import { defaultImages } from '@/utils/defaultImages'
 import { useNav } from '@/contexts/NavContext'
+import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/contexts/ToastContext'
+import { AuthModal } from '@/components/auth/AuthModal'
 import {
   Gamepad2,
   Clock,
@@ -57,6 +62,8 @@ interface Battle {
 
 const BattleSearch: React.FC = () => {
   const { navigate } = useNav();
+  const { profile } = useAuth();
+  const { showToast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedDuration, setSelectedDuration] = useState<string>('all');
@@ -76,6 +83,9 @@ const BattleSearch: React.FC = () => {
     push: boolean;
     sms: boolean;
   }>>({});
+
+  // 認証モーダルの状態
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Load from backend (fallback to sample data when enabled or on error)
   useEffect(() => {
@@ -98,8 +108,8 @@ const BattleSearch: React.FC = () => {
             .map(b => ({
               id: b.id,
               title: b.title,
-              challenger: { id: b.challenger_id, name: SAMPLE_PARTICIPANTS[b.challenger_id]?.display_name || 'Challenger', avatar: SAMPLE_PARTICIPANTS[b.challenger_id]?.avatar_url || '/api/placeholder/40/40', worksCount: 0 },
-              opponent: { id: b.opponent_id, name: SAMPLE_PARTICIPANTS[b.opponent_id]?.display_name || 'Opponent', avatar: SAMPLE_PARTICIPANTS[b.opponent_id]?.avatar_url || '/api/placeholder/40/40', worksCount: 0 },
+              challenger: { id: b.challenger_id, name: SAMPLE_PARTICIPANTS[b.challenger_id]?.display_name || 'Challenger', avatar: resolveImageUrl(SAMPLE_PARTICIPANTS[b.challenger_id]?.avatar_url, [defaultImages.avatar]), worksCount: 0 },
+              opponent: { id: b.opponent_id, name: SAMPLE_PARTICIPANTS[b.opponent_id]?.display_name || 'Opponent', avatar: resolveImageUrl(SAMPLE_PARTICIPANTS[b.opponent_id]?.avatar_url, [defaultImages.avatar]), worksCount: 0 },
               status: b.status,
               duration: b.duration_minutes,
               startTime: b.start_time,
@@ -118,8 +128,8 @@ const BattleSearch: React.FC = () => {
           const items: Battle[] = (res.items || []).map((b: any) => ({
             id: b.id,
             title: 'グッズバトル',
-            challenger: { id: b.challenger_id, name: res.participants?.[b.challenger_id]?.display_name || b.challenger_id.slice(0,8), avatar: res.participants?.[b.challenger_id]?.avatar_url || '/api/placeholder/40/40', worksCount: 0 },
-            opponent: { id: b.opponent_id, name: res.participants?.[b.opponent_id]?.display_name || b.opponent_id.slice(0,8), avatar: res.participants?.[b.opponent_id]?.avatar_url || '/api/placeholder/40/40', worksCount: 0 },
+            challenger: { id: b.challenger_id, name: res.participants?.[b.challenger_id]?.display_name || b.challenger_id.slice(0,8), avatar: resolveImageUrl(res.participants?.[b.challenger_id]?.avatar_url, [defaultImages.avatar]), worksCount: 0 },
+            opponent: { id: b.opponent_id, name: res.participants?.[b.opponent_id]?.display_name || b.opponent_id.slice(0,8), avatar: resolveImageUrl(res.participants?.[b.opponent_id]?.avatar_url, [defaultImages.avatar]), worksCount: 0 },
             status: b.status,
             duration: (b.duration_minutes as 5|30|60) ?? 5,
             startTime: b.start_time || new Date().toISOString(),
@@ -139,8 +149,8 @@ const BattleSearch: React.FC = () => {
           .map(b => ({
             id: b.id,
             title: b.title,
-            challenger: { id: b.challenger_id, name: SAMPLE_PARTICIPANTS[b.challenger_id]?.display_name || 'Challenger', avatar: SAMPLE_PARTICIPANTS[b.challenger_id]?.avatar_url || '/api/placeholder/40/40', worksCount: 0 },
-            opponent: { id: b.opponent_id, name: SAMPLE_PARTICIPANTS[b.opponent_id]?.display_name || 'Opponent', avatar: SAMPLE_PARTICIPANTS[b.opponent_id]?.avatar_url || '/api/placeholder/40/40', worksCount: 0 },
+            challenger: { id: b.challenger_id, name: SAMPLE_PARTICIPANTS[b.challenger_id]?.display_name || 'Challenger', avatar: resolveImageUrl(SAMPLE_PARTICIPANTS[b.challenger_id]?.avatar_url, [defaultImages.avatar]), worksCount: 0 },
+            opponent: { id: b.opponent_id, name: SAMPLE_PARTICIPANTS[b.opponent_id]?.display_name || 'Opponent', avatar: resolveImageUrl(SAMPLE_PARTICIPANTS[b.opponent_id]?.avatar_url, [defaultImages.avatar]), worksCount: 0 },
             status: b.status,
             duration: b.duration_minutes,
             startTime: b.start_time,
@@ -158,6 +168,17 @@ const BattleSearch: React.FC = () => {
 
   // 通知設定関数
   const openNotificationModal = (battle: Battle) => {
+    // 未ログインの場合はログイン要求
+    if (!profile) {
+      showToast({
+        title: 'ログインが必要です',
+        message: 'バトルの通知設定を行うには会員ログインが必要です。',
+        variant: 'warning'
+      });
+      setShowAuthModal(true);
+      return;
+    }
+
     setNotificationModal({ isOpen: true, battle });
     // ローカルストレージから既存の通知設定を読み込み
     const savedNotifications = localStorage.getItem(`notifications_${battle.id}`);
@@ -357,9 +378,9 @@ const BattleSearch: React.FC = () => {
                 onClick={() => {
                   // ハッシュにバトルIDを保持したまま画面遷移
                   const hash = `live-battle?battle=${encodeURIComponent(battle.id)}`
-                  try { window.location.hash = hash } catch {}
+                  try { import('@/utils/navigation').then(m => m.navigate('live-battle', { battle: battle.id })) } catch {}
                   // Appのカスタムナビゲーションイベントでビュー切替（navigate()はクエリを消すため使わない）
-                  window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'live-battle' } }))
+                  import('@/utils/navigation').then(m => m.navigate('live-battle'))
                 }}
                 className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 px-4 rounded-lg font-bold flex items-center justify-center gap-2 hover:from-red-600 hover:to-pink-600 transition-all transform hover:scale-105"
               >
@@ -638,6 +659,11 @@ const BattleSearch: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 認証モーダル */}
+      {showAuthModal && (
+        <AuthModal onClose={() => setShowAuthModal(false)} />
       )}
     </div>
   );

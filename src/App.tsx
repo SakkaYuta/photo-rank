@@ -42,48 +42,14 @@ import FactoryDashboard from './pages/FactoryDashboard'
 import OrganizerDashboard from './pages/OrganizerDashboard'
 import BattleSearch from './pages/BattleSearch'
 import { registerDevUtils } from './utils/devUtils'
+import { NAV_EVENT, viewToHash, parseHash } from '@/utils/navigation'
+import { allowedViews as ROUTES, isValidView, ROUTES_META, type RoleKey, defaultViewFor } from '@/routes'
 import LiveBattle from './pages/LiveBattle'
 import AccountSettings from './pages/AccountSettings'
 import ProductsMarketplace from './pages/ProductsMarketplace'
 import GoodsItemSelector from './pages/GoodsItemSelector'
 
-type ViewKey =
-  | 'trending'
-  | 'merch'
-  | 'search'
-  | 'collection'
-  | 'favorites'
-  | 'cart'
-  | 'create'
-  | 'myworks'
-  | 'orders'
-  | 'profile'
-  | 'admin'
-  | 'admin-asset-policies'
-  | 'admin-approvals'
-  | 'partner-dashboard'
-  | 'partner-products'
-  | 'partner-orders'
-  | 'partner-settings'
-  | 'factory'
-  | 'factory-order'
-  | 'events'
-  | 'contests'
-  | 'terms'
-  | 'privacy'
-  | 'refunds'
-  | 'commerce'
-  | 'general-dashboard'
-  | 'creator-dashboard'
-  | 'factory-dashboard'
-  | 'organizer-dashboard'
-  | 'battle-search'
-  | 'creator-profile'
-  | 'live-battle'
-  | 'account-settings'
-  | 'creator-goods'
-  | 'products-marketplace'
-  | 'goods-item-selector'
+type ViewKey = typeof ROUTES[number]
 
 function App() {
   const [view, setView] = useState<ViewKey>('merch')
@@ -95,24 +61,19 @@ function App() {
   const isFactoryUser = userType === 'factory'
   const isDemoMode = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
 
-  // ログイン後のデフォルト遷移先をユーザータイプに応じて設定
+  // ログイン後のデフォルト遷移先をルートメタに基づいて設定
   useEffect(() => {
     if (roleLoading) return
+    const isAdminUser = !!isAdmin
+    let role: RoleKey | 'guest' = 'guest'
     if (user) {
-      // オーガナイザーの場合はオーガナイザーダッシュボードに遷移
-      if ((userProfile as any)?.organizer_profile) {
-        navigate('organizer-dashboard')
-      }
-      // 工場製造パートナーの場合はファクトリーダッシュボードに遷移
-      else if ((userProfile as any)?.factory_profile || userType === 'factory') {
-        navigate('factory-dashboard')
-      } else {
-        navigate('merch')
-      }
-    } else {
-      // 未ログインユーザーはLPを表示
-      navigate('merch')
+      role = (userType as RoleKey) || 'general'
+      if ((userProfile as any)?.organizer_profile) role = 'organizer'
+      else if ((userProfile as any)?.factory_profile || userType === 'factory') role = 'factory'
+      else if (userType === 'creator') role = 'creator'
+      if (isAdminUser) role = 'admin'
     }
+    navigate(defaultViewFor(role))
   }, [roleLoading, user, userProfile, userType])
 
   // セキュリティ: デモ時のみ工場ユーザーにパートナーページアクセスを許可
@@ -124,30 +85,24 @@ function App() {
   const [selectedWorkId, setSelectedWorkId] = useState<string>('')
   const [currentOrderId, setCurrentOrderId] = useState<string>('')
 
-  // ナビゲーション関数
-  const isValidView = (v: string): v is ViewKey => {
-    return [
-      'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','battle-search','creator-profile','live-battle','account-settings','products-marketplace','goods-item-selector','creator-goods'
-    ].includes(v)
-  }
+  // ナビゲーション関数（検証は routes.ts に集約）
 
   const navigate = (v: ViewKey) => {
     setView(v)
-    try { window.location.hash = v } catch {}
+    try { window.location.hash = viewToHash(v) } catch {}
   }
 
   // 役割に応じた許可ビューを制限（ハッシュで不正なビューが来た場合も強制補正）
   const allowedViewsFor = (role: string): ViewKey[] => {
-    switch (role) {
-      case 'creator':
-        return ['creator-dashboard','create','myworks','orders','profile','merch','search','collection','favorites','cart','battle-search','live-battle','factory-order','account-settings','products-marketplace','goods-item-selector','creator-goods'] as ViewKey[]
-      case 'factory':
-        return ['factory-dashboard','partner-orders','partner-products','partner-orders','partner-settings','merch','battle-search','live-battle','factory-order','account-settings','products-marketplace','goods-item-selector','creator-goods'] as ViewKey[]
-      case 'organizer':
-        return ['organizer-dashboard','events','contests','merch','battle-search','live-battle','factory-order','account-settings','products-marketplace','goods-item-selector','creator-goods'] as ViewKey[]
-      default:
-        return ['general-dashboard','merch','search','collection','favorites','cart','orders','battle-search','live-battle','factory-order','account-settings','products-marketplace','goods-item-selector','creator-goods'] as ViewKey[]
-    }
+    const r = (role as RoleKey) || 'general'
+    return (ROUTES as readonly ViewKey[]).filter((view) => {
+      const meta = ROUTES_META[view]
+      // Auth gate: if requireAuth and no user, allow only public
+      if (meta.requireAuth && !user) return false
+      // Role gate: if roles specified, must include role; otherwise all roles allowed
+      if (meta.roles && !meta.roles.includes(r)) return false
+      return true
+    }) as ViewKey[]
   }
 
   useEffect(() => {
@@ -164,7 +119,8 @@ function App() {
         creator: 'creator-dashboard',
         factory: 'factory-dashboard',
         organizer: 'organizer-dashboard',
-        general: 'general-dashboard',
+        // ログアウト（ゲスト相当）や一般ロールはトップへ
+        general: 'merch',
       }
       navigate(fallback[effectiveType] || 'general-dashboard')
     }
@@ -189,16 +145,16 @@ function App() {
         setView(e.detail.view as ViewKey)
         // persona パラメータがある場合、URLハッシュに追加
         if (e.detail.view === 'products-marketplace' && e.detail.persona) {
-          window.location.hash = `${e.detail.view}?persona=${e.detail.persona}`
+          window.location.hash = viewToHash(e.detail.view, { persona: e.detail.persona })
         }
       }
     }
     ;(window as any).navigateTo = (v: string) => setView(v as ViewKey)
     window.addEventListener('start-factory-order', handler as any)
-    window.addEventListener('navigate', navHandler as any)
+    window.addEventListener(NAV_EVENT, navHandler as any)
     return () => {
       window.removeEventListener('start-factory-order', handler as any)
-      window.removeEventListener('navigate', navHandler as any)
+      window.removeEventListener(NAV_EVENT, navHandler as any)
       try { delete (window as any).navigateTo } catch {}
     }
   }, [])
@@ -207,16 +163,14 @@ function App() {
   useEffect(() => {
     // 初期ハッシュ適用
     try {
-      const raw = window.location.hash.replace(/^#/, '')
-      const v = raw.split('?')[0]
+      const { view: v } = parseHash()
       if (isValidView(v)) setView(v as ViewKey)
     } catch {}
 
     // ハッシュ変更監視
     const onHash = () => {
       try {
-        const raw = window.location.hash.replace(/^#/, '')
-        const v = raw.split('?')[0]
+        const { view: v } = parseHash()
         if (isValidView(v)) setView(v as ViewKey)
       } catch {}
     }
@@ -245,16 +199,18 @@ function App() {
               <Header currentView={view} />
             </PartialErrorBoundary>
 
-            <PartialErrorBoundary name="ナビゲーション">
-              <Navigation
-                current={view}
-                onChange={(k) => setView(k as ViewKey)}
-                isAdmin={isAdmin}
-                isPartner={canAccessPartnerPages}
-                hasProfile={Boolean(profile)}
-                userType={userType}
-              />
-            </PartialErrorBoundary>
+            {view !== 'merch' && (
+              <PartialErrorBoundary name="ナビゲーション">
+                <Navigation
+                  current={view}
+                  onChange={(k) => setView(k as ViewKey)}
+                  isAdmin={isAdmin}
+                  isPartner={canAccessPartnerPages}
+                  hasProfile={Boolean(profile)}
+                  userType={userType}
+                />
+              </PartialErrorBoundary>
+            )}
 
             <main className="mx-auto max-w-6xl">
               {view === 'general-dashboard' && (

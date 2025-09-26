@@ -3,6 +3,8 @@ import type { Work } from '../../types'
 import { myPurchases } from '../../services/work.service'
 import { supabase } from '../../services/supabaseClient'
 import { ProductCard } from '@/components/product/ProductCard'
+import { resolveImageUrl } from '@/utils/imageFallback'
+import { defaultImages } from '@/utils/defaultImages'
 import Modal from '@/components/ui/Modal'
 import { SuccessModal } from '@/components/ui/SuccessModal'
 import { purchaseService } from '@/services/purchase.service'
@@ -78,7 +80,7 @@ export function Collection() {
     <div className="p-4">
       <div className="mb-4">
         <button
-          onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: getDashboardRoute() } }))}
+          onClick={() => import('@/utils/navigation').then(m => m.navigate(getDashboardRoute()))}
           className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -90,7 +92,7 @@ export function Collection() {
         <ProductCard
           id={p.work.id}
           key={p.id}
-          imageUrl={p.work.thumbnail_url || p.work.image_url}
+          imageUrl={resolveImageUrl(p.work.thumbnail_url || p.work.image_url, [defaultImages.work, defaultImages.product])}
           title={p.work.title}
           price={p.work.price}
           reviewsCount={0}
@@ -111,7 +113,7 @@ export function Collection() {
           initialFocusSelector="[data-close]"
         >
           <div className="space-y-4">
-            <img src={selected.thumbnail_url || selected.image_url} alt={selected.title} className="w-full rounded-lg object-cover" />
+            <img src={resolveImageUrl(selected.thumbnail_url || selected.image_url, [defaultImages.work, defaultImages.product])} alt={selected.title} className="w-full rounded-lg object-cover" />
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold jp-text">{selected.title}</h3>
               <div className="text-lg font-bold">¥{selected.price.toLocaleString()}</div>

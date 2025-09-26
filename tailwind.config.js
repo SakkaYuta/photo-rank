@@ -10,6 +10,9 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        'xs': '480px',
+      },
       colors: {
         // Primary - Printful風の信頼感ある青
         primary: {

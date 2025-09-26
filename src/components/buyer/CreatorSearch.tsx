@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../services/supabaseClient'
 import type { User } from '../../types'
+import { resolveImageUrl } from '@/utils/imageFallback'
+import { defaultImages } from '@/utils/defaultImages'
 
 export function CreatorSearch() {
   const [q, setQ] = useState('')
@@ -31,7 +33,7 @@ export function CreatorSearch() {
       <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         {items.map(u => (
           <li key={u.id} className="card flex items-center gap-3">
-            <img src={u.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${u.id}`} alt={`${u.display_name}のアバター`} className="h-12 w-12 rounded-full" />
+            <img src={resolveImageUrl(u.avatar_url, [defaultImages.avatar])} alt={`${u.display_name}のアバター`} className="h-12 w-12 rounded-full" />
             <div>
               <p className="font-medium jp-text">{u.display_name}</p>
               {u.bio && <p className="text-sm text-gray-600 jp-text line-clamp-2">{u.bio}</p>}

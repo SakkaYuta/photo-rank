@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import Stripe from 'https://esm.sh/stripe@14.21.0'
 import { authenticateUser, getSupabaseAdmin } from '../_shared/client.ts'
+import { corsHeaders, corsPreflightResponse } from '../_shared/cors.ts'
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
   apiVersion: '2023-10-16',
@@ -13,9 +14,7 @@ const supabaseAdmin = getSupabaseAdmin()
 serve(async (req) => {
   try {
     // CORS preflight
-    if (req.method === 'OPTIONS') {
-      return new Response('ok', { status: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type' } })
-    }
+    if (req.method === 'OPTIONS') return corsPreflightResponse()
     if (req.method !== 'POST') {
       return new Response('Method not allowed', { status: 405 })
     }
@@ -24,7 +23,7 @@ serve(async (req) => {
     const allowed = (Deno.env.get('ALLOWED_ORIGINS') || '').split(',').map(s => s.trim()).filter(Boolean)
     const origin = req.headers.get('Origin') || ''
     if (allowed.length > 0 && origin && !allowed.includes(origin)) {
-      return new Response('Forbidden origin', { status: 403 })
+      return new Response('Forbidden origin', { status: 403, headers: corsHeaders })
     }
 
     // 認証必須: ユーザーIDはトークンから取得
@@ -33,19 +32,16 @@ serve(async (req) => {
 
     // 入力バリデーション
     if (!Array.isArray(workIds) || workIds.length === 0) {
-      return new Response(JSON.stringify({ error: '商品IDが指定されていません' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: '商品IDが指定されていません' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
     const uuidRe = /^[0-9a-fA-F-]{20,}$/
     const invalid = workIds.find((w: unknown) => typeof w !== 'string' || !uuidRe.test(w))
     if (invalid) {
-      return new Response(JSON.stringify({ error: '不正な商品IDが含まれています' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: '不正な商品IDが含まれています' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     if (!workIds || !Array.isArray(workIds) || workIds.length === 0) {
-      return new Response(
-        JSON.stringify({ error: '商品IDが指定されていません' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ error: '商品IDが指定されていません' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     // レート制限（例: 20件/時間）
@@ -69,17 +65,11 @@ serve(async (req) => {
 
     if (worksError) {
       console.error('Works query error:', worksError)
-      return new Response(
-        JSON.stringify({ error: '商品情報の取得に失敗しました' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ error: '商品情報の取得に失敗しました' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     if (!works || works.length === 0) {
-      return new Response(
-        JSON.stringify({ error: '指定された商品が見つかりません' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ error: '指定された商品が見つかりません' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     // 見つからない商品IDをチェック
@@ -97,14 +87,14 @@ serve(async (req) => {
     // 認可・妥当性検証
     for (const w of works) {
       if (w.creator_id === authedUser.id) {
-        return new Response(JSON.stringify({ error: '自身の作品は購入できません' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+        return new Response(JSON.stringify({ error: '自身の作品は購入できません' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
       const published = (typeof w.is_published === 'boolean' ? w.is_published : false) || (typeof w.is_active === 'boolean' ? w.is_active : false)
       if (!published) {
-        return new Response(JSON.stringify({ error: `購入不可の作品が含まれています: ${w.id}` }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+        return new Response(JSON.stringify({ error: `購入不可の作品が含まれています: ${w.id}` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
       if (!Number.isInteger(w.price) || w.price <= 0) {
-        return new Response(JSON.stringify({ error: `無効な価格の作品が含まれています: ${w.id}` }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+        return new Response(JSON.stringify({ error: `無効な価格の作品が含まれています: ${w.id}` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
     }
 
@@ -137,10 +127,7 @@ serve(async (req) => {
     const totalAmount = productSubtotal + shippingTotal
 
     if (totalAmount <= 0) {
-      return new Response(
-        JSON.stringify({ error: '合計金額が無効です' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ error: '合計金額が無効です' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     // Stripe PaymentIntentを作成
@@ -205,17 +192,12 @@ serve(async (req) => {
       }),
       {
         status: 200,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': origin || '*' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
 
   } catch (error) {
     console.error('Bulk payment intent creation error:', error)
-    return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : '一括決済の準備に失敗しました'
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : '一括決済の準備に失敗しました' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 })

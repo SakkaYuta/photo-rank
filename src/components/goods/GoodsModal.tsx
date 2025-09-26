@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { createGoodsOrder } from '../../services/goods.service'
 import { supabase } from '../../services/supabaseClient'
 import { Input } from '@/components/ui/input'
+import { resolveImageByContext } from '@/utils/imageFallback'
 import { Select } from '@/components/ui/select'
 
 export function GoodsModal({ work, onClose }: { work: Work, onClose: () => void }) {
@@ -48,7 +49,7 @@ export function GoodsModal({ work, onClose }: { work: Work, onClose: () => void 
         </div>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <img src={work.thumbnail_url || work.image_url} alt={work.title} className="h-16 w-16 rounded object-cover" />
+            <img src={resolveImageByContext('modal-preview', work.thumbnail_url || work.image_url)} alt={work.title} className="h-16 w-16 rounded object-cover" />
             <div>
               <p className="font-medium">{work.title}</p>
             </div>

@@ -12,6 +12,8 @@ import { useCart } from '@/contexts/CartContext'
 import { useFavorites } from '@/contexts/FavoritesContext'
 import { Analytics } from '@/services/analytics.service'
 import { AddressService, type UserAddress } from '@/services/address.service'
+import { resolveImageUrl } from '@/utils/imageFallback'
+import { defaultImages } from '@/utils/defaultImages'
 
 export function TrendingView() {
   const { works, loading, error } = useTrendingWorks()
@@ -90,7 +92,7 @@ export function TrendingView() {
         <ProductCard
           key={w.id}
           id={w.id}
-          imageUrl={w.thumbnail_url || w.image_url}
+          imageUrl={resolveImageUrl(w.thumbnail_url || w.image_url, [defaultImages.work, defaultImages.product])}
           title={w.title}
           price={w.price}
           rating={0}
@@ -107,7 +109,7 @@ export function TrendingView() {
           initialFocusSelector="[data-close]"
         >
           <div className="space-y-4">
-            <img src={selected.thumbnail_url || selected.image_url} alt={selected.title} className="w-full rounded-lg object-cover" />
+            <img src={resolveImageUrl(selected.thumbnail_url || selected.image_url, [defaultImages.work, defaultImages.product])} alt={selected.title} className="w-full rounded-lg object-cover" />
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold jp-text">{selected.title}</h3>
               <div className="text-lg font-bold">¥{selected.price.toLocaleString()}</div>
@@ -142,11 +144,11 @@ export function TrendingView() {
               <div className="space-y-2">
                 <div className="text-xs text-gray-500 text-right">
                   購入ボタンを押すと
-                  <button className="underline ml-1" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'terms' } }))}>利用規約</button>
+                  <button className="underline ml-1" onClick={() => import('@/utils/navigation').then(m => m.navigate('terms'))}>利用規約</button>
                   ・
-                  <button className="underline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'privacy' } }))}>プライバシー</button>
+                  <button className="underline" onClick={() => import('@/utils/navigation').then(m => m.navigate('privacy'))}>プライバシー</button>
                   ・
-                  <button className="underline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'refunds' } }))}>返金</button>
+                  <button className="underline" onClick={() => import('@/utils/navigation').then(m => m.navigate('refunds'))}>返金</button>
                   に同意したものとみなします
                 </div>
                 <div className="flex justify-end">
@@ -202,11 +204,11 @@ export function TrendingView() {
           itemCount={1}
           actionLabel="注文履歴を見る"
           onAction={() => {
-            window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'orders' } }))
+            import('@/utils/navigation').then(m => m.navigate('orders'))
           }}
           secondaryActionLabel="続けてショッピング"
           onSecondaryAction={() => {
-            window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'trending' } }))
+            import('@/utils/navigation').then(m => m.navigate('trending'))
           }}
         />
       )}

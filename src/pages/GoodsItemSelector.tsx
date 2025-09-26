@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Info, Check, Package, Truck, Clock, Star } from 'lucide-react';
+import { resolveImageUrl } from '@/utils/imageFallback'
+import { defaultImages } from '@/utils/defaultImages'
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/contexts/ToastContext';
+import { useUserRole } from '@/hooks/useUserRole'
+import { useRequireAuth } from '@/hooks/useRequireAuth'
 
 // グッズアイテムの型定義
 interface GoodsItem {
@@ -36,6 +40,8 @@ const GoodsItemSelector: React.FC = () => {
 
   const { addToCart } = useCart();
   const { showToast } = useToast();
+  const { user } = useUserRole();
+  const { requireAuth, LoginGate } = useRequireAuth();
 
   // URLパラメータから商品IDを取得
   useEffect(() => {
@@ -336,13 +342,13 @@ const GoodsItemSelector: React.FC = () => {
 
   // カテゴリー一覧
   const categories = [
-    { id: 'all', name: 'すべて', icon: '🎁' },
-    { id: 'apparel', name: 'アパレル', icon: '👕' },
-    { id: 'accessories', name: 'アクセサリー', icon: '✨' },
-    { id: 'display', name: 'ディスプレイ', icon: '🖼️' },
-    { id: 'homeware', name: '日用品', icon: '☕' },
-    { id: 'digital', name: 'デジタル', icon: '📱' },
-    { id: 'prints', name: '印刷物', icon: '📋' }
+    { id: 'all', name: 'すべて' },
+    { id: 'apparel', name: 'アパレル' },
+    { id: 'accessories', name: 'アクセサリー' },
+    { id: 'display', name: 'ディスプレイ' },
+    { id: 'homeware', name: '日用品' },
+    { id: 'digital', name: 'デジタル' },
+    { id: 'prints', name: '印刷物' }
   ];
 
   // フィルタリングされたアイテム
@@ -352,6 +358,10 @@ const GoodsItemSelector: React.FC = () => {
 
   // カートに追加
   const handleAddToCart = () => {
+    if (!requireAuth()) {
+      showToast({ message: 'これ以上進めるには会員ログインが必要です', variant: 'warning' })
+      return
+    }
     if (!selectedItem) return;
 
     // サイズとカラーの検証
@@ -446,7 +456,6 @@ const GoodsItemSelector: React.FC = () => {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                <span className="mr-1">{category.icon}</span>
                 {category.name}
               </button>
             ))}
@@ -461,7 +470,13 @@ const GoodsItemSelector: React.FC = () => {
             <div
               key={item.id}
               className="bg-white rounded-lg shadow-sm hover:shadow-lg transition-shadow overflow-hidden cursor-pointer"
-              onClick={() => setSelectedItem(item)}
+              onClick={() => {
+                if (!requireAuth()) {
+                  showToast({ message: 'これ以上進めるには会員ログインが必要です', variant: 'warning' })
+                  return
+                }
+                setSelectedItem(item)
+              }}
             >
               {/* バッジ */}
               {item.isRecommended && (
@@ -478,7 +493,7 @@ const GoodsItemSelector: React.FC = () => {
               {/* 画像 */}
               <div className="relative aspect-square">
                 <img
-                  src={item.image}
+                  src={resolveImageUrl(item.image, [defaultImages.product])}
                   alt={item.name}
                   className="w-full h-full object-cover"
                 />
@@ -549,6 +564,9 @@ const GoodsItemSelector: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* 共通ログインゲート */}
+      <LoginGate />
 
       {/* 選択モーダル */}
       {selectedItem && (

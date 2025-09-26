@@ -556,3 +556,27 @@ interface RiskManagement {
 ---
 本ドキュメントは v4.0（URL選択→グッズ化）および v3.1（クリエイター出品）を統合し、バトル機能を含む包括要件を定義します。詳細設計（スキーマ/RLS/関数/API I/F）と実装計画は本書の各章を基に具体化します。
 
+## 付録A. 直近変更に伴う要件更新（2025-09）
+
+### A.1 ナビゲーション/メニュー要件
+- グローバルメニューは以下ページに設置し、ラベルは「メニュー」固定。
+  - トップ（`/#merch`）、商品マーケットプレイス（`/#products-marketplace`）、クリエイターダッシュボード（`/#creator-dashboard`）
+- ドロップダウンはテキスト色を黒（`text-gray-900`）、外側クリックまたは Esc キーでクローズできること。
+- メニュー項目はルートメタ（ROUTES_META）に基づく自動生成とし、権限に応じて表示制御する。
+- ブランド表記: ヘッダーロゴから装飾絵文字（✨）を削除。ロゴクリック/アンカーは `#merch` へ遷移。
+
+### A.2 認証・遷移要件
+- ログアウト時は必ずトップ（`/#merch`）へ遷移すること。
+- 未認証ユーザーがいずれかのダッシュボード（general/creator/factory/organizer/admin）へ遷移した場合、トップ（`/#merch`）へリダイレクトすること。
+- 一般ユーザー（guest相当）に対するフォールバック先は `/#merch` とする。
+
+### A.3 E2E テスト要件（Playwright）
+- Smoke: `/#merch` へアクセスし、アプリ名（PhotoRank）が可視であること。
+- Guard: 未認証状態で `/#creator-dashboard` へアクセスすると `/#merch` に戻ること。
+- 実行時の `BASE_URL` は環境変数で指定（デフォルト `http://localhost:5173`）。
+
+### A.4 セキュリティ/DB 要件（運用方針）
+- public スキーマの内部テーブルは RLS 有効化 + deny-all ポリシーで保護（例: `schema_migrations`, `simple_rate_limits`）。
+- `manufacturing_order_status_history` は RLS を有効にし、認可は service_role に限定する（JWT クレーム `role=service_role` を用いた USING/ WITH CHECK）。
+- 拡張 `pg_trgm` は `extensions` スキーマに配置（`ALTER EXTENSION pg_trgm SET SCHEMA extensions;`）。
+- public 関数は役割の search_path に依存しないよう、`SET search_path TO pg_catalog, public` を付与（ALTER FUNCTION）。

@@ -4,6 +4,8 @@ import { StripeCheckout } from '@/components/checkout/StripeCheckout'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/services/supabaseClient'
 import { SAMPLE_BATTLES, SAMPLE_PARTICIPANTS, SAMPLE_SCORES } from '@/sample/battleSamples'
+import { resolveImageUrl } from '@/utils/imageFallback'
+import { defaultImages } from '@/utils/defaultImages'
 
 export const BattleRoom: React.FC = () => {
   const { profile } = useAuth()
@@ -205,7 +207,7 @@ export const BattleRoom: React.FC = () => {
             <h3 className="font-semibold mb-2">スコア</h3>
             <div className="flex gap-6 text-lg items-center">
               <div className="flex items-center gap-2">
-                <img src={participants?.[battleId ? undefined! : ''] ? '' : participants?.[Object.keys(participants)[0]]?.avatar_url || 'https://placehold.co/32x32'} alt="" className="w-8 h-8 rounded-full border hidden" />
+                <img src={resolveImageUrl(participants?.[Object.keys(participants)[0]]?.avatar_url, [defaultImages.avatar])} alt="" className="w-8 h-8 rounded-full border hidden" />
               </div>
               {(() => {
                 // Show both participants if known
@@ -214,7 +216,7 @@ export const BattleRoom: React.FC = () => {
                   <>
                     {ids.map(pid => (
                       <div key={pid} className="flex items-center gap-2">
-                        <img src={participants?.[pid]?.avatar_url || 'https://placehold.co/32x32'} alt="" className="w-8 h-8 rounded-full border" />
+                        <img src={resolveImageUrl(participants?.[pid]?.avatar_url, [defaultImages.avatar])} alt="" className="w-8 h-8 rounded-full border" />
                         <span className="text-sm text-gray-600">{participants?.[pid]?.display_name || pid.slice(0,8)}</span>
                         <span className="font-bold">{scores?.[pid] ?? 0}</span>
                       </div>
@@ -229,7 +231,7 @@ export const BattleRoom: React.FC = () => {
                 <ul className="space-y-1">
                   {recent.map((r, idx) => (
                     <li key={idx} className="flex items-center gap-2 text-gray-700">
-                      <img src={participants?.[r.creator_id]?.avatar_url || 'https://placehold.co/24x24'} className="w-6 h-6 rounded-full border" />
+                      <img src={resolveImageUrl(participants?.[r.creator_id]?.avatar_url, [defaultImages.avatar])} className="w-6 h-6 rounded-full border" />
                       <span className="text-xs">{participants?.[r.creator_id]?.display_name || r.creator_id.slice(0,8)}</span>
                       <span className="text-xs text-green-700">+¥{r.amount}</span>
                       <span className="text-[10px] text-gray-500">{new Date(r.purchased_at).toLocaleTimeString()}</span>

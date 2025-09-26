@@ -78,11 +78,22 @@ export async function signOut() {
   // デモユーザーの場合
   const demoUser = getDemoUser()
   if (demoUser) {
+    // 先にトップへ遷移してからデモログアウト
+    try { window.location.hash = '#merch' } catch {}
     return signOutDemo()
   }
 
   const { error } = await supabase.auth.signOut()
   if (error) throw error
+  // ログアウト後はトップへ強制遷移
+  try {
+    // ユーティリティがあればそれを使う
+    import('@/utils/navigation').then(m => m.navigate('merch')).catch(() => {
+      try { window.location.hash = '#merch' } catch {}
+    })
+  } catch {
+    try { window.location.hash = '#merch' } catch {}
+  }
 }
 
 // デモモード用のログイン機能
@@ -109,6 +120,8 @@ export async function signInWithDemo(userType: UserType = 'general') {
 // デモユーザーをログアウト
 export async function signOutDemo() {
   localStorage.removeItem('demoUser')
+  // 既にハッシュは '#merch' にしているが、念のため再設定
+  try { window.location.hash = '#merch' } catch {}
   window.location.reload()
 }
 
@@ -140,4 +153,3 @@ export async function getCurrentUserProfile(): Promise<User | null> {
     email: user.email || null
   } as User
 }
-

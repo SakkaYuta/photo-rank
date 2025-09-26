@@ -4,6 +4,8 @@ import { listWorksByIds } from '@/services/work.service'
 import type { Work } from '@/types/work.types'
 import { useToast } from '@/contexts/ToastContext'
 import { SAMPLE_WORKS } from '@/sample/worksSamples'
+import { resolveImageUrl } from '@/utils/imageFallback'
+import { defaultImages } from '@/utils/defaultImages'
 import { TrendingUp, Heart as HeartIcon, ShoppingCart, ArrowLeft } from 'lucide-react'
 import { useUserRole } from '@/hooks/useUserRole'
 
@@ -145,7 +147,7 @@ export function Favorites() {
       {sorted.map(w => (
         <div key={w.id} className="rounded-xl border bg-white overflow-hidden hover:shadow transition-base">
           <div className="aspect-square bg-gray-100">
-            <img src={w.thumbnail_url || w.image_url} alt={w.title} className="w-full h-full object-cover" />
+            <img src={resolveImageUrl(w.thumbnail_url || w.image_url, [defaultImages.work, defaultImages.product])} alt={w.title} className="w-full h-full object-cover" />
           </div>
           <div className="p-3">
             <p className="font-semibold text-gray-900 line-clamp-1">{w.title}</p>

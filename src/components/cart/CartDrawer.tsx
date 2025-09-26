@@ -5,6 +5,7 @@ import { useToast } from '@/contexts/ToastContext'
 import { purchaseService } from '@/services/purchase.service'
 import { StripeCheckout } from '@/components/checkout/StripeCheckout'
 import { SuccessModal } from '@/components/ui/SuccessModal'
+import { resolveImageByContext } from '@/utils/imageFallback'
 
 type CartDrawerProps = {
   isOpen: boolean
@@ -73,9 +74,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
           ) : (
             items.map(it => (
               <div key={it.id} className="flex items-center gap-3 border rounded-lg p-3 dark:border-gray-700">
-                {it.imageUrl && (
-                  <img src={it.imageUrl} alt="thumb" className="w-16 h-16 rounded object-cover" />
-                )}
+                <img src={resolveImageByContext('cart-item', it.imageUrl)} alt="thumb" className="w-16 h-16 rounded object-cover" />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate jp-text text-gray-900 dark:text-white">{it.title}</div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">¥{(it.price * it.qty).toLocaleString()}（¥{it.price.toLocaleString()} × {it.qty}）</div>
@@ -91,11 +90,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                   </button>
                   <div className="text-[11px] text-gray-500">
                     購入ボタンを押すと
-                    <button className="underline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'terms' } }))}>利用規約</button>
+                    <button className="underline" onClick={() => import('@/utils/navigation').then(m => m.navigate('terms'))}>利用規約</button>
                     ・
-                    <button className="underline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'privacy' } }))}>プライバシー</button>
+                    <button className="underline" onClick={() => import('@/utils/navigation').then(m => m.navigate('privacy'))}>プライバシー</button>
                     ・
-                    <button className="underline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'refunds' } }))}>返金</button>
+                    <button className="underline" onClick={() => import('@/utils/navigation').then(m => m.navigate('refunds'))}>返金</button>
                     に同意したものとみなします
                   </div>
                   <button className="btn btn-outline" onClick={() => { removeFromCart(it.id); showToast({ variant: 'success', message: '削除しました' }) }}>
@@ -129,7 +128,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
             <button
               className="btn btn-primary flex-1"
               onClick={() => {
-                window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'cart' } }))
+                import('@/utils/navigation').then(m => m.navigate('cart'))
                 onClose()
               }}
               disabled={items.length === 0 || busy}
@@ -168,11 +167,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
               itemCount={1}
               actionLabel="注文履歴を見る"
               onAction={() => {
-                window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'orders' } }))
+                import('@/utils/navigation').then(m => m.navigate('orders'))
               }}
               secondaryActionLabel="続けてショッピング"
               onSecondaryAction={() => {
-                window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'trending' } }))
+                import('@/utils/navigation').then(m => m.navigate('trending'))
               }}
             />
           )}

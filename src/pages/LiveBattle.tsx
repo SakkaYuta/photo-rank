@@ -5,6 +5,7 @@ import { purchaseCheerTicket, purchaseBattleGoods, getBattleStatus, purchaseChee
 import { BATTLE_GOODS_TYPES } from '@/utils/constants'
 import { formatJPY } from '@/utils/helpers'
 import { supabase } from '@/services/supabaseClient'
+import { useRequireAuth } from '@/hooks/useRequireAuth'
 
 type Side = 'challenger' | 'opponent'
 
@@ -21,6 +22,7 @@ const LiveBattle: React.FC = () => {
   const [selectedPlayer, setSelectedPlayer] = useState<Side | null>(null)
   const [showGoodsModal, setShowGoodsModal] = useState<boolean>(false)
   const [buyingGoods, setBuyingGoods] = useState<boolean>(false)
+  const [purchaseQuantity, setPurchaseQuantity] = useState<number>(1)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
   const [userId, setUserId] = useState<string>('')
@@ -32,6 +34,8 @@ const LiveBattle: React.FC = () => {
   const [lastResetTime, setLastResetTime] = useState<number>(Date.now())
   const [showPointPurchaseModal, setShowPointPurchaseModal] = useState<boolean>(false)
   const [selectedCheerSide, setSelectedCheerSide] = useState<Side | null>(null)
+  const { requireAuth, LoginGate } = useRequireAuth()
+  const [showLoginPrompt, setShowLoginPrompt] = useState<boolean>(false)
 
   // ポイント購入オプション
   const pointPurchaseOptions = [
@@ -168,6 +172,7 @@ const LiveBattle: React.FC = () => {
   const pct = (side: Side) => total === 0 ? 50 : Math.round((scores[side] / total) * 100)
 
   const cheer = async (side: Side) => {
+    if (!requireAuth()) { return }
     // 短時間の連打防止（500ms）
     const now = Date.now()
     if (now - (lastCheerTsRef.current || 0) < 500) return
@@ -206,6 +211,7 @@ const LiveBattle: React.FC = () => {
   }
 
   const purchasePoints = async (option: typeof pointPurchaseOptions[0]) => {
+    if (!userId) { setShowLoginPrompt(true); return }
     if (!selectedCheerSide) return
 
     try {
@@ -246,7 +252,7 @@ const LiveBattle: React.FC = () => {
 
       <div className="max-w-6xl mx-auto px-6 py-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-          <SideCard name={challenger.name} avatar={challenger.avatar} score={scores.challenger} crown={scores.challenger>=scores.opponent} active={effects.burst && effects.side==='challenger'} />
+          <SideCard name={challenger.name} avatar={challenger.avatar} score={scores.challenger} crown={scores.challenger>=scores.opponent} active={effects.burst && effects.side==='challenger'} creatorId={challenger.id} />
           <div className="space-y-3">
             <div className="flex items-center justify-center gap-2"><Timer className="w-4 h-4 text-pink-300" /><span className="text-pink-300 text-sm">リアルタイム更新</span></div>
             <div className="h-6 bg-gray-800 rounded-full overflow-hidden border border-gray-700">
@@ -254,7 +260,7 @@ const LiveBattle: React.FC = () => {
             </div>
             <div className="text-center text-sm text-gray-300">{pct('challenger')}% vs {pct('opponent')}%</div>
           </div>
-          <SideCard name={opponent.name} avatar={opponent.avatar} score={scores.opponent} crown={scores.opponent>=scores.challenger} active={effects.burst && effects.side==='opponent'} />
+          <SideCard name={opponent.name} avatar={opponent.avatar} score={scores.opponent} crown={scores.opponent>=scores.challenger} active={effects.burst && effects.side==='opponent'} creatorId={opponent.id} />
         </div>
 
         {/* 無料応援回数表示 */}
@@ -324,12 +330,22 @@ const LiveBattle: React.FC = () => {
             {/* Challenger Items */}
             <div className="space-y-4">
               <div className="flex items-center gap-3 mb-4">
-                <img src={challenger.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(challenger.name)}`} className="w-8 h-8 rounded-full border-2 border-pink-400/50" />
+                <img
+                  src={challenger.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(challenger.name)}`}
+                  className="w-8 h-8 rounded-full border-2 border-pink-400/50 cursor-pointer hover:border-pink-300 transition-colors"
+                  onClick={() => {
+                    if (challenger.id) {
+                      try { localStorage.setItem('selected_creator_id', challenger.id) } catch {}
+                      import('@/utils/navigation').then(m => m.navigate('creator-profile', { creator: challenger.id }))
+                    }
+                  }}
+                  title={`${challenger.name}の出品コンテンツを見る`}
+                />
                 <h4 className="font-bold text-pink-300">{challenger.name} 応援アイテム</h4>
               </div>
               <div className="grid grid-cols-1 gap-3">
                 {BATTLE_GOODS_TYPES.slice(0, 3).map((item, index) => (
-                  <div key={`challenger-${item.id}`} className="bg-pink-500/10 border border-pink-400/20 rounded-lg p-3 hover:bg-pink-500/20 transition-colors cursor-pointer" onClick={() => { setSelectedGoods(item.id); setSelectedPlayer('challenger'); setShowGoodsModal(true) }}>
+                  <div key={`challenger-${item.id}`} className="bg-pink-500/10 border border-pink-400/20 rounded-lg p-3 hover:bg-pink-500/20 transition-colors cursor-pointer" onClick={() => { if(!requireAuth()){ return } setSelectedGoods(item.id); setSelectedPlayer('challenger'); setPurchaseQuantity(1); setShowGoodsModal(true) }}>
                     <div className="flex items-start gap-3">
                       <Gift className="w-6 h-6 text-pink-400 flex-shrink-0 mt-1" />
                       <div className="flex-1 min-w-0">
@@ -349,12 +365,22 @@ const LiveBattle: React.FC = () => {
             {/* Opponent Items */}
             <div className="space-y-4">
               <div className="flex items-center gap-3 mb-4">
-                <img src={opponent.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(opponent.name)}`} className="w-8 h-8 rounded-full border-2 border-teal-400/50" />
+                <img
+                  src={opponent.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(opponent.name)}`}
+                  className="w-8 h-8 rounded-full border-2 border-teal-400/50 cursor-pointer hover:border-teal-300 transition-colors"
+                  onClick={() => {
+                    if (opponent.id) {
+                      try { localStorage.setItem('selected_creator_id', opponent.id) } catch {}
+                      import('@/utils/navigation').then(m => m.navigate('creator-profile', { creator: opponent.id }))
+                    }
+                  }}
+                  title={`${opponent.name}の出品コンテンツを見る`}
+                />
                 <h4 className="font-bold text-teal-300">{opponent.name} 応援アイテム</h4>
               </div>
               <div className="grid grid-cols-1 gap-3">
                 {BATTLE_GOODS_TYPES.slice(3, 6).map((item, index) => (
-                  <div key={`opponent-${item.id}`} className="bg-teal-500/10 border border-teal-400/20 rounded-lg p-3 hover:bg-teal-500/20 transition-colors cursor-pointer" onClick={() => { setSelectedGoods(item.id); setSelectedPlayer('opponent'); setShowGoodsModal(true) }}>
+                  <div key={`opponent-${item.id}`} className="bg-teal-500/10 border border-teal-400/20 rounded-lg p-3 hover:bg-teal-500/20 transition-colors cursor-pointer" onClick={() => { if(!requireAuth()){ return } setSelectedGoods(item.id); setSelectedPlayer('opponent'); setPurchaseQuantity(1); setShowGoodsModal(true) }}>
                     <div className="flex items-start gap-3">
                       <Gift className="w-6 h-6 text-teal-400 flex-shrink-0 mt-1" />
                       <div className="flex-1 min-w-0">
@@ -427,17 +453,48 @@ const LiveBattle: React.FC = () => {
                           <p className="text-sm text-gray-300">{targetPlayer.name}限定デザイン - {item.description}</p>
                         </div>
                       </div>
+                      {/* 数量選択UI */}
+                      <div className="bg-white/5 rounded-lg p-4 mb-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="text-gray-300">購入数量</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setPurchaseQuantity(Math.max(1, purchaseQuantity - 1))}
+                              className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center text-white transition-colors"
+                              disabled={purchaseQuantity <= 1}
+                            >
+                              -
+                            </button>
+                            <span className="w-12 text-center text-white font-bold">{purchaseQuantity}</span>
+                            <button
+                              onClick={() => setPurchaseQuantity(Math.min(99, purchaseQuantity + 1))}
+                              className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center text-white transition-colors"
+                              disabled={purchaseQuantity >= 99}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-400 mb-4">
+                          最大99個まで購入可能です
+                        </div>
+                      </div>
+
                       <div className="bg-white/5 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-gray-300">価格</span>
+                          <span className="text-gray-300">単価</span>
                           <span className="text-white font-bold">{formatJPY(item.basePrice)}</span>
                         </div>
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-gray-300">応援ポイント</span>
+                          <span className="text-gray-300">合計価格</span>
+                          <span className="text-white font-bold text-lg">{formatJPY(item.basePrice * purchaseQuantity)}</span>
+                        </div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-gray-300">応援ポイント（合計）</span>
                           <span className={selectedPlayer === 'challenger'
                             ? "text-pink-300 font-bold"
                             : "text-teal-300 font-bold"
-                          }>+50pt</span>
+                          }>+{50 * purchaseQuantity}pt</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-gray-300">応援先</span>
@@ -456,21 +513,24 @@ const LiveBattle: React.FC = () => {
                             setBuyingGoods(true)
                             try {
                               if (useSamples) {
-                                // サンプル環境では選択されたプレイヤーにポイントを追加
-                                setScores(prev => ({ ...prev, [selectedPlayer]: prev[selectedPlayer] + 50 }))
+                                // サンプル環境では選択されたプレイヤーにポイントを追加（数量を考慮）
+                                setScores(prev => ({ ...prev, [selectedPlayer]: prev[selectedPlayer] + (50 * purchaseQuantity) }))
                                 setEffects({ burst: true, side: selectedPlayer })
                                 setTimeout(() => setEffects({ burst: false }), 1200)
                               } else {
-                                // 本番環境では選択されたプレイヤーのIDを使用
+                                // 本番環境では選択されたプレイヤーのIDを使用（数量を考慮）
                                 const targetId = selectedPlayer === 'challenger' ? challenger.id : opponent.id
-                                await purchaseBattleGoods(battleId, targetId, selectedGoods)
+                                // 数量分繰り返し処理（APIが複数個対応していない場合）
+                                for (let i = 0; i < purchaseQuantity; i++) {
+                                  await purchaseBattleGoods(battleId, targetId, selectedGoods)
+                                }
                                 await refreshFromBackend(battleId)
                                 setEffects({ burst: true, side: selectedPlayer })
                                 setTimeout(() => setEffects({ burst: false }), 1200)
                               }
                               setShowGoodsModal(false)
                               setSelectedPlayer(null)
-                              alert(`${item.label}を購入しました！${targetPlayer.name}に50ポイントが追加されました！`)
+                              alert(`${item.label} × ${purchaseQuantity}個を購入しました！${targetPlayer.name}に${50 * purchaseQuantity}ポイントが追加されました！`)
                             } catch (e) {
                               alert('購入に失敗しました')
                             } finally {
@@ -484,7 +544,7 @@ const LiveBattle: React.FC = () => {
                               : 'from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600'
                           } transition-colors text-white font-bold disabled:opacity-50`}
                         >
-                          {buyingGoods ? '購入中...' : `${targetPlayer.name}を応援して購入`}
+                          {buyingGoods ? '購入中...' : `${formatJPY(item.basePrice * purchaseQuantity)}で購入`}
                         </button>
                       </div>
                     </div>
@@ -569,19 +629,35 @@ const LiveBattle: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* ログイン案内ポップアップ + ログインモーダル（未ログイン時） */}
+        <LoginGate />
       </div>
     </div>
   )
 }
 
-function SideCard({ name, avatar, score, crown, active }: { name: string; avatar?: string; score: number; crown?: boolean; active?: boolean }) {
+function SideCard({ name, avatar, score, crown, active, creatorId }: { name: string; avatar?: string; score: number; crown?: boolean; active?: boolean; creatorId?: string }) {
+  const handleCreatorClick = () => {
+    if (creatorId) {
+      // クリエイターの出品コンテンツリストページに遷移
+      try { localStorage.setItem('selected_creator_id', creatorId || '') } catch {}
+      import('@/utils/navigation').then(m => m.navigate('creator-profile', { creator: creatorId || '' }))
+    }
+  }
+
   return (
     <div className={`relative rounded-xl p-4 bg-white/5 border border-white/10 ${active ? 'ring-4 ring-pink-500/40' : ''}`}>
       <div className="flex items-center gap-3">
-        <img src={avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(name)}`} className="w-14 h-14 rounded-full border-2 border-white/20" />
+        <img
+          src={avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(name)}`}
+          className="w-14 h-14 rounded-full border-2 border-white/20 cursor-pointer hover:border-pink-400/50 transition-colors"
+          onClick={handleCreatorClick}
+          title={`${name}の出品コンテンツを見る`}
+        />
         <div>
           <div className="flex items-center gap-2">
-            <h4 className="font-bold text-lg">{name}</h4>
+            <h4 className="font-bold text-lg cursor-pointer hover:text-pink-300 transition-colors" onClick={handleCreatorClick}>{name}</h4>
             {crown && <Crown className="w-4 h-4 text-yellow-400" />}
           </div>
           <div className="text-pink-300 font-mono">{score.toLocaleString()} pt</div>

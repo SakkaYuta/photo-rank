@@ -1,7 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Heart, Eye, Star, Filter, Search, TrendingUp, Clock, Award } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ShoppingCart, Heart, Eye, Star, Filter, Search, TrendingUp, Clock, Award, Grid3X3, List, Home, Store, LayoutDashboard, Users, Building2, Calendar, Trophy, Shield, PlusSquare, Images, Gamepad2, Package as PackageIcon } from 'lucide-react';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { useToast } from '@/contexts/ToastContext';
+import { useRequireAuth } from '@/hooks/useRequireAuth'
+import { supabase } from '@/services/supabaseClient'
+import { resolveImageByContext } from '@/utils/imageFallback'
+import { useUserRole } from '@/hooks/useUserRole'
+import { allowedViews as ROUTES, ROUTES_META, type RoleKey } from '@/routes'
+import { navigate as navTo } from '@/utils/navigation'
 
 interface Product {
   id: string;
@@ -28,6 +34,7 @@ interface Product {
 }
 
 const ProductsMarketplace: React.FC = () => {
+  const { userType, userProfile } = useUserRole();
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +45,56 @@ const ProductsMarketplace: React.FC = () => {
 
   const { add, remove, has } = useFavorites();
   const { showToast } = useToast();
+  const { requireAuth, LoginGate } = useRequireAuth();
+
+  // Default image fallbacks (from storage)
+  const SAMPLE_BUCKET = (import.meta as any).env?.VITE_SAMPLE_BUCKET || 'user-content'
+  const DEFAULT_PRODUCT_PATH = (import.meta as any).env?.VITE_DEFAULT_PRODUCT_IMAGE_PATH || 'defaults/product.jpg'
+  const DEFAULT_AVATAR_PATH = (import.meta as any).env?.VITE_DEFAULT_AVATAR_IMAGE_PATH || 'defaults/avatar.jpg'
+  const defaultProductUrl = supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(DEFAULT_PRODUCT_PATH).data.publicUrl
+  const defaultAvatarUrl = supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(DEFAULT_AVATAR_PATH).data.publicUrl
+
+  // メニュー（ページ内）の状態
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null as HTMLDivElement | null)
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (!menuRef.current) return
+      if (!menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false) }
+    document.addEventListener('click', onClick)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('click', onClick); document.removeEventListener('keydown', onKey) }
+  }, [])
+
+  // ROUTES_META に基づくメニュー項目
+  type NavItem = { key: string; label: string }
+  const viewOverride = typeof window !== 'undefined' ? localStorage.getItem('view_override') : null
+  const effectiveType = viewOverride === 'general' ? 'general' : (userType || 'general')
+  let role: RoleKey = (effectiveType as RoleKey) || 'general'
+  const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+    Home, Store, LayoutDashboard, Users, Building2, Calendar, Trophy, Shield, PlusSquare, Images, Gamepad2, Heart, Package: PackageIcon
+  }
+  const items: NavItem[] = (ROUTES as readonly string[])
+    .filter((key) => {
+      const meta = ROUTES_META[key as keyof typeof ROUTES_META]
+      if (!meta?.showInNav) return false
+      if (meta.requireAuth && !userProfile) return false
+      if (meta.roles && !meta.roles.includes(role)) return false
+      return true
+    })
+    .map((key) => ({ key, label: ROUTES_META[key as keyof typeof ROUTES_META]?.title || key }))
+    .sort((a, b) => {
+      const ao = ROUTES_META[a.key as keyof typeof ROUTES_META]?.navOrder ?? 999
+      const bo = ROUTES_META[b.key as keyof typeof ROUTES_META]?.navOrder ?? 999
+      return ao - bo
+    })
+  const dedupedItems: NavItem[] = []
+  const seen = new Set<string>()
+  for (const it of items) {
+    if (!seen.has(it.key)) { dedupedItems.push(it); seen.add(it.key) }
+  }
 
   // 残り販売時間の簡易計算（作成日時 + 7日を仮の販売期限とみなす）
   const formatRemaining = (createdAt?: string, endAt?: string | null) => {
@@ -118,7 +175,7 @@ const ProductsMarketplace: React.FC = () => {
         is_trending: true,
         discount_percentage: 15,
         stock_quantity: 50,
-        product_types: ['Tシャツ', 'パーカー']
+        product_types: ['Tシャツ', 'パーカー', 'トートバッグ']
       },
       {
         id: '2',
@@ -136,7 +193,7 @@ const ProductsMarketplace: React.FC = () => {
         rating: 4.9,
         created_at: '2024-01-20',
         stock_quantity: 200,
-        product_types: ['ステッカー']
+        product_types: ['ステッカー', 'キーホルダー', 'バッジ']
       },
       {
         id: '3',
@@ -154,7 +211,7 @@ const ProductsMarketplace: React.FC = () => {
         rating: 4.7,
         created_at: '2024-01-18',
         stock_quantity: 75,
-        product_types: ['マグカップ', 'タンブラー']
+        product_types: ['マグカップ', 'タンブラー', 'コースター']
       },
       {
         id: '4',
@@ -174,7 +231,7 @@ const ProductsMarketplace: React.FC = () => {
         created_at: '2024-01-22',
         is_trending: true,
         stock_quantity: 100,
-        product_types: ['iPhone', 'Android']
+        product_types: ['スマホケース', 'AirPodsケース', 'スマホスタンド']
       },
       {
         id: '5',
@@ -192,7 +249,7 @@ const ProductsMarketplace: React.FC = () => {
         rating: 4.5,
         created_at: '2024-01-19',
         stock_quantity: 150,
-        product_types: ['A2', 'A3', 'B2']
+        product_types: ['ポスター', 'ポストカード', 'クリアファイル']
       },
       {
         id: '6',
@@ -211,7 +268,7 @@ const ProductsMarketplace: React.FC = () => {
         created_at: '2024-01-21',
         discount_percentage: 10,
         stock_quantity: 80,
-        product_types: ['トート', 'ショルダー']
+        product_types: ['トートバッグ', 'ショルダーバッグ', 'エコバッグ']
       },
       {
         id: '7',
@@ -230,7 +287,7 @@ const ProductsMarketplace: React.FC = () => {
         created_at: '2024-01-17',
         is_trending: true,
         stock_quantity: 120,
-        product_types: ['10cm', '15cm', '20cm']
+        product_types: ['アクリルスタンド', 'アクリルキーホルダー', 'アクリルフィギュア']
       },
       {
         id: '8',
@@ -248,7 +305,7 @@ const ProductsMarketplace: React.FC = () => {
         rating: 4.7,
         created_at: '2024-01-16',
         stock_quantity: 60,
-        product_types: ['Tシャツ', 'ロンT']
+        product_types: ['Tシャツ', 'ロングスリーブT', 'スウェット']
       }
     ];
 
@@ -330,13 +387,18 @@ const ProductsMarketplace: React.FC = () => {
   }
 
   const handleGoodsify = (product: Product) => {
+    if (!requireAuth()) {
+      showToast({ message: 'これ以上進めるには会員ログインが必要です', variant: 'warning' })
+      return
+    }
     // グッズアイテム選択ページへ遷移
     const productData = encodeURIComponent(JSON.stringify(product));
-    window.location.hash = `goods-item-selector?productId=${product.id}&data=${productData}`;
+    import('@/utils/navigation').then(m => m.navigate('goods-item-selector', { productId: product.id, data: productData }))
     showToast({ message: 'グッズアイテムを選択してください', variant: 'success' })
   }
 
   const handleToggleFavorite = (product: Product) => {
+    if (!requireAuth()) { showToast({ message: 'これ以上進めるには会員ログインが必要です', variant: 'warning' }); return }
     if (has(product.id)) {
       remove(product.id)
       showToast({ message: 'お気に入りから削除しました', variant: 'default' })
@@ -356,6 +418,7 @@ const ProductsMarketplace: React.FC = () => {
 
   return (
     <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen min-h-screen bg-gray-50">
+      <LoginGate />
       {/* Header */}
       <div className="bg-white shadow-sm border-b sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
@@ -370,8 +433,40 @@ const ProductsMarketplace: React.FC = () => {
                 className="p-2 border rounded-lg hover:bg-gray-50"
                 title={viewMode === 'grid' ? 'リスト表示' : 'グリッド表示'}
               >
-                {viewMode === 'grid' ? '⚏' : '⚎'}
+{viewMode === 'grid' ? <List className="w-5 h-5" /> : <Grid3X3 className="w-5 h-5" />}
               </button>
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setMenuOpen(v => !v)}
+                  className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm text-gray-900"
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                  title="メニュー"
+                >
+                  メニュー
+                </button>
+                {menuOpen && (
+                  <div className="absolute right-0 mt-2 w-64 rounded-lg border bg-white shadow-lg z-20">
+                    <ul className="py-2 max-h-[70vh] overflow-y-auto">
+                      {dedupedItems.map((it) => (
+                        <li key={it.key}>
+                          <button
+                            className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors text-gray-900 hover:bg-gray-50`}
+                            onClick={() => { navTo(it.key); setMenuOpen(false) }}
+                          >
+                            {(() => {
+                              const iconKey = ROUTES_META[it.key as keyof typeof ROUTES_META]?.icon
+                              const IconComp = iconKey ? iconMap[iconKey] : undefined
+                              return IconComp ? <IconComp className="w-4 h-4" /> : null
+                            })()}
+                            <span className="truncate">{it.label}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -450,7 +545,7 @@ const ProductsMarketplace: React.FC = () => {
                 {/* Product Image */}
                 <div className={viewMode === 'grid' ? 'relative aspect-square' : 'relative w-48 h-48 flex-shrink-0'}>
                   <img
-                    src={product.image_url}
+                    src={resolveImageByContext('marketplace-item', product.image_url, [defaultProductUrl])}
                     alt={product.title}
                     className="w-full h-full object-cover"
                   />
@@ -482,13 +577,11 @@ const ProductsMarketplace: React.FC = () => {
 
                     {/* Creator Info */}
                     <div className="flex items-center gap-2 mb-3">
-                      {product.creator_avatar && (
-                        <img
-                          src={product.creator_avatar}
-                          alt={product.creator_name}
-                          className="w-6 h-6 rounded-full"
-                        />
-                      )}
+                      <img
+                        src={resolveImageByContext('avatar', product.creator_avatar, [defaultAvatarUrl])}
+                        alt={product.creator_name}
+                        className="w-6 h-6 rounded-full"
+                      />
                       <span className="text-sm text-gray-600">{product.creator_name}</span>
                     </div>
 
@@ -515,7 +608,7 @@ const ProductsMarketplace: React.FC = () => {
                     {/* Product Types */}
                     <div className="flex flex-wrap gap-1 mb-3">
                       {product.product_types.map((type, index) => (
-                        <span key={index} className="px-2 py-1 bg-gray-100 text-xs rounded-full">
+                        <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
                           {type}
                         </span>
                       ))}

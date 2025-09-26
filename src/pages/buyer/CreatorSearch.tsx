@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Users, Search, Filter, Star } from 'lucide-react'
 import { supabase } from '@/services/supabaseClient'
+import { resolveImageUrl } from '@/utils/imageFallback'
+import { defaultImages } from '@/utils/defaultImages'
 
 type Row = {
   id: string
@@ -112,7 +114,7 @@ const CreatorSearchPage: React.FC = () => {
           {ordered.map((u) => (
             <div key={u.id} className="rounded-xl border bg-white p-4 hover:shadow transition-base">
               <div className="flex items-center gap-3">
-                <img src={u.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${u.id}`} className="w-14 h-14 rounded-full" />
+                <img src={resolveImageUrl(u.avatar_url, [defaultImages.avatar])} className="w-14 h-14 rounded-full" />
                 <div className="min-w-0">
                   <p className="font-semibold truncate text-gray-900">{u.display_name}</p>
                   {u.bio && <p className="text-sm text-gray-600 line-clamp-2">{u.bio}</p>}
@@ -121,7 +123,7 @@ const CreatorSearchPage: React.FC = () => {
               <div className="mt-3 flex items-center justify-between text-sm text-gray-500">
                 <span className="inline-flex items-center gap-1"><Star className="w-4 h-4 text-amber-500" /> 作品数: {workCounts[u.id] || (isSample ? Math.floor(Math.random()*30)+1 : 0)}</span>
                 <a
-                  href={`#creator-goods?creator=${encodeURIComponent(u.id)}`}
+                  href={`#creator-profile?creator=${encodeURIComponent(u.id)}`}
                   onClick={() => {
                     try { localStorage.setItem('selected_creator_id', u.id) } catch {}
                   }}

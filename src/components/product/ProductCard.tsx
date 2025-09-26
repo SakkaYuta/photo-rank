@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useCart } from '../../contexts/CartContext'
 import { useToast } from '../../contexts/ToastContext'
+import { resolveImageByContext } from '@/utils/imageFallback'
+import { defaultImages } from '@/utils/defaultImages'
 
 export type ProductCardProps = {
   id: string
@@ -42,7 +44,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     <Card hoverable className={`group relative overflow-hidden transition-base ${className || ''}`}>
       <div className="relative aspect-[4/3] w-full overflow-hidden">
         <img
-          src={imageUrl}
+          src={resolveImageByContext('product-card', imageUrl)}
           alt={title}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
@@ -63,7 +65,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 id,
                 title,
                 price,
-                imageUrl,
+                imageUrl: resolveImageByContext('cart-item', imageUrl),
                 factoryId
               })
               showToast({ message: 'カートに追加しました', variant: 'success' })

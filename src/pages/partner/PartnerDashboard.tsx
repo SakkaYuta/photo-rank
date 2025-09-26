@@ -386,11 +386,7 @@ export function PartnerDashboard() {
               <Button
                 variant="primary"
                 className="mt-4 w-full transition-base hover-lift"
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('navigate', {
-                    detail: { view: 'factory-order' }
-                  }))
-                }}
+                onClick={() => { import('@/utils/navigation').then(m => m.navigate('factory-order')) }}
               >
                 <Package className="w-4 h-4 mr-2" />
                 新規製造発注
@@ -403,11 +399,7 @@ export function PartnerDashboard() {
               <Button
                 variant="primary"
                 className="transition-base hover-lift"
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('navigate', {
-                    detail: { view: 'factory-order' }
-                  }))
-                }}
+                onClick={() => { import('@/utils/navigation').then(m => m.navigate('factory-order')) }}
               >
                 最初の発注を作成
               </Button>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useUserRole } from '../hooks/useUserRole';
 import { useNav } from '@/contexts/NavContext';
 import { fetchCreatorDashboard, CreatorDashboardData, updateWorkStatus } from '../services/creatorService';
@@ -14,11 +14,22 @@ import {
   TrendingUp,
   Star,
   ChevronDown,
-  Gamepad2
+  Gamepad2,
+  Home,
+  Store,
+  LayoutDashboard,
+  Building2,
+  Calendar,
+  Trophy,
+  Shield,
+  PlusSquare,
+  Images,
+  Package
 } from 'lucide-react';
+import { allowedViews as ROUTES, ROUTES_META, type RoleKey } from '@/routes';
 
 const CreatorDashboard: React.FC = () => {
-  const { userProfile, user } = useUserRole();
+  const { userProfile, user, userType } = useUserRole();
   const { navigate } = useNav();
   const [dashboardData, setDashboardData] = useState<CreatorDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,6 +38,42 @@ const CreatorDashboard: React.FC = () => {
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [pendingStatusChanges, setPendingStatusChanges] = useState<Map<string, boolean>>(new Map());
   const [hasChanges, setHasChanges] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null as HTMLDivElement | null);
+
+  // メニュー用ナビゲーション項目の構築（Navigation.tsx と同等）
+  type NavItem = { key: string; label: string }
+  const viewOverride = typeof window !== 'undefined' ? localStorage.getItem('view_override') : null
+  const effectiveType = viewOverride === 'general' ? 'general' : (userType || 'general')
+  let role: RoleKey = (effectiveType as RoleKey) || 'general'
+
+  const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+    Home, Store, LayoutDashboard, Users, Building2, Calendar, Trophy, Shield, PlusSquare, Images, Gamepad2, Heart, Package
+  }
+
+  const items: NavItem[] = (ROUTES as readonly string[])
+    .filter((key) => {
+      const meta = ROUTES_META[key as keyof typeof ROUTES_META]
+      if (!meta?.showInNav) return false
+      if (meta.requireAuth && !userProfile) return false
+      if (meta.roles && !meta.roles.includes(role)) return false
+      return true
+    })
+    .map((key) => ({ key, label: ROUTES_META[key as keyof typeof ROUTES_META]?.title || key }))
+    .sort((a, b) => {
+      const ao = ROUTES_META[a.key as keyof typeof ROUTES_META]?.navOrder ?? 999
+      const bo = ROUTES_META[b.key as keyof typeof ROUTES_META]?.navOrder ?? 999
+      return ao - bo
+    })
+
+  const dedupedItems: NavItem[] = []
+  const seen = new Set<string>()
+  for (const it of items) {
+    if (!seen.has(it.key)) {
+      dedupedItems.push(it)
+      seen.add(it.key)
+    }
+  }
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -63,8 +110,20 @@ const CreatorDashboard: React.FC = () => {
     }
   }, [statusDropdown]);
 
+  // メニューの外側クリック・Escで閉じる
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (!menuRef.current) return
+      if (!menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false) }
+    document.addEventListener('click', onClick)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('click', onClick); document.removeEventListener('keydown', onKey) }
+  }, [])
+
   const goToCreate = () => {
-    window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'create' } }))
+    import('@/utils/navigation').then(m => m.navigate('create'))
   }
 
   const handleStatusChange = (workId: string, newStatus: boolean) => {
@@ -160,13 +219,38 @@ const CreatorDashboard: React.FC = () => {
                 <span className="hidden sm:inline">新しい作品をアップロード</span>
                 <span className="sm:hidden">作品投稿</span>
               </button>
-              <button
-                onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'merch' } }))}
-                className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm text-gray-900"
-                title="ホームへ"
-              >
-                ✨ PhotoRank
-              </button>
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setMenuOpen(v => !v)}
+                  className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm text-gray-900"
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                  title="メニュー"
+                >
+                  メニュー
+                </button>
+                {menuOpen && (
+                  <div className="absolute right-0 mt-2 w-64 rounded-lg border bg-white shadow-lg z-20">
+                    <ul className="py-2 max-h-[70vh] overflow-y-auto">
+                      {dedupedItems.map((it) => (
+                        <li key={it.key}>
+                          <button
+                            className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors text-gray-900 hover:bg-gray-50`}
+                            onClick={() => { navigate(it.key); setMenuOpen(false) }}
+                          >
+                            {(() => {
+                              const iconKey = ROUTES_META[it.key as keyof typeof ROUTES_META]?.icon
+                              const IconComp = iconKey ? iconMap[iconKey] : undefined
+                              return IconComp ? <IconComp className="w-4 h-4" /> : null
+                            })()}
+                            <span className="truncate">{it.label}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -276,7 +360,7 @@ const CreatorDashboard: React.FC = () => {
                         try {
                           localStorage.setItem('highlight_work_id', work.id)
                         } catch {}
-                        window.dispatchEvent(new CustomEvent('navigate', { detail: { view: 'myworks' } }))
+                        import('@/utils/navigation').then(m => m.navigate('myworks'))
                       }
 
                       return (

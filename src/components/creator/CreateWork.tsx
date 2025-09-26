@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Textarea } from '../ui/textarea'
 import { Select } from '../ui/select'
 import { createWork } from '../../services/work.service'
 import { supabase } from '../../services/supabaseClient'
+import { useRequireAuth } from '@/hooks/useRequireAuth'
 
 export function CreateWork() {
   // 基本情報
@@ -14,6 +15,9 @@ export function CreateWork() {
   const [contentUrl, setContentUrl] = useState('')
   const [price, setPrice] = useState<number | ''>(1000)
   const [isPrivate, setIsPrivate] = useState(true)
+  // 在庫管理
+  const [stockQuantity, setStockQuantity] = useState<number | ''>(10)
+  const [isDigitalProduct, setIsDigitalProduct] = useState(true)
   // 販売期間（開始・終了）
   const [saleStart, setSaleStart] = useState<string>('')
   const [saleEnd, setSaleEnd] = useState<string>('')
@@ -31,8 +35,15 @@ export function CreateWork() {
   // ファイル（最大50）
   const [files, setFiles] = useState<File[]>([])
 
+  // 配送設定
+  const [shippingFee, setShippingFee] = useState<number | ''>(500)
+  const [shippingMethod, setShippingMethod] = useState('standard')
+  const [productWeight, setProductWeight] = useState<number | ''>(100)
+  const [productSize, setProductSize] = useState({ width: '', height: '', depth: '' })
+
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const { LoginGate, requireAuth } = useRequireAuth()
 
   const titleLimit = 100
   const descLimit = 10000
@@ -52,7 +63,7 @@ export function CreateWork() {
     setBusy(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('ログインが必要です')
+      if (!user || !requireAuth()) throw new Error('ログインが必要です')
       const primaryImage = images[0] || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1200&auto=format&fit=crop'
       await createWork({
         creator_id: user.id,
@@ -75,6 +86,10 @@ export function CreateWork() {
       setImageInput('')
       setSaleStart('')
       setSaleEnd('')
+      setStockQuantity(10)
+      setShippingFee(500)
+      setProductWeight(100)
+      setProductSize({ width: '', height: '', depth: '' })
     } catch (e: any) {
       setMessage(e.message)
     } finally {
@@ -84,6 +99,7 @@ export function CreateWork() {
 
   return (
     <div className="space-y-6 p-4 max-w-3xl mx-auto">
+      <LoginGate />
       {/* タイトル */}
       <section className="card space-y-2 p-4">
         <label className="block">
@@ -276,22 +292,41 @@ export function CreateWork() {
             setFiles(next)
           }}
         />
-        <div className="rounded-lg border p-3 text-xs text-gray-900 dark:text-gray-300">
-          <div className="mb-2 font-medium">ショップのファイル使用状況</div>
-          <div>{formatBytes(usedBytes)} / 10GB</div>
-        </div>
         <p className="text-xs text-gray-900 dark:text-gray-400">複数のファイルをアップロードできます。</p>
       </section>
 
-      {/* バリエーション */}
+
+      {/* 商品タイプと在庫管理 */}
       <section className="card space-y-3 p-4">
-        <div className="flex items-center justify-between">
-          <span className="block text-sm font-medium">バリエーション</span>
-          <Button type="button" onClick={() => alert('バリエーションは近日対応予定です。')}>新しい</Button>
+        <span className="block text-sm font-medium">商品タイプ・在庫設定</span>
+        <div className="space-y-3">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={isDigitalProduct}
+              onChange={(e) => setIsDigitalProduct(e.target.checked)}
+            />
+            デジタル商品（在庫無制限）
+          </label>
+          {!isDigitalProduct && (
+            <label className="block">
+              <span className="mb-1 block text-xs text-gray-600">在庫数量</span>
+              <div className="flex items-baseline gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  value={stockQuantity}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    if (v === '') setStockQuantity('')
+                    else setStockQuantity(Math.max(0, Math.floor(Number(v) || 0)))
+                  }}
+                />
+                <span className="text-sm text-gray-900 shrink-0 whitespace-nowrap">個</span>
+              </div>
+            </label>
+          )}
         </div>
-        <p className="text-xs text-gray-900 dark:text-gray-400">
-          サイズ、色、その他のオプションのバリエーションを追加できます。詳しい使い方については、バリエーション機能の使い方
-        </p>
       </section>
 
       {/* 価格 */}
@@ -315,6 +350,77 @@ export function CreateWork() {
         </label>
       </section>
 
+      {/* 配送設定 */}
+      {!isDigitalProduct && (
+        <section className="card space-y-3 p-4">
+          <span className="block text-sm font-medium">配送設定</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="block">
+              <span className="mb-1 block text-xs text-gray-600">配送方法</span>
+              <Select value={shippingMethod} onChange={(e) => setShippingMethod(e.target.value)}>
+                <option value="standard">通常配送</option>
+                <option value="express">速達配送</option>
+                <option value="pickup">店舗受取</option>
+              </Select>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs text-gray-600">送料</span>
+              <div className="flex items-baseline gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  value={shippingFee}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    if (v === '') setShippingFee('')
+                    else setShippingFee(Math.max(0, Math.floor(Number(v) || 0)))
+                  }}
+                />
+                <span className="text-sm text-gray-900 shrink-0 whitespace-nowrap">円</span>
+              </div>
+            </label>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="block">
+              <span className="mb-1 block text-xs text-gray-600">商品重量</span>
+              <div className="flex items-baseline gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  value={productWeight}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    if (v === '') setProductWeight('')
+                    else setProductWeight(Math.max(0, Math.floor(Number(v) || 0)))
+                  }}
+                />
+                <span className="text-sm text-gray-900 shrink-0 whitespace-nowrap">g</span>
+              </div>
+            </label>
+            <div className="space-y-1">
+              <span className="block text-xs text-gray-600">商品サイズ（cm）</span>
+              <div className="grid grid-cols-3 gap-2">
+                <Input
+                  placeholder="幅"
+                  value={productSize.width}
+                  onChange={(e) => setProductSize({...productSize, width: e.target.value})}
+                />
+                <Input
+                  placeholder="高さ"
+                  value={productSize.height}
+                  onChange={(e) => setProductSize({...productSize, height: e.target.value})}
+                />
+                <Input
+                  placeholder="奥行"
+                  value={productSize.depth}
+                  onChange={(e) => setProductSize({...productSize, depth: e.target.value})}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* 公開設定 */}
       <section className="card space-y-2 p-4">
         <span className="mb-1 block text-sm font-medium">公開設定</span>
@@ -337,4 +443,5 @@ export function CreateWork() {
       {message && <div className="text-sm text-gray-900">{message}</div>}
     </div>
   )
+  // 認証は useRequireAuth の LoginGate で制御
 }

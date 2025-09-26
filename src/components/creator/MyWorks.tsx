@@ -3,11 +3,13 @@ import type { Work } from '../../types'
 import { myWorks } from '../../services/work.service'
 import { supabase } from '../../services/supabaseClient'
 import { ProductCard } from '@/components/product/ProductCard'
+import { useRequireAuth } from '@/hooks/useRequireAuth'
 
 export function MyWorks() {
   const [items, setItems] = useState<Work[]>([])
   const [loading, setLoading] = useState(true)
   const [highlightId, setHighlightId] = useState<string | null>(null)
+  const { LoginGate } = useRequireAuth()
 
   useEffect(() => {
     let active = true
@@ -39,6 +41,7 @@ export function MyWorks() {
 
   return (
     <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
+      <LoginGate />
       {items.map((w) => (
         <div
           key={w.id}

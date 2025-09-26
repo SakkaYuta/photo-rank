@@ -6,6 +6,8 @@ import { signOut } from '../../services/auth.service'
 // removed Settings icon
 import { useUserRole } from '@/hooks/useUserRole'
 import { useNav } from '@/contexts/NavContext'
+import { supabase } from '@/services/supabaseClient'
+import { resolveImageUrl } from '@/utils/imageFallback'
 
 export function UserMenu() {
   const { profile, loading } = useAuth()
@@ -13,6 +15,9 @@ export function UserMenu() {
   const { navigate } = useNav()
   const [open, setOpen] = useState(false)
   const [showProfileSettings, setShowProfileSettings] = useState(false)
+  const SAMPLE_BUCKET = (import.meta as any).env?.VITE_SAMPLE_BUCKET || 'user-content'
+  const DEFAULT_AVATAR_PATH = (import.meta as any).env?.VITE_DEFAULT_AVATAR_IMAGE_PATH || 'defaults/avatar.jpg'
+  const defaultAvatarUrl = supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(DEFAULT_AVATAR_PATH).data.publicUrl
 
   if (loading) return <div className="h-8 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-800" />
   if (!profile) return (
@@ -97,13 +102,13 @@ export function UserMenu() {
           title="アカウント設定"
         >
           <img
-            src={profile.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${profile.id}`}
+            src={resolveImageUrl(profile.avatar_url, [defaultAvatarUrl])}
             alt="avatar"
             className="h-8 w-8 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
           />
         </a>
         <span className="text-sm hidden md:inline text-gray-900">{profile.display_name}</span>
-        <button className="btn btn-outline text-xs md:text-sm px-2 md:px-4 text-black hover:text-black" onClick={() => signOut()}>ログアウト</button>
+        <button className="btn btn-outline text-xs md:text-sm px-2 md:px-4 !text-black hover:!text-black" onClick={() => signOut()}>ログアウト</button>
       </div>
       {profileModal}
     </>

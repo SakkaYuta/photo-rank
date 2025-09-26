@@ -2,14 +2,13 @@
 // Note: This is a placeholder. Wire Stripe secret and input validation before production use.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getSupabaseAdmin, authenticateUser } from '../_shared/client.ts'
+import { corsHeaders, corsPreflightResponse } from '../_shared/cors.ts'
 // deno-lint-ignore no-explicit-any
 type Stripe = any
 
 serve(async (req) => {
   // CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { status: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type' } })
-  }
+  if (req.method === 'OPTIONS') return corsPreflightResponse()
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 })
   
   try {
@@ -17,7 +16,7 @@ serve(async (req) => {
     const allowed = (Deno.env.get('ALLOWED_ORIGINS') || '').split(',').map(s => s.trim()).filter(Boolean)
     const origin = req.headers.get('Origin') || ''
     if (allowed.length > 0 && origin && !allowed.includes(origin)) {
-      return new Response('Forbidden origin', { status: 403 })
+      return new Response('Forbidden origin', { status: 403, headers: corsHeaders })
     }
     // Authenticate user from request headers
     const user = await authenticateUser(req)
@@ -74,12 +73,12 @@ serve(async (req) => {
       automatic_payment_methods: { enabled: true },
     })
 
-    return new Response(JSON.stringify({ clientSecret: intent.client_secret, client_secret: intent.client_secret }), { headers: { 'content-type': 'application/json', 'Access-Control-Allow-Origin': origin || '*' } })
+    return new Response(JSON.stringify({ clientSecret: intent.client_secret, client_secret: intent.client_secret }), { headers: { ...corsHeaders, 'content-type': 'application/json' } })
   } catch (e) {
     console.error('create-payment-intent error:', e)
     if (e.message.includes('Missing or invalid Authorization') || e.message.includes('Invalid or expired token')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'content-type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'content-type': 'application/json' } })
     }
-    return new Response(JSON.stringify({ error: String(e) }), { status: 400, headers: { 'content-type': 'application/json' } })
+    return new Response(JSON.stringify({ error: String(e) }), { status: 400, headers: { ...corsHeaders, 'content-type': 'application/json' } })
   }
 });

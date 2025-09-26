@@ -4,6 +4,8 @@ import { ProfileService } from '@/services/profile.service'
 import { AddressService, type UserAddress, type AddressInput } from '@/services/address.service'
 import { APP_NAME } from '@/utils/constants'
 import { useUserRole } from '@/hooks/useUserRole'
+import { useRequireAuth } from '@/hooks/useRequireAuth'
+import { AuthModal } from '@/components/auth/AuthModal'
 import { joinOrganizerWithCode } from '@/services/organizerService'
 import { PayoutService } from '@/services/payout.service'
 import { IdentityService } from '@/services/identity.service'
@@ -14,9 +16,12 @@ type TabKey = 'account' | 'payout' | 'card' | 'address' | 'notifications' | '2fa
 
 const AccountSettings: React.FC = () => {
   const [active, setActive] = useState<TabKey>('account')
+  const { user } = useUserRole()
+  const { LoginGate } = useRequireAuth()
 
   return (
     <div className="min-h-screen bg-gray-50 account-settings">
+      {!user && <LoginGate />}
       <div className="bg-white border-b">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-3">
           <Settings className="w-5 h-5 text-blue-600" />

@@ -2,7 +2,7 @@ import React from 'react'
 
 export function Footer() {
   const go = (view: string) => {
-    window.dispatchEvent(new CustomEvent('navigate', { detail: { view } }))
+    import('@/utils/navigation').then(m => m.navigate(view))
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 

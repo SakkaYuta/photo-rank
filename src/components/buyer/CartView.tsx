@@ -76,65 +76,69 @@ const CartItemCard: React.FC<{
   onRemove: (id: string) => void
   showFactory?: boolean
 }> = ({ item, onUpdateQty, onRemove, showFactory = true }) => (
-  <div className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-    {item.imageUrl && (
-      <img
-        src={item.imageUrl}
-        alt={item.title}
-        className="w-16 h-16 rounded object-cover"
-      />
-    )}
+  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white rounded-lg border border-gray-200">
+    <div className="flex items-center gap-3 w-full sm:w-auto">
+      {item.imageUrl && (
+        <img
+          src={item.imageUrl}
+          alt={item.title}
+          className="w-12 h-12 sm:w-16 sm:h-16 rounded object-cover flex-shrink-0"
+        />
+      )}
 
-    <div className="flex-1">
-      <h3 className="font-medium text-gray-900 dark:text-gray-100 jp-text line-clamp-2">
-        {item.title}
-      </h3>
-      <p className="text-sm text-gray-600 dark:text-gray-400">
-        {formatJPY(item.price)}
-      </p>
+      <div className="flex-1 sm:flex-none min-w-0">
+        <h3 className="font-medium text-gray-900 text-sm sm:text-base line-clamp-2 break-words">
+          {item.title}
+        </h3>
+        <p className="text-xs sm:text-sm text-gray-600">
+          {formatJPY(item.price)}
+        </p>
+      </div>
     </div>
 
-    <div className="flex items-center gap-2">
-      <button
-        onClick={() => onUpdateQty(item.id, item.qty - 1)}
-        disabled={item.qty <= 1}
+    <div className="flex items-center justify-between w-full sm:w-auto sm:flex-shrink-0 gap-3">
+      <div className="flex items-center gap-1 sm:gap-2">
+        <button
+          onClick={() => onUpdateQty(item.id, item.qty - 1)}
+          disabled={item.qty <= 1}
         className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
         aria-label="数量を減らす"
       >
         <Minus className="w-4 h-4" />
       </button>
 
-      <span className="w-8 text-center font-medium">
-        {item.qty}
-      </span>
+        <span className="w-6 sm:w-8 text-center font-medium text-sm sm:text-base">
+          {item.qty}
+        </span>
+
+        <button
+          onClick={() => onUpdateQty(item.id, item.qty + 1)}
+          className="p-1 rounded hover:bg-gray-100 transition-colors"
+          aria-label="数量を増やす"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div className="text-right flex-shrink-0">
+        <p className="font-semibold text-gray-900 text-sm sm:text-base">
+          {formatJPY(item.price * item.qty)}
+        </p>
+        {showFactory && item.factoryId && (
+          <p className="text-xs text-gray-500 mt-1">
+            工場ID: {item.factoryId}
+          </p>
+        )}
+      </div>
 
       <button
-        onClick={() => onUpdateQty(item.id, item.qty + 1)}
-        className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-        aria-label="数量を増やす"
+        onClick={() => onRemove(item.id)}
+        className="p-1.5 sm:p-2 text-red-500 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+        aria-label="カートから削除"
       >
-        <Plus className="w-4 h-4" />
+        <Trash2 className="w-4 h-4" />
       </button>
     </div>
-
-    <div className="text-right">
-      <p className="font-semibold text-gray-900 dark:text-gray-100">
-        {formatJPY(item.price * item.qty)}
-      </p>
-      {showFactory && item.factoryId && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          工場ID: {item.factoryId}
-        </p>
-      )}
-    </div>
-
-    <button
-      onClick={() => onRemove(item.id)}
-      className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-      aria-label="カートから削除"
-    >
-      <Trash2 className="w-4 h-4" />
-    </button>
   </div>
 )
 

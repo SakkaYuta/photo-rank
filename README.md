@@ -112,6 +112,11 @@ SELECT public.generate_monthly_payouts_v50();
 - Vite
 - Supabase (Auth/DB/Storage)
 
+## E2E テスト（Playwright）
+- `e2e/` 配下に Playwright の包括的構成を用意（自動 dev サーバー起動・マルチブラウザ/モバイル対応）。
+- 実行例: `cd e2e && npm i && npx playwright install --with-deps && npm test`（デフォルト `BASE_URL=http://localhost:3002`）。
+- 代表テスト: `smoke.spec.ts`（トップ表示確認）、`guards.spec.ts`（未認証のダッシュボード遷移はトップへ）。
+
 ## ディレクトリ
 ご依頼の構成に沿って `src/components`, `src/services`, `src/hooks`, `src/types`, `src/utils` を配置しています。
 

@@ -50,7 +50,7 @@ supabase/migrations/20250922_rls_policy_fixes.sql
 supabase/migrations/20250922_v5_0_core.sql
 supabase/migrations/20250922_v5_0_storage.sql
 
-# 12. テストデータ（開発時のみ）
+# 14. テストデータ（開発時のみ）
 supabase/migrations/20241218_test_data_tables.sql
 ```
 
@@ -72,6 +72,52 @@ psql -h your-host -d your-db -f supabase/migrations/20250922_fix_trigger_conflic
 
 # スキーマ要件更新
 psql -h your-host -d your-db -f supabase/migrations/20250922_schema_requirements_update.sql
+```
+
+### 🔒 セキュリティ補遺（手動適用SQLの例）
+以下の指摘（linter）がある場合、環境に応じて SQL を直接適用してください（権限が必要な場合あり）。
+
+- RLS disabled in public（public テーブルの RLS 無効）
+```
+ALTER TABLE IF EXISTS public.schema_migrations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.simple_rate_limits ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS schema_migrations_deny_all ON public.schema_migrations;
+DROP POLICY IF EXISTS simple_rate_limits_deny_all ON public.simple_rate_limits;
+CREATE POLICY schema_migrations_deny_all ON public.schema_migrations FOR ALL TO PUBLIC USING (false) WITH CHECK (false);
+CREATE POLICY simple_rate_limits_deny_all ON public.simple_rate_limits FOR ALL TO PUBLIC USING (false) WITH CHECK (false);
+```
+
+- 指定テーブルのみ service_role に限定（例: manufacturing_order_status_history）
+```
+ALTER TABLE IF EXISTS public.manufacturing_order_status_history ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS mo_status_admin_all ON public.manufacturing_order_status_history;
+CREATE POLICY mo_status_admin_all ON public.manufacturing_order_status_history FOR ALL TO authenticated
+USING ((current_setting('request.jwt.claims', true)::jsonb ->> 'role') = 'service_role')
+WITH CHECK ((current_setting('request.jwt.claims', true)::jsonb ->> 'role') = 'service_role');
+```
+
+- extension in public（pg_trgm を public から移動）
+```
+CREATE SCHEMA IF NOT EXISTS extensions;
+ALTER EXTENSION pg_trgm SET SCHEMA extensions;
+```
+
+- function search_path mutable（public 関数に search_path 固定）
+```
+SELECT format(
+  'ALTER FUNCTION %I.%I(%s) SET search_path TO pg_catalog, public;',
+  n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)
+)
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND p.proname IN (
+    'set_updated_at','get_user_type','is_user_factory','get_creator_monthly_summary',
+    'is_admin','generate_monthly_payouts_v50','simple_rate_check','update_updated_at_column',
+    'check_rate_limit_safe','validate_image_mime_safe','is_admin_safe',
+    'sanitize_xml_safe','sync_user_public_profile','delete_user_public_profile'
+  );
+# 出力された ALTER FUNCTION 文を実行
 ```
 
 ### ✅ 解決された問題

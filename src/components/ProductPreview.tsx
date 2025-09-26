@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { resolveImageUrl } from '@/utils/imageFallback'
+import { defaultImages } from '@/utils/defaultImages'
 
 type Props = {
   photo: { title: string; watermarked_url?: string; original_url?: string }
@@ -15,9 +17,7 @@ export const ProductPreview = ({ photo, isOwner }: Props) => {
 
   return (
     <div className="relative">
-      {imageUrl && (
-        <img src={imageUrl} alt={photo.title} className="w-full h-auto rounded" />
-      )}
+      <img src={resolveImageUrl(imageUrl, [defaultImages.work, defaultImages.product])} alt={photo.title} className="w-full h-auto rounded" />
       {!isOwner && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <span className="text-white text-4xl sm:text-6xl opacity-30" style={{ transform: 'rotate(45deg)' }}>
@@ -30,4 +30,3 @@ export const ProductPreview = ({ photo, isOwner }: Props) => {
 }
 
 export default ProductPreview
-

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../services/supabaseClient'
 import { useAuth } from '../../hooks/useAuth'
+import { resolveImageUrl } from '@/utils/imageFallback'
+import { defaultImages } from '@/utils/defaultImages'
 
 type ApprovalRow = {
   id: string
@@ -80,9 +82,7 @@ export const ApprovalDashboard = () => {
         {rows.map((approval) => (
           <div key={approval.id} className="border rounded-lg p-4">
             <div className="flex gap-4">
-              {approval.works?.image_url && (
-                <img src={approval.works.image_url} alt={approval.works.title} className="w-32 h-32 object-cover rounded" />
-              )}
+              <img src={resolveImageUrl(approval.works?.image_url, [defaultImages.work, defaultImages.product])} alt={approval.works?.title || ''} className="w-32 h-32 object-cover rounded" />
               <div className="flex-1">
                 <h3 className="font-semibold">{approval.works?.title}</h3>
                 <p className="text-sm text-gray-600">作成者: {approval.works?.users?.display_name ?? '—'}</p>
