@@ -6,6 +6,7 @@ export interface Product {
   description: string;
   price: number;
   image_url: string;
+  image_urls?: string[]; // 追加ギャラリー（最大10件想定）
   creator_id: string;
   creator_name: string;
   creator_avatar?: string;
@@ -57,6 +58,7 @@ export async function fetchProducts(
         description,
         price,
         image_url,
+        image_urls,
         creator_id,
         category,
         view_count,
@@ -129,6 +131,7 @@ export async function fetchProducts(
       description: work.description || '',
       price: work.price,
       image_url: work.image_url,
+      image_urls: (work as any).image_urls || undefined,
       creator_id: work.creator_id,
       creator_name: work.users?.display_name || '匿名クリエイター',
       creator_avatar: work.users?.avatar_url,
@@ -174,6 +177,7 @@ export async function fetchProductById(productId: string): Promise<Product | nul
         description,
         price,
         image_url,
+        image_urls,
         creator_id,
         category,
         view_count,
@@ -206,6 +210,7 @@ export async function fetchProductById(productId: string): Promise<Product | nul
       description: (data as any).description || '',
       price: (data as any).price,
       image_url: (data as any).image_url,
+      image_urls: (data as any).image_urls || undefined,
       creator_id: (data as any).creator_id,
       creator_name: u?.display_name || '匿名クリエイター',
       creator_avatar: u?.avatar_url,

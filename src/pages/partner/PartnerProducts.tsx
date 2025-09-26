@@ -4,8 +4,9 @@ import { getPartnerProducts, createFactoryProduct, updateFactoryProduct, deleteF
 import { LoadingSpinner } from '../../components/common/LoadingSpinner'
 import { Table, Badge, Button } from '@/components/ui'
 import type { FactoryProduct } from '../../types'
-import { Plus, Edit3, Trash2, Eye, EyeOff } from 'lucide-react'
+import { Plus, Edit3, Trash2, Eye, EyeOff, Image as ImageIcon } from 'lucide-react'
 import { Input } from '@/components/ui'
+import { MockupEditor } from '@/components/partner/MockupEditor'
 
 type ProductFormData = {
   product_type: string
@@ -31,6 +32,7 @@ export function PartnerProducts() {
   const [editingProduct, setEditingProduct] = useState<FactoryProduct | null>(null)
   const [formData, setFormData] = useState<ProductFormData>(initialFormData)
   const [submitting, setSubmitting] = useState(false)
+  const [mockupEditorFor, setMockupEditorFor] = useState<string | null>(null)
 
   useEffect(() => {
     if (!partner) return
@@ -199,6 +201,9 @@ export function PartnerProducts() {
                           <Button variant="ghost" size="sm" onClick={() => handleEditProduct(product)} title="編集">
                             <Edit3 className="w-4 h-4" />
                           </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setMockupEditorFor(product.id)} title="モックアップ編集">
+                            <ImageIcon className="w-4 h-4" />
+                          </Button>
                           <Button variant="danger" size="sm" onClick={() => handleDelete(product)} title="削除">
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -313,6 +318,14 @@ export function PartnerProducts() {
             </div>
           )}
         </>
+      )}
+
+      {mockupEditorFor && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+            <MockupEditor factoryProductId={mockupEditorFor} onClose={() => setMockupEditorFor(null)} />
+          </div>
+        </div>
       )}
     </div>
   )

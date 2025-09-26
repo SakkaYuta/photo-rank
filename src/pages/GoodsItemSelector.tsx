@@ -7,6 +7,10 @@ import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useUserRole } from '@/hooks/useUserRole'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
+import { GoodsPreviewCarousel } from '@/components/goods/GoodsPreviewCarousel'
+import type { PreviewSlide } from '@/components/goods/GoodsPreviewCarousel'
+import GOODS_MOCKUPS from '@/config/goods-mockups'
+import { getFactoryProductMockups } from '@/services/factory-mockups.service'
 
 // グッズアイテムの型定義
 interface GoodsItem {
@@ -19,6 +23,7 @@ interface GoodsItem {
   minOrder: number; // 最小注文数
   features: string[]; // 特徴
   image: string;
+  mockups?: string[]; // 他アングルのモックアップ画像
   sizes?: string[]; // サイズ展開
   colors?: string[]; // カラー展開
   materials?: string; // 素材
@@ -53,6 +58,7 @@ const GoodsItemSelector: React.FC = () => {
     } catch {}
     const params = new URLSearchParams(qs || window.location.search)
     const productId = params.get('productId')
+    const factoryProductId = params.get('factoryProductId') || undefined
     const productData = params.get('data')
 
     if (productData) {
@@ -66,7 +72,19 @@ const GoodsItemSelector: React.FC = () => {
 
     // グッズアイテムデータをロード
     loadGoodsItems();
+    if (factoryProductId) {
+      // 先に取得して state などに乗せる（スライド生成時に使用）
+      ;(async () => {
+        try {
+          const mocks = await getFactoryProductMockups(factoryProductId)
+          ;(window as any).__FACTORY_MOCKS__ = mocks // 開発デバッグ用
+          setFactoryMockups(mocks.map(m => ({ mockupUrl: m.image_url, geometry: (m as any).geometry } as any)))
+        } catch (e) { console.warn('factoryProductId provided but fetch failed', e) }
+      })()
+    }
   }, []);
+
+  const [factoryMockups, setFactoryMockups] = useState<Array<{ mockupUrl: string; geometry?: any }>>([])
 
   const loadGoodsItems = () => {
     // グッズアイテムのマスターデータ
@@ -584,11 +602,41 @@ const GoodsItemSelector: React.FC = () => {
 
             <div className="p-6">
               <div className="flex gap-6 mb-6">
-                <img
-                  src={selectedItem.image}
-                  alt={selectedItem.name}
-                  className="w-48 h-48 object-cover rounded-lg"
-                />
+                {(() => {
+                  // Config優先（工場登録の基本モックアップがある想定）
+                  const cfg = GOODS_MOCKUPS[selectedItem.id]
+                  const cfgSlides = cfg?.slides || []
+                  const hasFactory = factoryMockups.length > 0
+                  const mockups = hasFactory
+                    ? factoryMockups.map(s => s.mockupUrl)
+                    : (cfgSlides.length > 0 ? cfgSlides.map(s => s.mockupUrl) : (selectedItem.mockups && selectedItem.mockups.length > 0 ? selectedItem.mockups : [selectedItem.image]))
+                  // 作品側のギャラリー（存在すれば優先的に取り込む）
+                  const gallery: string[] = (
+                    (selectedProduct?.images as string[] | undefined)
+                    || (selectedProduct?.image_urls as string[] | undefined)
+                    || (selectedProduct?.gallery as string[] | undefined)
+                    || []
+                  ).filter(Boolean)
+                  const artVariantsAll = [
+                    selectedProduct?.image_url,
+                    selectedProduct?.thumbnail_url,
+                    ...gallery,
+                  ].filter(Boolean) as string[]
+                  // 重複排除して最大10件に制限（スライド側でもガードするが念のため）
+                  const artVariants = Array.from(new Set(artVariantsAll)).slice(0, 10)
+                  let slides: PreviewSlide[] = [
+                    // 他アングルモックアップ（デフォルトのアート）。Configにgeometryがあれば引き継ぐ。
+                    ...mockups.map((m, idx) => ({ mockupUrl: m, variantId: selectedItem.id, geometry: (hasFactory ? factoryMockups[idx]?.geometry : cfgSlides[idx]?.geometry) })),
+                    // 作品の別バリエーション（1枚目のモックアップを基準に差し替え）
+                    ...artVariants.slice(1).map((a) => ({ mockupUrl: mockups[0], variantId: selectedItem.id, artUrl: a, geometry: (hasFactory ? factoryMockups[0]?.geometry : cfgSlides[0]?.geometry) })),
+                    // 作品のみ
+                    { artOnly: true },
+                  ]
+                  slides = slides.slice(0, 10)
+                  return (
+                    <GoodsPreviewCarousel size={192} artUrl={artVariants[0]} slides={slides} enableSwipe autoplayMs={3500} />
+                  )
+                })()}
                 <div className="flex-1">
                   <h3 className="text-xl font-semibold mb-2">{selectedItem.name}</h3>
                   <p className="text-gray-600 mb-4">{selectedItem.description}</p>
