@@ -21,50 +21,50 @@ function randomBase32(length = 16): string {
 }
 
 export const MfaService = {
-  async get(): Promise<{ enabled: boolean; secret?: string; otpauth?: string } | null> {
+  async get(): Promise<{ enabled: boolean } | null> {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
-    const { data } = await supabase
-      .from('user_mfa')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle()
-    if (!data) return { enabled: false }
-    return { enabled: data.enabled, secret: data.secret, otpauth: `otpauth://totp/PhotoRank:${user.email}?secret=${data.secret}&issuer=PhotoRank` }
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mfa`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}` }
+    })
+    if (!res.ok) return { enabled: false }
+    const body = await res.json()
+    return { enabled: !!body.enabled }
   },
 
   async provision() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
-    const secret = randomBase32(20)
-    const payload = { user_id: user.id, secret, enabled: false }
-    const { data, error } = await supabase
-      .from('user_mfa')
-      .upsert(payload, { onConflict: 'user_id' })
-      .select('*')
-      .single()
-    if (error) throw error
-    return { enabled: data.enabled, secret: data.secret, otpauth: `otpauth://totp/PhotoRank:${user.email}?secret=${data.secret}&issuer=PhotoRank` }
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) throw new Error('Not authenticated')
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mfa`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action: 'provision' })
+    })
+    if (!res.ok) throw new Error('Provisioning failed')
+    const body = await res.json()
+    return { enabled: false, otpauth: body.otpauth as string }
   },
 
   async enable() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
-    const { error } = await supabase
-      .from('user_mfa')
-      .update({ enabled: true })
-      .eq('user_id', user.id)
-    if (error) throw error
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) throw new Error('Not authenticated')
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mfa`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action: 'enable' })
+    })
+    if (!res.ok) throw new Error('Enable failed')
   },
 
   async disable() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
-    const { error } = await supabase
-      .from('user_mfa')
-      .update({ enabled: false })
-      .eq('user_id', user.id)
-    if (error) throw error
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) throw new Error('Not authenticated')
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mfa`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action: 'disable' })
+    })
+    if (!res.ok) throw new Error('Disable failed')
   }
 }
-

@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { getSupabaseAdmin, authenticateUser } from '../_shared/client.ts'
+import { requireInternalSecret } from '../_shared/auth.ts'
 
 async function assertAdmin(supabase: any, userId: string) {
   try {
@@ -17,6 +18,8 @@ async function assertAdmin(supabase: any, userId: string) {
 
 serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 })
+  const secretErr = requireInternalSecret(req)
+  if (secretErr) return secretErr
   try {
     const user = await authenticateUser(req)
     const supabase = getSupabaseAdmin()
@@ -65,4 +68,3 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: e?.message ?? 'unknown error' }), { status: 500, headers: { 'content-type': 'application/json' } })
   }
 })
-
