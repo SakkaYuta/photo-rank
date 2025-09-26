@@ -71,12 +71,7 @@ export async function fetchProducts(
         is_active,
         stock_quantity,
         discount_percentage,
-        product_types,
-        users!inner(
-          id,
-          display_name,
-          avatar_url
-        )
+        product_types
       `, { count: 'exact' });
 
     // フィルタリング
@@ -101,8 +96,10 @@ export async function fetchProducts(
       }
     }
 
-    // デフォルトで公開中の商品のみ取得
-    query = query.eq('is_active', true);
+    // デフォルトで公開中の商品のみ取得（filtersで未指定のとき）
+    if (!filters || filters.isActive === undefined) {
+      query = query.eq('is_active', true);
+    }
 
     // ソート
     if (sort) {
@@ -124,8 +121,21 @@ export async function fetchProducts(
 
     if (error) throw error;
 
+    const works = (data || []) as any[]
+
+    // クリエイター公開プロフィールをまとめて取得
+    const creatorIds = Array.from(new Set(works.map(w => w.creator_id).filter(Boolean)))
+    let profiles: Record<string, { display_name?: string; avatar_url?: string }> = {}
+    if (creatorIds.length > 0) {
+      const { data: upp } = await supabase
+        .from('user_public_profiles')
+        .select('id, display_name, avatar_url')
+        .in('id', creatorIds)
+      if (upp) profiles = Object.fromEntries(upp.map((p: any) => [p.id, { display_name: p.display_name, avatar_url: p.avatar_url }]))
+    }
+
     // データを整形
-    const products: Product[] = (data || []).map((work: any) => ({
+    const products: Product[] = works.map((work: any) => ({
       id: work.id,
       title: work.title,
       description: work.description || '',
@@ -133,8 +143,8 @@ export async function fetchProducts(
       image_url: work.image_url,
       image_urls: (work as any).image_urls || undefined,
       creator_id: work.creator_id,
-      creator_name: work.users?.display_name || '匿名クリエイター',
-      creator_avatar: work.users?.avatar_url,
+      creator_name: profiles[work.creator_id]?.display_name || '匿名クリエイター',
+      creator_avatar: profiles[work.creator_id]?.avatar_url,
       category: work.category || 'other',
       views: work.view_count || 0,
       likes: work.like_count || 0,
@@ -190,12 +200,7 @@ export async function fetchProductById(productId: string): Promise<Product | nul
         is_active,
         stock_quantity,
         discount_percentage,
-        product_types,
-        users!inner(
-          id,
-          display_name,
-          avatar_url
-        )
+        product_types
       `)
       .eq('id', productId)
       .single();
@@ -203,8 +208,7 @@ export async function fetchProductById(productId: string): Promise<Product | nul
     if (error) throw error;
     if (!data) return null;
 
-    const u = (data as any).users as any
-    return {
+    const base: any = {
       id: (data as any).id,
       title: (data as any).title,
       description: (data as any).description || '',
@@ -212,8 +216,8 @@ export async function fetchProductById(productId: string): Promise<Product | nul
       image_url: (data as any).image_url,
       image_urls: (data as any).image_urls || undefined,
       creator_id: (data as any).creator_id,
-      creator_name: u?.display_name || '匿名クリエイター',
-      creator_avatar: u?.avatar_url,
+      creator_name: '匿名クリエイター',
+      creator_avatar: undefined,
       category: (data as any).category || 'other',
       views: (data as any).view_count || 0,
       likes: (data as any).like_count || 0,
@@ -227,7 +231,22 @@ export async function fetchProductById(productId: string): Promise<Product | nul
       discount_percentage: (data as any).discount_percentage,
       stock_quantity: (data as any).stock_quantity || 100,
       product_types: (data as any).product_types || ['standard']
-    };
+    }
+
+    // 補助: 公開プロフィールから表示名/アバターを解決
+    try {
+      const { data: upp } = await supabase
+        .from('user_public_profiles')
+        .select('id, display_name, avatar_url')
+        .eq('id', base.creator_id)
+        .single()
+      if (upp) {
+        base.creator_name = (upp as any).display_name || base.creator_name
+        base.creator_avatar = (upp as any).avatar_url || base.creator_avatar
+      }
+    } catch {}
+
+    return base as Product;
   } catch (error) {
     console.error('Error fetching product by ID:', error);
     return null;

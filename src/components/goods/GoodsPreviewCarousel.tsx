@@ -82,6 +82,11 @@ export const GoodsPreviewCarousel: React.FC<Props> = ({ slides, artUrl, size = 1
     }
   }, [enableSwipe, max])
 
+  function isControlTarget(el: EventTarget | null): boolean {
+    if (!(el instanceof Element)) return false
+    return !!el.closest('[data-carousel-control="true"]')
+  }
+
   return (
     <div
       className="relative"
@@ -94,7 +99,13 @@ export const GoodsPreviewCarousel: React.FC<Props> = ({ slides, artUrl, size = 1
       onFocus={pauseOnHover ? () => setPaused(true) : undefined}
       onBlur={pauseOnHover ? () => setPaused(false) : undefined}
     >
-      <div className="relative overflow-hidden rounded-lg" style={{ width: size, height: size }}>
+      <div
+        className="relative overflow-hidden rounded-lg"
+        style={{ width: size, height: size }}
+        onClick={(e) => { if (!isControlTarget(e.target)) next() }}
+        role="button"
+        aria-label="次の画像へ"
+      >
         {validSlides.map((s, i) => (
           <div
             key={i}
@@ -120,6 +131,7 @@ export const GoodsPreviewCarousel: React.FC<Props> = ({ slides, artUrl, size = 1
             type="button"
             onClick={prev}
             className="absolute left-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/80 hover:bg-white shadow text-gray-800"
+            data-carousel-control="true"
             aria-label="前の画像"
           >
             ‹
@@ -128,6 +140,7 @@ export const GoodsPreviewCarousel: React.FC<Props> = ({ slides, artUrl, size = 1
             type="button"
             onClick={next}
             className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/80 hover:bg-white shadow text-gray-800"
+            data-carousel-control="true"
             aria-label="次の画像"
           >
             ›
@@ -140,6 +153,7 @@ export const GoodsPreviewCarousel: React.FC<Props> = ({ slides, artUrl, size = 1
                 aria-selected={i === index}
                 onClick={() => setIndex(i)}
                 className={`h-2 w-2 rounded-full ${i === index ? 'bg-gray-800' : 'bg-gray-300'}`}
+                data-carousel-control="true"
                 aria-label={`スライド ${i + 1}`}
               />
             ))}

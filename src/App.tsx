@@ -47,11 +47,16 @@ import { allowedViews as ROUTES, isValidView, ROUTES_META, type RoleKey, default
 import LiveBattle from './pages/LiveBattle'
 import AccountSettings from './pages/AccountSettings'
 import ProductsMarketplace from './pages/ProductsMarketplace'
+import AuthCallbackGate from './components/auth/AuthCallbackGate'
 import GoodsItemSelector from './pages/GoodsItemSelector'
 
 type ViewKey = typeof ROUTES[number]
 
 function App() {
+  // 先に /auth/callback をハンドリング（ハッシュルーターに入る前に処理）
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/auth/callback')) {
+    return <AuthCallbackGate />
+  }
   const [view, setView] = useState<ViewKey>('merch')
   const { profile } = useAuth()
   const { partner } = usePartnerAuth()

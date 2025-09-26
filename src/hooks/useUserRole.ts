@@ -63,6 +63,18 @@ export const useUserRole = () => {
           if (setupResult) {
             setUserProfile(setupResult);
             setUserType(setupResult.user_type as UserType);
+            // ログイン直前の画面へ復帰
+            try {
+              const redirect = localStorage.getItem('postLoginRedirect')
+              if (redirect) {
+                localStorage.removeItem('postLoginRedirect')
+                if (redirect.startsWith('#')) {
+                  window.location.hash = redirect
+                } else {
+                  window.location.hash = `#${redirect}`
+                }
+              }
+            } catch {}
             setLoading(false);
             return;
           }

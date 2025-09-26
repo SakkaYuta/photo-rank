@@ -5,11 +5,29 @@ import type { UserType } from '../types/user'
 export async function signInWithGoogle(userType: UserType = 'general') {
   // ログイン時に選択されたユーザータイプをローカルストレージに保存
   localStorage.setItem('pendingUserType', userType);
+  // 直前の画面へ戻すためのリダイレクト先（デフォルトはトップ）
+  try {
+    const current = window.location.hash && window.location.hash.length > 1 ? window.location.hash : '#merch'
+    localStorage.setItem('postLoginRedirect', current)
+  } catch {}
+
+  // /auth/callback に next パラメータで復帰先を明示（localStorageフォールバックも保持）
+  const next = (() => {
+    try {
+      const current = localStorage.getItem('postLoginRedirect') || '#merch'
+      return encodeURIComponent(current)
+    } catch { return encodeURIComponent('#merch') }
+  })()
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin
+      // Googleの"Continue to"に自ドメインを出すため、独自コールバックにリダイレクト
+      redirectTo: `${window.location.origin}/auth/callback?next=${next}`,
+      queryParams: {
+        prompt: 'select_account',
+        // scopes はデフォルトで十分（openid email profile）。必要なら拡張
+      }
     }
   })
   if (error) throw error

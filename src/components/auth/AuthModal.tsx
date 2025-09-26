@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { signInWithGoogle, signInWithDemo } from '../../services/auth.service';
 import { UserType } from '../../types/user';
 import { Users, Factory, Calendar, User } from 'lucide-react';
+import { useToast } from '@/contexts/ToastContext'
 
 export function AuthModal({ onClose }: { onClose: () => void }) {
   const [selectedUserType, setSelectedUserType] = useState<UserType>('general');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isSignUpMode, setIsSignUpMode] = useState(false);
+  const { showToast } = useToast();
 
   const userTypes = [
     {
@@ -42,10 +44,23 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
   const handleGoogleSignIn = async () => {
     setIsLoggingIn(true);
     try {
+      // 登録モードのフラグを保存（コールバックで扱う）
+      try {
+        if (isSignUpMode) localStorage.setItem('pendingSignUp', '1')
+        else localStorage.removeItem('pendingSignUp')
+      } catch {}
       await signInWithGoogle(selectedUserType);
-      onClose();
-    } catch (error) {
+      // Supabase によるリダイレクトが発生する想定のため、モーダルは開いたままスピナー表示
+      // 一定時間遷移しない場合のみ注意を表示
+      setTimeout(() => {
+        if (isLoggingIn) {
+          showToast({ variant: 'warning', message: '遷移中です。ポップアップ/リダイレクトがブロックされていないかご確認ください。' })
+        }
+      }, 5000)
+    } catch (error: any) {
       console.error('Login failed:', error);
+      const msg = error?.message || 'Googleログインに失敗しました。設定を確認して再試行してください。'
+      showToast({ variant: 'error', message: msg })
     } finally {
       setIsLoggingIn(false);
     }
