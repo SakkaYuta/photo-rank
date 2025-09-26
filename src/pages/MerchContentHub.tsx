@@ -10,6 +10,8 @@ import { navigate as navTo } from '@/utils/navigation'
 import type { Work } from '@/types'
 import { fetchTrendingProducts } from '@/services/productsService'
 import { allowedViews as ROUTES, ROUTES_META, type RoleKey } from '@/routes'
+import { resolveImageUrl } from '@/utils/imageFallback'
+import { defaultImages } from '@/utils/defaultImages'
 
 type FeaturedCreator = {
   id: string
@@ -42,10 +44,12 @@ const MerchContentHub: React.FC = () => {
   const CONTENT_PREFIX = (import.meta as any).env?.VITE_SAMPLE_CONTENT_PREFIX || 'samples/contents'
   const DEFAULT_CREATOR_PATH = (import.meta as any).env?.VITE_DEFAULT_CREATOR_IMAGE_PATH || 'defaults/creator.jpg'
   const DEFAULT_CONTENT_PATH = (import.meta as any).env?.VITE_DEFAULT_CONTENT_IMAGE_PATH || 'defaults/content.jpg'
+  const DEFAULT_AVATAR_PATH = (import.meta as any).env?.VITE_DEFAULT_AVATAR_IMAGE_PATH || 'defaults/avatar.jpg'
   const [sampleCreatorImages, setSampleCreatorImages] = useState<string[]>([])
   const [sampleContentImages, setSampleContentImages] = useState<string[]>([])
   const defaultCreatorUrl = supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(DEFAULT_CREATOR_PATH).data.publicUrl
   const defaultContentUrl = supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(DEFAULT_CONTENT_PATH).data.publicUrl
+  const defaultAvatarUrl = supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(DEFAULT_AVATAR_PATH).data.publicUrl
 
   useEffect(() => {
     (async () => {
@@ -727,7 +731,7 @@ const MerchContentHub: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {creators.map(c => (
               <a key={c.id} href={`#creator-profile?creator=${encodeURIComponent(c.id)}`} onClick={() => { try{localStorage.setItem('selected_creator_id', c.id)}catch{} }} className="rounded-xl border bg-white p-4 block hover:shadow transition-base">
-                <img src={resolveImageUrl(c.avatar, [supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(DEFAULT_AVATAR_PATH || 'defaults/avatar.jpg').data.publicUrl])} alt="" className="w-16 h-16 rounded-full mb-3" />
+                <img src={resolveImageUrl(c.avatar, [defaultImages.avatar])} alt="" className="w-16 h-16 rounded-full mb-3" />
                 <p className="font-semibold text-gray-900">{c.name}</p>
                 {c.tagline && <p className="text-sm text-gray-900 line-clamp-2">{c.tagline}</p>}
               </a>
@@ -745,7 +749,7 @@ const MerchContentHub: React.FC = () => {
             {battles.map(b => (
               <button key={b.id} onClick={() => { try{localStorage.setItem('battle_query', b.title)}catch{}; go('battle-search') }} className="rounded-xl border bg-white overflow-hidden text-left hover:shadow transition-base">
                 <div className="aspect-[3/1] bg-gray-100">
-                  {<img src={resolveImageUrl(b.banner, [defaultContentUrl])} className="w-full h-full object-cover" />}
+                  {<img src={resolveImageUrl(b.banner, [defaultImages.content])} className="w-full h-full object-cover" />}
                 </div>
                 <div className="p-4">
                   <p className="font-semibold text-gray-900">{b.title}</p>
@@ -772,7 +776,7 @@ const MerchContentHub: React.FC = () => {
                 {myEligible.map((w) => (
                   <div key={w.id} className="rounded-xl border bg-white overflow-hidden hover:shadow transition-base">
                     <div className="aspect-[4/3] bg-gray-100">
-                      <img src={resolveImageUrl((w as any).thumbnail_url || (w as any).image_url, [defaultContentUrl, defaultCreatorUrl])} className="w-full h-full object-cover" />
+                      <img src={resolveImageUrl((w as any).thumbnail_url || (w as any).image_url, [defaultImages.content, defaultImages.creator])} className="w-full h-full object-cover" />
                     </div>
                     <div className="p-3">
                       <p className="font-medium truncate">{w.title}</p>
