@@ -1,4 +1,5 @@
 import { supabase } from '@/services/supabaseClient';
+import { cache, cacheKeys, cacheTTL } from '@/utils/cache';
 
 export interface Product {
   id: string;
@@ -42,12 +43,25 @@ export interface ProductSortOptions {
 /**
  * 商品一覧を取得
  */
+// バッチクエリ管理
+const batchQueue = new Map<string, Promise<any>>();
+
 export async function fetchProducts(
   filters?: ProductFilters,
   sort?: ProductSortOptions,
   limit: number = 20,
   offset: number = 0
 ): Promise<{ products: Product[]; total: number }> {
+  // キャッシュキーを生成
+  const page = Math.floor(offset / limit);
+  const cacheKey = cacheKeys.products(filters, sort, page);
+
+  // キャッシュから確認
+  const cached = cache.get<{ products: Product[]; total: number }>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   try {
     // まずはワークテーブルから商品データを取得
     let query = supabase
@@ -160,10 +174,15 @@ export async function fetchProducts(
       product_types: work.product_types || ['standard']
     }));
 
-    return {
+    const result = {
       products,
       total: count || 0
     };
+
+    // 結果をキャッシュに保存（5分間）
+    cache.set(cacheKey, result, cacheTTL.medium);
+
+    return result;
   } catch (error) {
     console.error('Error fetching products:', error);
     // エラー時はモックデータを返す
@@ -177,7 +196,103 @@ export async function fetchProducts(
 /**
  * 特定の商品を取得
  */
+/**
+ * 複数の商品IDをバッチで取得（最適化）
+ */
+export async function fetchProductsByIds(productIds: string[]): Promise<Product[]> {
+  const cacheKey = `products_batch:${productIds.sort().join(',')}`;
+
+  // キャッシュから確認
+  const cached = cache.get<Product[]>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  // バッチクエリで一括取得
+  if (batchQueue.has(cacheKey)) {
+    return batchQueue.get(cacheKey)!;
+  }
+
+  const batchPromise = (async () => {
+    try {
+      const { data, error } = await supabase
+        .from('works')
+        .select(`
+          id, title, description, price, image_url, image_urls,
+          creator_id, category, view_count, like_count, sales_count,
+          rating, created_at, sale_start_at, sale_end_at, is_active,
+          stock_quantity, discount_percentage, product_types
+        `)
+        .in('id', productIds);
+
+      if (error) throw error;
+
+      const works = data || [];
+
+      // クリエイター情報をバッチで取得
+      const creatorIds = Array.from(new Set(works.map(w => w.creator_id).filter(Boolean)));
+      let profiles: Record<string, any> = {};
+
+      if (creatorIds.length > 0) {
+        const { data: upp } = await supabase
+          .from('user_public_profiles')
+          .select('id, display_name, avatar_url')
+          .in('id', creatorIds);
+
+        if (upp) {
+          profiles = Object.fromEntries(upp.map(p => [p.id, p]));
+        }
+      }
+
+      const products = works.map(work => ({
+        id: work.id,
+        title: work.title,
+        description: work.description || '',
+        price: work.price,
+        image_url: work.image_url,
+        image_urls: work.image_urls,
+        creator_id: work.creator_id,
+        creator_name: profiles[work.creator_id]?.display_name || '匿名クリエイター',
+        creator_avatar: profiles[work.creator_id]?.avatar_url,
+        category: work.category || 'other',
+        views: work.view_count || 0,
+        likes: work.like_count || 0,
+        sales: work.sales_count || 0,
+        rating: work.rating || 0,
+        created_at: work.created_at,
+        sale_start_at: work.sale_start_at,
+        sale_end_at: work.sale_end_at,
+        is_active: work.is_active,
+        is_trending: work.sales_count > 50,
+        discount_percentage: work.discount_percentage,
+        stock_quantity: work.stock_quantity || 100,
+        product_types: work.product_types || ['standard']
+      })) as Product[];
+
+      // キャッシュに保存
+      cache.set(cacheKey, products, cacheTTL.medium);
+
+      return products;
+    } catch (error) {
+      console.error('Error fetching products by IDs:', error);
+      return [];
+    } finally {
+      batchQueue.delete(cacheKey);
+    }
+  })();
+
+  batchQueue.set(cacheKey, batchPromise);
+  return batchPromise;
+}
+
 export async function fetchProductById(productId: string): Promise<Product | null> {
+  // キャッシュから確認
+  const cacheKey = cacheKeys.product(productId);
+  const cached = cache.get<Product>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   try {
     const { data, error } = await supabase
       .from('works')
@@ -245,6 +360,9 @@ export async function fetchProductById(productId: string): Promise<Product | nul
         base.creator_avatar = (upp as any).avatar_url || base.creator_avatar
       }
     } catch {}
+
+    // キャッシュに保存
+    cache.set(cacheKey, base, cacheTTL.medium);
 
     return base as Product;
   } catch (error) {
