@@ -598,7 +598,7 @@ const GoodsItemSelector: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold">グッズの詳細設定</h2>
+              <h2 className="text-xl font-bold text-black">グッズの詳細設定</h2>
               <button
                 onClick={() => setSelectedItem(null)}
                 className="text-gray-400 hover:text-gray-600"
@@ -645,7 +645,7 @@ const GoodsItemSelector: React.FC = () => {
                   )
                 })()}
                 <div className="flex-1">
-                  <h3 className="text-xl font-semibold mb-2">{selectedItem.name}</h3>
+                  <h3 className="text-xl font-semibold mb-2 text-black">{selectedItem.name}</h3>
                   <p className="text-gray-600 mb-4">{selectedItem.description}</p>
 
                   {/* 特徴 */}
@@ -665,22 +665,22 @@ const GoodsItemSelector: React.FC = () => {
                     {selectedItem.materials && (
                       <div>
                         <span className="text-gray-500">素材:</span>
-                        <span className="ml-2 font-medium">{selectedItem.materials}</span>
+                        <span className="ml-2 font-medium text-black">{selectedItem.materials}</span>
                       </div>
                     )}
                     {selectedItem.printArea && (
                       <div>
                         <span className="text-gray-500">印刷範囲:</span>
-                        <span className="ml-2 font-medium">{selectedItem.printArea}</span>
+                        <span className="ml-2 font-medium text-black">{selectedItem.printArea}</span>
                       </div>
                     )}
                     <div>
                       <span className="text-gray-500">製作期間:</span>
-                      <span className="ml-2 font-medium">{selectedItem.productionTime}</span>
+                      <span className="ml-2 font-medium text-black">{selectedItem.productionTime}</span>
                     </div>
                     <div>
                       <span className="text-gray-500">最小注文数:</span>
-                      <span className="ml-2 font-medium">{selectedItem.minOrder}個</span>
+                      <span className="ml-2 font-medium text-black">{selectedItem.minOrder}個</span>
                     </div>
                   </div>
                 </div>
@@ -752,7 +752,7 @@ const GoodsItemSelector: React.FC = () => {
                       type="number"
                       value={quantity}
                       onChange={(e) => setQuantity(Math.max(selectedItem.minOrder, parseInt(e.target.value) || selectedItem.minOrder))}
-                      className="w-20 px-3 py-2 border rounded-lg text-center"
+                      className="w-20 px-3 py-2 border rounded-lg text-center text-black"
                       min={selectedItem.minOrder}
                     />
                     <button
@@ -769,13 +769,13 @@ const GoodsItemSelector: React.FC = () => {
               <div className="border-t pt-4 mb-6">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-gray-600">単価</span>
-                  <span className="font-medium">
+                  <span className="font-medium text-black">
                     ¥{selectedItem.basePrice.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-gray-600">数量</span>
-                  <span className="font-medium">×{quantity}</span>
+                  <span className="font-medium text-black">×{quantity}</span>
                 </div>
                 {selectedItem.discountRate && (
                   <div className="flex items-center justify-between mb-2 text-green-600">
@@ -784,8 +784,8 @@ const GoodsItemSelector: React.FC = () => {
                   </div>
                 )}
                 <div className="flex items-center justify-between text-lg font-bold border-t pt-2">
-                  <span>合計</span>
-                  <span className="text-2xl text-purple-600">
+                  <span className="text-black">合計</span>
+                  <span className="text-2xl text-black">
                     ¥{calculatePrice().toLocaleString()}
                   </span>
                 </div>

@@ -53,7 +53,7 @@ const CreatorProfilePage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b">
         <div className="max-w-6xl mx-auto px-6 py-5">
-          <h1 className="text-2xl font-bold">クリエイターの作品</h1>
+          <h1 className="text-2xl font-bold text-black">クリエイターの作品</h1>
           {!creatorId && (
             <p className="text-sm text-gray-500 mt-2">
               クリエイターが選択されていません。<a href="#search" className="text-blue-600 hover:underline">クリエイター検索</a>から選んでください。
