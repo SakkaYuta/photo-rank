@@ -1057,7 +1057,7 @@ export function CreateWork() {
       )}
 
       {showConfirmModal && (
-        <Modal onClose={() => setShowConfirmModal(false)} title="公開前の最終確認">
+        <Modal isOpen={showConfirmModal} onClose={() => setShowConfirmModal(false)} title="公開前の最終確認">
           <ModalHeader>公開前の最終確認</ModalHeader>
           <ModalBody>
             <div className="space-y-4 text-sm">
