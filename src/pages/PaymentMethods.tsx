@@ -166,7 +166,7 @@ export function PaymentMethods() {
 
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-semibold text-gray-900 mb-2">Q: 領収書は発行されますか？</h4>
-                <p className="text-gray-700">A: ご注文完了後、メールにて電子領収書をお送りします。マイページからもダウンロード可能です。</p>
+                <p className="text-gray-700">A: ご注文完了後、Stripeから電子領収書（レシート）のメールが送信されます。サイトのマイページからのダウンロードはできません。</p>
               </div>
 
               <div className="bg-gray-50 p-4 rounded-lg">

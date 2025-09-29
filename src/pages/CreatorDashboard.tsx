@@ -10,8 +10,7 @@ import {
   DollarSign,
   Camera,
   TrendingUp,
-  ChevronDown,
-  Gamepad2
+  ChevronDown
 } from 'lucide-react';
 
 const CreatorDashboard: React.FC = () => {
@@ -385,25 +384,6 @@ const CreatorDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="p-4 sm:p-6 border-b">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">クイックアクション</h2>
-              </div>
-              <div className="p-4 sm:p-6 space-y-3">
-                <button onClick={goToCreate} className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-all duration-200 ease-in-out">
-                  <Upload className="w-5 h-5 text-blue-600" />
-                  <span className="truncate">新しい作品をアップロード</span>
-                </button>
-                <button
-                  className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-all duration-200 ease-in-out"
-                  onClick={() => navigate('battle-search')}
-                >
-                  <Gamepad2 className="w-5 h-5 text-purple-600" />
-                  <span className="truncate">バトルを探す</span>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>

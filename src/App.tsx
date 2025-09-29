@@ -53,6 +53,11 @@ import AccountSettings from './pages/AccountSettings'
 import ProductsMarketplace from './pages/ProductsMarketplace'
 import AuthCallbackGate from './components/auth/AuthCallbackGate'
 import GoodsItemSelector from './pages/GoodsItemSelector'
+import OrganizerSupport from './pages/organizer/OrganizerSupport'
+import LeaveRequest from './pages/organizer/LeaveRequest'
+import InvoiceSettings from './pages/organizer/InvoiceSettings'
+import OrganizerRevenue from './pages/organizer/RevenueManagement'
+import OrganizerGuidelines from './pages/organizer/OrganizerGuidelines'
 
 type ViewKey = typeof ROUTES[number]
 
@@ -395,6 +400,31 @@ function App() {
                     <h1 className="text-2xl font-bold mb-4">イベント管理</h1>
                     <p className="text-gray-600">イベント管理機能は開発中です。</p>
                   </div>
+                </PartialErrorBoundary>
+              )}
+              {view === 'organizer-revenue' && (
+                <PartialErrorBoundary name="売上管理">
+                  <OrganizerRevenue />
+                </PartialErrorBoundary>
+              )}
+              {view === 'organizer-support' && (
+                <PartialErrorBoundary name="オーガナイザー窓口">
+                  <OrganizerSupport />
+                </PartialErrorBoundary>
+              )}
+              {view === 'organizer-leave' && (
+                <PartialErrorBoundary name="所属解除申請">
+                  <LeaveRequest />
+                </PartialErrorBoundary>
+              )}
+              {view === 'organizer-invoice' && (
+                <PartialErrorBoundary name="インボイス設定">
+                  <InvoiceSettings />
+                </PartialErrorBoundary>
+              )}
+              {view === 'organizer-guidelines' && (
+                <PartialErrorBoundary name="規約・ガイドライン">
+                  <OrganizerGuidelines />
                 </PartialErrorBoundary>
               )}
               {view === 'contests' && (

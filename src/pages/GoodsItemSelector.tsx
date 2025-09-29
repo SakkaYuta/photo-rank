@@ -534,7 +534,7 @@ const GoodsItemSelector: React.FC = () => {
                 {/* 特徴 */}
                 <div className="flex flex-wrap gap-1 mb-3">
                   {item.features.slice(0, 3).map((feature, index) => (
-                    <span key={index} className="px-2 py-1 bg-gray-100 text-xs rounded-full">
+                    <span key={index} className="px-2 py-1 bg-gray-100 text-xs rounded-full text-gray-800">
                       {feature}
                     </span>
                   ))}

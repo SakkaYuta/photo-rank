@@ -10,6 +10,7 @@ import { joinOrganizerWithCode } from '@/services/organizerService'
 import { PayoutService } from '@/services/payout.service'
 import { IdentityService } from '@/services/identity.service'
 import { AccountExtraService } from '@/services/account-extra.service'
+import { supabase } from '@/services/supabaseClient'
 import { MfaService } from '@/services/mfa.service'
 
 type TabKey = 'account' | 'payout' | 'card' | 'address' | 'notifications' | '2fa'
@@ -70,6 +71,8 @@ function AccountPanel() {
   const [newEmail, setNewEmail] = useState('')
   const [profileImage, setProfileImage] = useState('')
   const [saving, setSaving] = useState(false)
+  const [isTaxable, setIsTaxable] = useState<boolean>(false)
+  const [invoiceNumber, setInvoiceNumber] = useState('')
   const [uploadingImage, setUploadingImage] = useState(false)
   // 追加フィールド
   const [newAccountName, setNewAccountName] = useState('')
@@ -112,6 +115,15 @@ function AccountPanel() {
             setProfileImage(savedImage)
           }
         } catch {}
+      } catch {}
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data } = await supabase.from('users').select('metadata').eq('id', user.id).maybeSingle()
+          const meta = (data as any)?.metadata || {}
+          if (typeof meta.is_taxable_business === 'boolean') setIsTaxable(Boolean(meta.is_taxable_business))
+          if (meta.invoice_registration_number) setInvoiceNumber(String(meta.invoice_registration_number))
+        }
       } catch {}
     })()
   }, [])
@@ -432,6 +444,14 @@ function PayoutPanel() {
         address1: person.address1,
         address2: person.address2,
       })
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data } = await supabase.from('users').select('metadata').eq('id', user.id).maybeSingle()
+          const metadata = { ...(data as any)?.metadata, is_taxable_business: isTaxable, invoice_registration_number: isTaxable ? (invoiceNumber || null) : null }
+          await supabase.from('users').update({ metadata }).eq('id', user.id)
+        }
+      } catch {}
       alert('保存しました')
     } catch {
       alert('保存に失敗しました')
@@ -498,6 +518,24 @@ function PayoutPanel() {
             <button className="btn btn-primary" disabled={disabled || saving}>{saving ? '保存中...' : '保存'}</button>
           </div>
         </form>
+      </div>
+
+      <div className="rounded-xl border bg-white p-6 space-y-3">
+        <h2 className="text-lg font-semibold text-gray-900">インボイス設定</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1">課税事業者</label>
+            <select className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900" value={isTaxable ? 'yes' : 'no'} onChange={e=>setIsTaxable(e.target.value=='yes')} disabled={disabled}>
+              <option value="no">免税事業者（インボイス未対応）</option>
+              <option value="yes">課税事業者（インボイス対応）</option>
+            </select>
+          </div>
+          <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">適格請求書発行事業者登録番号</label>
+              <input className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900" placeholder="T1234567890123" value={invoiceNumber} onChange={e=>setInvoiceNumber(e.target.value)} disabled={!isTaxable || disabled} />
+            </div>
+        </div>
+        <p className="text-xs text-gray-500">この設定は「インボイス設定」ページと共通です。</p>
       </div>
 
       <div className="rounded-xl border bg-white p-6 space-y-4">

@@ -248,9 +248,9 @@ const OrganizerDashboard: React.FC = () => {
               title: '売上管理', icon: DollarSign, onClick: () => import('@/utils/navigation').then(m => m.navigate('organizer-revenue'))
             },{
               title: '銀行口座設定', icon: DollarSign, onClick: () => import('@/utils/navigation').then(m => m.navigate('account-settings'))
-            },{
-              title: '規約・ガイドライン', icon: AlertCircle, onClick: () => import('@/utils/navigation').then(m => m.navigate('terms'))
-            },{
+          },{
+            title: '規約・ガイドライン', icon: AlertCircle, onClick: () => import('@/utils/navigation').then(m => m.navigate('organizer-guidelines'))
+          },{
               title: 'アカウント設定', icon: Users, onClick: () => import('@/utils/navigation').then(m => m.navigate('account-settings'))
             },{
               title: 'オーガナイザー窓口', icon: MessageSquare, onClick: () => import('@/utils/navigation').then(m => m.navigate('organizer-support'))
@@ -263,7 +263,7 @@ const OrganizerDashboard: React.FC = () => {
             <button key={i} onClick={a.onClick} className="bg-white p-4 rounded-lg shadow-sm border text-left hover:shadow transition">
               <div className="flex items-center gap-3">
                 <a.icon className="w-5 h-5 text-blue-600" />
-                <div className="font-medium text-gray-900">{a.title}</div>
+                <div className="font-bold text-black">{a.title}</div>
               </div>
             </button>
           ))}
