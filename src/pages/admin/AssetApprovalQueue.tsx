@@ -60,7 +60,7 @@ export const AssetApprovalQueue: React.FC = () => {
         {items.map(it => (
           <div key={it.id} className="rounded border p-3">
             <div className="text-sm text-gray-600">ID: {it.id}</div>
-            <div className="text-sm">URL: <a href={it.source_url} className="link" target="_blank" rel="noreferrer">{it.source_url}</a></div>
+            <div className="text-sm">URL: <a href={it.source_url} className="link" target="_blank" rel="noopener noreferrer">{it.source_url}</a></div>
             <div className="text-sm">提供元: {it.provider || '-'}</div>
             <div className="flex flex-wrap gap-2 mt-2 items-center">
               <button className="btn btn-success btn-sm" onClick={() => onApprove(it.id)} disabled={loading}>承認</button>
@@ -76,4 +76,3 @@ export const AssetApprovalQueue: React.FC = () => {
 }
 
 export default AssetApprovalQueue
-

@@ -79,7 +79,7 @@ const CartItemCard: React.FC<{
   showFactory?: boolean
 }> = ({ item, onUpdateQty, onRemove, showFactory = true }) => (
   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white rounded-lg border border-gray-200">
-    <div className="flex items-center gap-3 w-full sm:w-auto">
+      <div className="flex items-center gap-3 w-full sm:w-auto">
       {item.imageUrl && (
         <img
           src={item.imageUrl}
@@ -92,6 +92,13 @@ const CartItemCard: React.FC<{
         <h3 className="font-medium text-gray-900 text-sm sm:text-base line-clamp-2 break-words">
           {item.title}
         </h3>
+        {(item as any).variant && ((item as any).variant.size || (item as any).variant.color) && (
+          <div className="text-xs text-gray-500 mt-0.5">
+            {(item as any).variant.size && (<span>サイズ: {(item as any).variant.size}</span>)}
+            {((item as any).variant.size && (item as any).variant.color) && <span className="mx-1">/</span>}
+            {(item as any).variant.color && (<span>カラー: {(item as any).variant.color}</span>)}
+          </div>
+        )}
         <p className="text-xs sm:text-sm text-gray-600">
           {formatJPY(item.price)}
         </p>

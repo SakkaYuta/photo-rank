@@ -7,6 +7,10 @@ export type CartItem = {
   imageUrl?: string | null
   qty: number
   factoryId?: string | null
+  factoryProductId?: string | null
+  workId?: string | null
+  variant?: { size?: string; color?: string } | null
+  constraints?: { minOrder: number; maxOrder?: number } | null
 }
 
 type CartContextType = {

@@ -82,9 +82,86 @@ export async function createWork(payload: Partial<Work>): Promise<Work> {
     sampleCreatedWorks.unshift(w)
     return w
   }
+  // Map extended fields into top-level columns + metadata(JSONB)
+  const {
+    // top-level known columns
+    title,
+    description,
+    message,
+    creator_id,
+    price,
+    image_url,
+    category,
+    tags,
+    factory_id,
+    sale_start_at,
+    sale_end_at,
+    // UI-specific fields to be stored into metadata
+    // @ts-ignore - present from CreateWork form
+    content_url,
+    // @ts-ignore
+    images,
+    // @ts-ignore
+    enabled_families,
+    // @ts-ignore
+    creator_margin,
+    // @ts-ignore
+    ip_confirmed,
+    // @ts-ignore
+    policy_accepted,
+    // @ts-ignore
+    product_model_id,
+    // @ts-ignore
+    variants,
+    // @ts-ignore
+    product_specs,
+    // @ts-ignore
+    shipping_profile,
+    // @ts-ignore
+    print_surfaces,
+    // @ts-ignore
+    price_breakdown_preview,
+    // @ts-ignore (from UI: is_published)
+    is_published,
+    ...rest
+  } = (payload as any) || {}
+
+  const insertPayload: any = {
+    title,
+    description: description ?? message ?? null,
+    creator_id,
+    price,
+    image_url,
+    category,
+    tags,
+    factory_id,
+    sale_start_at: sale_start_at || null,
+    sale_end_at: sale_end_at || null,
+    // Map publish flag to existing column
+    is_active: typeof is_published === 'boolean' ? Boolean(is_published) : true,
+    // Merge extra fields into flexible metadata JSONB
+    metadata: {
+      ...(rest?.metadata || {}),
+      content_url: content_url || null,
+      images: images || [],
+      image_preview_storage_paths: (rest as any)?.image_preview_storage_paths || [],
+      image_original_storage_paths: (rest as any)?.image_original_storage_paths || [],
+      enabled_families: enabled_families || [],
+      creator_margin: creator_margin || null,
+      ip_confirmed: Boolean(ip_confirmed),
+      policy_accepted: Boolean(policy_accepted),
+      product_model_id: product_model_id || null,
+      variants: variants || null,
+      product_specs: product_specs || null,
+      shipping_profile: shipping_profile || null,
+      print_surfaces: print_surfaces || null,
+      price_breakdown_preview: price_breakdown_preview || null,
+    },
+  }
+
   const { data, error } = await supabase
     .from('works')
-    .insert(payload)
+    .insert(insertPayload)
     .select('*')
     .single()
   if (error) throw error

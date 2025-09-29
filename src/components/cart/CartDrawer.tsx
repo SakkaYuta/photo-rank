@@ -77,6 +77,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                 <img src={resolveImageByContext('cart-item', it.imageUrl)} alt="thumb" className="w-16 h-16 rounded object-cover" />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate jp-text text-gray-900 dark:text-white">{it.title}</div>
+                  {(it as any).variant && (((it as any).variant as any).size || ((it as any).variant as any).color) && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {((it as any).variant as any).size && (<span>サイズ: {((it as any).variant as any).size}</span>)}
+                      {((it as any).variant as any).size && ((it as any).variant as any).color && <span className="mx-1">/</span>}
+                      {((it as any).variant as any).color && (<span>カラー: {((it as any).variant as any).color}</span>)}
+                    </div>
+                  )}
                   <div className="text-sm text-gray-600 dark:text-gray-400">¥{(it.price * it.qty).toLocaleString()}（¥{it.price.toLocaleString()} × {it.qty}）</div>
                   <div className="mt-2 inline-flex items-center gap-2">
                     <button className="btn btn-outline" onClick={() => updateQty(it.id, Math.max(1, it.qty - 1))}><Minus className="w-4 h-4" /></button>

@@ -1,7 +1,62 @@
--- Ensure factory tables exist and align with app expectations
--- Safe, idempotent migration for factory_products schema + RLS write policies
+-- Consolidated app updates (idempotent):
+-- 1) manufacturing_partners.shipping_info (jsonb)
+-- 2) favorites unique index (user_id, work_id) + created_at
+-- 3) organizer_leave_requests table + RLS
+-- 4) factory_products schema & RLS adjustments
 
--- 1) Create manufacturing_partners if not exists (with owner_user_id)
+-- 1) Shipping info on manufacturing_partners
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'manufacturing_partners'
+      AND column_name = 'shipping_info'
+  ) THEN
+    ALTER TABLE public.manufacturing_partners ADD COLUMN shipping_info jsonb;
+  END IF;
+END $$;
+
+COMMENT ON COLUMN public.manufacturing_partners.shipping_info IS 'JSONB: method_title, per_order_note, carrier_name, fee_general_jpy, fee_okinawa_jpy, eta_text, cautions[], split_title, split_desc, split_cautions[]';
+
+-- 2) Favorites unique index + created_at
+DO $$ BEGIN
+  IF to_regclass('public.favorites') IS NOT NULL THEN
+    CREATE UNIQUE INDEX IF NOT EXISTS uniq_favorites_user_work
+      ON public.favorites(user_id, work_id);
+
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='favorites' AND column_name='created_at'
+    ) THEN
+      ALTER TABLE public.favorites ADD COLUMN created_at timestamptz DEFAULT now();
+    END IF;
+  END IF;
+END $$;
+
+-- 3) Organizer leave requests
+CREATE TABLE IF NOT EXISTS public.organizer_leave_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organizer_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  creator_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  reason text,
+  effective_date date,
+  status text DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','cancelled')),
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.organizer_leave_requests ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS olr_organizer_rw ON public.organizer_leave_requests;
+CREATE POLICY olr_organizer_rw ON public.organizer_leave_requests
+  FOR ALL USING (organizer_id = auth.uid()) WITH CHECK (organizer_id = auth.uid());
+
+DROP POLICY IF EXISTS olr_admin_all ON public.organizer_leave_requests;
+CREATE POLICY olr_admin_all ON public.organizer_leave_requests
+  FOR ALL USING ((current_setting('request.jwt.claims', true)::jsonb ->> 'role') = 'service_role');
+
+COMMENT ON TABLE public.organizer_leave_requests IS 'Organizer-initiated requests to remove a creator; default effective at month-end.';
+
+-- 4) Factory products schema & RLS
 CREATE TABLE IF NOT EXISTS public.manufacturing_partners (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_user_id uuid REFERENCES public.users(id),
@@ -20,7 +75,6 @@ CREATE TABLE IF NOT EXISTS public.manufacturing_partners (
   updated_at timestamptz DEFAULT now()
 );
 
--- Ensure owner_user_id column exists if table was created elsewhere
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns 
@@ -30,7 +84,6 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- 2) Create factory_products if not exists with required columns
 CREATE TABLE IF NOT EXISTS public.factory_products (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   partner_id uuid NOT NULL REFERENCES public.manufacturing_partners(id) ON DELETE CASCADE,
@@ -45,45 +98,24 @@ CREATE TABLE IF NOT EXISTS public.factory_products (
   updated_at timestamptz DEFAULT now()
 );
 
--- 3) Evolve older schemas to new columns
 DO $$ BEGIN
-  -- Add columns if missing
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_schema='public' AND table_name='factory_products' AND column_name='minimum_quantity'
-  ) THEN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='factory_products' AND column_name='minimum_quantity') THEN
     ALTER TABLE public.factory_products ADD COLUMN minimum_quantity integer DEFAULT 1;
   END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_schema='public' AND table_name='factory_products' AND column_name='maximum_quantity'
-  ) THEN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='factory_products' AND column_name='maximum_quantity') THEN
     ALTER TABLE public.factory_products ADD COLUMN maximum_quantity integer DEFAULT 1000;
   END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_schema='public' AND table_name='factory_products' AND column_name='options'
-  ) THEN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='factory_products' AND column_name='options') THEN
     ALTER TABLE public.factory_products ADD COLUMN options jsonb;
   END IF;
-
-  -- Backfill from legacy min_order_qty if present
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_schema='public' AND table_name='factory_products' AND column_name='min_order_qty'
-  ) THEN
-    UPDATE public.factory_products
-    SET minimum_quantity = GREATEST(COALESCE(min_order_qty, 1), 1)
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='factory_products' AND column_name='min_order_qty') THEN
+    UPDATE public.factory_products SET minimum_quantity = GREATEST(COALESCE(min_order_qty, 1), 1)
     WHERE (minimum_quantity IS NULL OR minimum_quantity < 1);
   END IF;
 END $$;
 
--- 4) Useful indexes
 CREATE INDEX IF NOT EXISTS idx_factory_products_partner_active ON public.factory_products(partner_id, is_active);
 
--- 5) updated_at trigger (shared function may already exist; ensure presence)
 CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS trigger AS $$
 BEGIN
@@ -99,11 +131,9 @@ DROP TRIGGER IF EXISTS trg_manufacturing_partners_updated ON public.manufacturin
 CREATE TRIGGER trg_manufacturing_partners_updated BEFORE UPDATE ON public.manufacturing_partners
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
--- 6) RLS: enable and add owner write policies (read policies defined elsewhere remain)
 ALTER TABLE public.factory_products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.manufacturing_partners ENABLE ROW LEVEL SECURITY;
 
--- Allow partner owners to manage their own products
 DROP POLICY IF EXISTS factory_products_owner_manage ON public.factory_products;
 CREATE POLICY factory_products_owner_manage ON public.factory_products
   FOR ALL USING (
@@ -120,7 +150,6 @@ CREATE POLICY factory_products_owner_manage ON public.factory_products
     )
   );
 
--- Optional: keep a permissive public SELECT (adjust in security hardening phase)
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'factory_products' AND policyname = 'factory_products_public_select'
@@ -129,7 +158,6 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- Mark
 COMMENT ON TABLE public.factory_products IS 'Factory products for partner listings (options jsonb holds merch attributes)';
 COMMENT ON COLUMN public.factory_products.options IS 'JSONB: display_name, category, description, image_url, production_time, sizes[], colors[], materials, print_area, features[], is_recommended, discount_rate';
 

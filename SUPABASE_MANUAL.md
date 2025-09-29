@@ -164,6 +164,32 @@ LEFT JOIN public.users uu ON uu.id = p.user_id;
 --   FOR SELECT USING (partner_id = auth.jwt() ->> 'partner_id');
 ```
 
+## 🔐 セキュリティ運用（RLS/Storage）
+
+### RLS/ストレージポリシーの適用
+
+Supabase SQL Editor で `db/security_policies.sql` を実行してください。主な内容は以下です。
+
+- works テーブル
+  - RLS 有効化
+  - SELECT: 公開作品 or 自分の作品のみ
+  - INSERT: `creator_id = auth.uid()` のみ、かつ `is_active` は false のみ許可（公開は承認フロー側で）
+  - UPDATE: 自分の作品のみ。`is_active = true` への変更は禁止（モデレータ用ポリシーは別途）
+  - CHECK 制約: `sale_end_at <= sale_start_at + 365 days`
+
+- storage.objects（user-content バケット想定）
+  - Private バケットを前提
+  - INSERT/SELECT: `uploads/works/{uid}/...` の prefix のみ許可
+
+### 画像アップロードのフロー
+
+1. 一時領域にアップロード
+2. Edge Function `process-uploaded-image` でサニタイズ/透かし処理
+3. プレビューは署名付きURLで 1 時間など短期配信
+
+クライアント側でも MIME/サイズ（例: 10MB 以下）を検査していますが、最終的な検証は Edge Function 側で実施してください。
+
+
 ### 3. プロフィール機能テーブル追加
 ```sql
 -- 2. Profile Tables Migration (20240118_add_profile_tables.sql)

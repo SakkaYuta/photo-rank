@@ -10,10 +10,10 @@ import { defaultImages } from '@/utils/defaultImages'
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal'
 import { getManufacturingPartners } from '@/services/factory.service'
 import { getPartnerProducts } from '@/services/partner.service'
+import { processUploadedWorkImage } from '@/services/uploadPipeline.service'
 import type { ManufacturingPartner, FactoryProduct } from '@/types/partner.types'
 import { supabase } from '../../services/supabaseClient'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
-import { processUploadedWorkImage } from '@/services/uploadPipeline.service'
 
 export function CreateWork() {
   const [step, setStep] = useState<1 | 2 | 3>(1)
@@ -103,6 +103,9 @@ export function CreateWork() {
 
   // ===== 工場カタログ・製品の接続 =====
   const [partners, setPartners] = useState<ManufacturingPartner[]>([])
+  // ストレージパスの保持（メタデータ保存用）
+  const [imagePreviewStoragePaths, setImagePreviewStoragePaths] = useState<string[]>([])
+  const [imageOriginalStoragePaths, setImageOriginalStoragePaths] = useState<string[]>([])
   const [partnerProducts, setPartnerProducts] = useState<FactoryProduct[]>([])
   const [partnerCategoryMap, setPartnerCategoryMap] = useState<Record<string, string[]>>({})
   const [showConfirmModal, setShowConfirmModal] = useState(false)
@@ -203,7 +206,7 @@ export function CreateWork() {
 
   const titleLimit = 30
   const descLimit = 200
-  const UPLOAD_BUCKET = (import.meta as any).env?.VITE_UPLOAD_BUCKET || (import.meta as any).env?.VITE_SAMPLE_BUCKET || 'user-content'
+  const UPLOAD_BUCKET = 'user-content'
   const toDateInputValue = (d: Date) => {
     const pad = (n: number) => String(n).padStart(2, '0')
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
@@ -288,6 +291,9 @@ export function CreateWork() {
         tags,
         content_url: null,
         images: [imgUrl],
+        // ストレージ内のオリジナル/プレビューパスをメタデータとして保持
+        image_preview_storage_paths: imagePreviewStoragePaths,
+        image_original_storage_paths: imageOriginalStoragePaths,
         enabled_families: enabledFamilies, // 従来の互換：カテゴリキー配列
         enabled_categories: enabledFamilies,
         enabled_product_types: enabledProductTypes,
@@ -323,6 +329,8 @@ export function CreateWork() {
       setEnabledFamilies([])
       setIpConfirmed(false)
       setPolicyAccepted(false)
+      setImagePreviewStoragePaths([])
+      setImageOriginalStoragePaths([])
       setFactoryId('')
       setProductModelId('')
       setSizeOptions('')
@@ -571,24 +579,32 @@ export function CreateWork() {
                 const { data: { user } } = await supabase.auth.getUser()
                 if (!user || !requireAuth()) throw new Error('ログインが必要です')
                 const secureUploads: string[] = []
+                const previewPaths: string[] = []
+                const originalPaths: string[] = []
                 for (const file of pick) {
                   // Step 1: Upload to temporary location
                   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
-                  const tempPath = `uploads/works/${user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+                  const tempPath = `uploads/works/${user.id}/${crypto.getRandomValues(new Uint32Array(4)).join('')}.${ext}`
                   const { error: upErr } = await supabase.storage.from(UPLOAD_BUCKET).upload(tempPath, file, { upsert: false, cacheControl: '3600' })
                   if (upErr) throw upErr
 
                   // Step 2: Process through secure pipeline (sanitize + watermark)
-                  const result = await processUploadedWorkImage(tempPath)
-                  if (!result.ok || !result.preview?.path) {
+                  const result = await processUploadedWorkImage(tempPath, UPLOAD_BUCKET)
+                  if (!result.ok || !result.preview?.signedUrl) {
                     throw new Error(result.error || 'セキュア処理に失敗しました')
                   }
 
-                  // Step 3: Use watermarked preview URL for display
-                  const { data } = supabase.storage.from(result.preview.bucket).getPublicUrl(result.preview.path)
-                  secureUploads.push(data.publicUrl)
+                  // Step 3: Use signed preview URL directly from Edge Function
+                  secureUploads.push(result.preview.signedUrl)
+                  previewPaths.push(`${result.preview.bucket}/${result.preview.path}`)
+                  if (result.original?.bucket && result.original.path) {
+                    originalPaths.push(`${result.original.bucket}/${result.original.path}`)
+                  }
                 }
                 setImages(prev => [...prev, ...secureUploads])
+                // ストレージ内パスも保持（作品メタデータ用）
+                setImagePreviewStoragePaths(prev => [...prev, ...previewPaths])
+                setImageOriginalStoragePaths(prev => [...prev, ...originalPaths])
               } catch (err: any) {
                 setMessage(err?.message || '画像のアップロードに失敗しました')
                 showToast({ message: err?.message || '画像のアップロードに失敗しました', variant: 'error' })
@@ -626,7 +642,11 @@ export function CreateWork() {
                 type="button"
                 aria-label="画像を削除"
                 className="absolute top-1 right-1 bg-white/90 hover:bg-white text-gray-700 border border-gray-200 rounded-full p-1 shadow"
-                onClick={() => setImages(images.filter((_, i) => i !== idx))}
+                onClick={() => {
+                  setImages(images.filter((_, i) => i !== idx))
+                  setImagePreviewStoragePaths(imagePreviewStoragePaths.filter((_, i) => i !== idx))
+                  setImageOriginalStoragePaths(imageOriginalStoragePaths.filter((_, i) => i !== idx))
+                }}
               >
                 ×
               </button>

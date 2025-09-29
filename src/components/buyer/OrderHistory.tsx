@@ -233,7 +233,7 @@ export function OrderHistory() {
                       className="btn btn-primary btn-sm"
                       onClick={() => {
                         const url = getTrackingUrl(selectedOrder)
-                        if (url) window.open(url, '_blank')
+                        if (url) window.open(url, '_blank', 'noopener,noreferrer')
                       }}
                     >
                       配送状況を確認
