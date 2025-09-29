@@ -500,7 +500,11 @@ const GoodsItemSelector: React.FC = () => {
                   showToast({ message: 'これ以上進めるには会員ログインが必要です', variant: 'warning' })
                   return
                 }
+                // 別アイテムを選択した際に、前の選択状態（数量・サイズ・カラー）を引き継がないように初期化
                 setSelectedItem(item)
+                setQuantity(Math.max(item.minOrder || 1, 1))
+                setSelectedSize('')
+                setSelectedColor('')
               }}
             >
               {/* バッジ */}
@@ -744,7 +748,7 @@ const GoodsItemSelector: React.FC = () => {
                   <div className="flex items-center gap-4">
                     <button
                       onClick={() => setQuantity(Math.max(selectedItem.minOrder, quantity - 1))}
-                      className="w-10 h-10 border rounded-lg hover:bg-gray-50"
+                      className="w-10 h-10 border-2 border-gray-400 bg-white rounded-lg hover:bg-gray-100 text-black font-medium"
                     >
                       −
                     </button>
@@ -752,12 +756,12 @@ const GoodsItemSelector: React.FC = () => {
                       type="number"
                       value={quantity}
                       onChange={(e) => setQuantity(Math.max(selectedItem.minOrder, parseInt(e.target.value) || selectedItem.minOrder))}
-                      className="w-20 px-3 py-2 border rounded-lg text-center text-black"
+                      className="w-20 px-3 py-2 border-2 border-gray-400 bg-white rounded-lg text-center text-black focus:border-blue-500 focus:outline-none"
                       min={selectedItem.minOrder}
                     />
                     <button
                       onClick={() => setQuantity(quantity + 1)}
-                      className="w-10 h-10 border rounded-lg hover:bg-gray-50"
+                      className="w-10 h-10 border-2 border-gray-400 bg-white rounded-lg hover:bg-gray-100 text-black font-medium"
                     >
                       +
                     </button>
