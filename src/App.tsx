@@ -36,6 +36,10 @@ import { Terms } from './pages/legal/Terms'
 import { Privacy } from './pages/legal/Privacy'
 import { RefundPolicy } from './pages/legal/RefundPolicy'
 import { CommerceAct } from './pages/legal/CommerceAct'
+import { PaymentMethods } from './pages/PaymentMethods'
+import { Receipt } from './pages/Receipt'
+import { Refunds } from './pages/Refunds'
+import { FAQ } from './pages/FAQ'
 import GeneralDashboard from './pages/GeneralDashboard'
 import CreatorDashboard from './pages/CreatorDashboard'
 import FactoryDashboard from './pages/FactoryDashboard'
@@ -363,6 +367,26 @@ function App() {
               {view === 'commerce' && (
                 <PartialErrorBoundary name="特定商取引法に基づく表示">
                   <CommerceAct />
+                </PartialErrorBoundary>
+              )}
+              {view === 'payment-methods' && (
+                <PartialErrorBoundary name="お支払い方法">
+                  <PaymentMethods />
+                </PartialErrorBoundary>
+              )}
+              {view === 'receipt' && (
+                <PartialErrorBoundary name="領収書発行">
+                  <Receipt />
+                </PartialErrorBoundary>
+              )}
+              {view === 'faq' && (
+                <PartialErrorBoundary name="よくある質問">
+                  <FAQ />
+                </PartialErrorBoundary>
+              )}
+              {view === 'refunds' && (
+                <PartialErrorBoundary name="返品・交換">
+                  <Refunds />
                 </PartialErrorBoundary>
               )}
               {view === 'events' && (

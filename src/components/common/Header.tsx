@@ -23,6 +23,7 @@ export function Header({ currentView }: HeaderProps = {}) {
     setMobileMenuOpen(false)
   }
 
+
   // PhotoRankロゴ（ヘッダー左）をタップしたら常にPhotoRankページ（merch）へ
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -44,6 +45,7 @@ export function Header({ currentView }: HeaderProps = {}) {
         >
           {APP_NAME}
         </a>
+
 
         {/* デスクトップメニュー */}
         <div className="hidden md:flex items-center gap-3 flex-shrink-0 overflow-visible">
@@ -93,6 +95,7 @@ export function Header({ currentView }: HeaderProps = {}) {
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-gray-200 bg-white">
           <div className="px-4 py-3 space-y-3">
+
             {user && (
               <div className="pb-3 border-b border-gray-200">
                 <RoleSwitcher />

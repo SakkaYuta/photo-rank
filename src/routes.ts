@@ -1,6 +1,6 @@
 // Central route registry to ease Router migration
 export const allowedViews = [
-  'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','battle-search','creator-profile','live-battle','account-settings','products-marketplace','goods-item-selector','creator-goods'
+  'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','battle-search','creator-profile','live-battle','account-settings','products-marketplace','goods-item-selector','creator-goods','payment-methods','receipt','faq'
 ] as const
 
 export type ViewKey = typeof allowedViews[number]
@@ -36,6 +36,9 @@ export const ROUTES_META: Record<ViewKey, RouteMeta> = {
   'privacy': {},
   'refunds': {},
   'commerce': {},
+  'payment-methods': {},
+  'receipt': {},
+  'faq': { title: 'よくある質問', showInNav: false, icon: 'HelpCircle' },
 
   // Auth-required general
   'cart': { requireAuth: true },
@@ -71,7 +74,7 @@ export const ROUTES_META: Record<ViewKey, RouteMeta> = {
   'goods-item-selector': { requireAuth: false },
 
   // Generic dashboards
-  'general-dashboard': { title: 'ダッシュボード', showInNav: true, navOrder: 15, icon: 'LayoutDashboard' },
+  'general-dashboard': { requireAuth: true, title: 'ダッシュボード', showInNav: true, navOrder: 15, icon: 'LayoutDashboard' },
   'creator-profile': {},
 }
 
