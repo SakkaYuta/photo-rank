@@ -41,6 +41,11 @@ export function useOptimizedData<T>(
     onSuccess
   } = options;
 
+  // 同一キーへの重複フェッチを合流させる（コンポーネント間での同時要求を1本化）
+  // モジュールスコープで共有
+  const inflightRef = (useOptimizedData as any)._inflight || new Map<string, Promise<any>>();
+  ;(useOptimizedData as any)._inflight = inflightRef;
+
   // データ取得関数
   const fetchData = useCallback(async (forceRefresh = false) => {
     if (!enabled) return;
@@ -65,7 +70,12 @@ export function useOptimizedData<T>(
     setError(null);
 
     try {
-      const result = await fetcher();
+      let p = inflightRef.get(cacheKey) as Promise<T> | undefined
+      if (!p) {
+        p = fetcher();
+        inflightRef.set(cacheKey, p);
+      }
+      const result = await p;
 
       if (!mountedRef.current) return;
 
@@ -84,6 +94,7 @@ export function useOptimizedData<T>(
       if (mountedRef.current) {
         setLoading(false);
       }
+      inflightRef.delete(cacheKey)
     }
   }, [fetcher, cacheKey, ttl, enabled, onError, onSuccess]);
 
