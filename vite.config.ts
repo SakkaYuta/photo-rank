@@ -9,6 +9,10 @@ export default defineConfig({
     port: 3000,
     open: false,
     host: true,
+    hmr: {
+      clientPort: 3000,
+      protocol: 'ws',
+    },
   },
   preview: {
     port: 3000,
