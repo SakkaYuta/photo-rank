@@ -1,32 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUserRole } from '../hooks/useUserRole';
 import { useNav } from '@/contexts/NavContext';
 import { fetchCreatorDashboard, CreatorDashboardData, updateWorkStatus } from '../services/creatorService';
 import {
   Upload,
-  BarChart3,
   Eye,
   Heart,
   ShoppingCart,
   DollarSign,
   Camera,
-  Users,
   TrendingUp,
-  Star,
   ChevronDown,
-  Gamepad2,
-  Home,
-  Store,
-  LayoutDashboard,
-  Building2,
-  Calendar,
-  Trophy,
-  Shield,
-  PlusSquare,
-  Images,
-  Package
+  Gamepad2
 } from 'lucide-react';
-import { allowedViews as ROUTES, ROUTES_META, type RoleKey } from '@/routes';
 
 const CreatorDashboard: React.FC = () => {
   const { userProfile, user, userType } = useUserRole();
@@ -38,42 +24,6 @@ const CreatorDashboard: React.FC = () => {
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [pendingStatusChanges, setPendingStatusChanges] = useState<Map<string, boolean>>(new Map());
   const [hasChanges, setHasChanges] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null as HTMLDivElement | null);
-
-  // メニュー用ナビゲーション項目の構築（Navigation.tsx と同等）
-  type NavItem = { key: string; label: string }
-  const viewOverride = typeof window !== 'undefined' ? localStorage.getItem('view_override') : null
-  const effectiveType = viewOverride === 'general' ? 'general' : (userType || 'general')
-  let role: RoleKey = (effectiveType as RoleKey) || 'general'
-
-  const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-    Home, Store, LayoutDashboard, Users, Building2, Calendar, Trophy, Shield, PlusSquare, Images, Gamepad2, Heart, Package
-  }
-
-  const items: NavItem[] = (ROUTES as readonly string[])
-    .filter((key) => {
-      const meta = ROUTES_META[key as keyof typeof ROUTES_META]
-      if (!meta?.showInNav) return false
-      if (meta.requireAuth && !userProfile) return false
-      if (meta.roles && !meta.roles.includes(role)) return false
-      return true
-    })
-    .map((key) => ({ key, label: ROUTES_META[key as keyof typeof ROUTES_META]?.title || key }))
-    .sort((a, b) => {
-      const ao = ROUTES_META[a.key as keyof typeof ROUTES_META]?.navOrder ?? 999
-      const bo = ROUTES_META[b.key as keyof typeof ROUTES_META]?.navOrder ?? 999
-      return ao - bo
-    })
-
-  const dedupedItems: NavItem[] = []
-  const seen = new Set<string>()
-  for (const it of items) {
-    if (!seen.has(it.key)) {
-      dedupedItems.push(it)
-      seen.add(it.key)
-    }
-  }
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -109,18 +59,6 @@ const CreatorDashboard: React.FC = () => {
       return () => document.removeEventListener('click', handleClickOutside);
     }
   }, [statusDropdown]);
-
-  // メニューの外側クリック・Escで閉じる
-  useEffect(() => {
-    const onClick = (e: MouseEvent) => {
-      if (!menuRef.current) return
-      if (!menuRef.current.contains(e.target as Node)) setMenuOpen(false)
-    }
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false) }
-    document.addEventListener('click', onClick)
-    document.addEventListener('keydown', onKey)
-    return () => { document.removeEventListener('click', onClick); document.removeEventListener('keydown', onKey) }
-  }, [])
 
   const goToCreate = () => {
     import('@/utils/navigation').then(m => m.navigate('create'))
@@ -183,16 +121,16 @@ const CreatorDashboard: React.FC = () => {
   };
 
   return (
-    <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4">
+    <div className="min-h-screen bg-gray-50">
+      {/* Creator Welcome Section */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
                 クリエイターダッシュボード
               </h1>
-              <p className="text-gray-600">
+              <p className="text-sm lg:text-base text-gray-600">
                 こんにちは、{userProfile?.display_name}さん
               </p>
             </div>
@@ -201,62 +139,33 @@ const CreatorDashboard: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={cancelChanges}
-                    className="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm"
+                    className="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm transition-all duration-200 ease-in-out"
                   >
                     キャンセル
                   </button>
                   <button
                     onClick={saveAllChanges}
                     disabled={updatingStatus === 'all'}
-                    className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm flex items-center gap-1"
+                    className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm flex items-center gap-1 transition-all duration-200 ease-in-out"
                   >
                     {updatingStatus === 'all' ? '保存中...' : '変更を保存'}
                   </button>
                 </div>
               )}
-              <button onClick={goToCreate} className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 whitespace-nowrap text-sm sm:text-base">
+              <button
+                onClick={goToCreate}
+                className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 whitespace-nowrap text-sm sm:text-base transition-all duration-200 ease-in-out"
+              >
                 <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="hidden sm:inline">新しい作品をアップロード</span>
                 <span className="sm:hidden">作品投稿</span>
               </button>
-              <div className="relative" ref={menuRef}>
-                <button
-                  onClick={() => setMenuOpen(v => !v)}
-                  className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm text-gray-900"
-                  aria-haspopup="menu"
-                  aria-expanded={menuOpen}
-                  title="メニュー"
-                >
-                  メニュー
-                </button>
-                {menuOpen && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-lg border bg-white shadow-lg z-20">
-                    <ul className="py-2 max-h-[70vh] overflow-y-auto">
-                      {dedupedItems.map((it) => (
-                        <li key={it.key}>
-                          <button
-                            className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors text-gray-900 hover:bg-gray-50`}
-                            onClick={() => { navigate(it.key); setMenuOpen(false) }}
-                          >
-                            {(() => {
-                              const iconKey = ROUTES_META[it.key as keyof typeof ROUTES_META]?.icon
-                              const IconComp = iconKey ? iconMap[iconKey] : undefined
-                              return IconComp ? <IconComp className="w-4 h-4" /> : null
-                            })()}
-                            <span className="truncate">{it.label}</span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+      <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
         {/* Stats Overview */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {loading ? (
@@ -277,7 +186,7 @@ const CreatorDashboard: React.FC = () => {
             </div>
           ) : (
             <>
-              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
+              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-gray-600">総作品数</h3>
                   <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
@@ -286,7 +195,7 @@ const CreatorDashboard: React.FC = () => {
                 <p className="text-sm text-green-600">+{dashboardData?.stats.monthlyGrowth.works || 0} 今月</p>
               </div>
 
-              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
+              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-gray-600">総売上</h3>
                   <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
@@ -295,7 +204,7 @@ const CreatorDashboard: React.FC = () => {
                 <p className="text-sm text-green-600">+¥{dashboardData?.stats.monthlyGrowth.revenue.toLocaleString() || 0} 今月</p>
               </div>
 
-              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
+              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-gray-600">合計ビュー</h3>
                   <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
@@ -304,7 +213,7 @@ const CreatorDashboard: React.FC = () => {
                 <p className="text-sm text-green-600">+{dashboardData?.stats.monthlyGrowth.views.toLocaleString() || 0} 今月</p>
               </div>
 
-              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
+              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-gray-600">総販売数</h3>
                   <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
@@ -316,12 +225,12 @@ const CreatorDashboard: React.FC = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Recent Works */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-sm">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="p-4 sm:p-6 border-b">
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">最近の作品</h2>
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">最近の作品</h2>
               </div>
               <div className="p-4 sm:p-6">
                 <div className="space-y-4">
@@ -462,9 +371,9 @@ const CreatorDashboard: React.FC = () => {
           {/* Performance Chart & Quick Actions */}
           <div className="space-y-6">
             {/* Performance Chart */}
-            <div className="bg-white rounded-lg shadow-sm">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="p-4 sm:p-6 border-b">
-                <h2 className="text-lg font-semibold text-gray-900">パフォーマンス</h2>
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">パフォーマンス</h2>
               </div>
               <div className="p-4 sm:p-6">
                 <div className="h-48 flex items-center justify-center bg-gray-50 rounded-lg">
@@ -477,17 +386,17 @@ const CreatorDashboard: React.FC = () => {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-white rounded-lg shadow-sm">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="p-4 sm:p-6 border-b">
-                <h2 className="text-lg font-semibold text-gray-900">クイックアクション</h2>
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">クイックアクション</h2>
               </div>
-              <div className="p-6 space-y-3">
-                <button onClick={goToCreate} className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg">
+              <div className="p-4 sm:p-6 space-y-3">
+                <button onClick={goToCreate} className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-all duration-200 ease-in-out">
                   <Upload className="w-5 h-5 text-blue-600" />
                   <span className="truncate">新しい作品をアップロード</span>
                 </button>
                 <button
-                  className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg"
+                  className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-all duration-200 ease-in-out"
                   onClick={() => navigate('battle-search')}
                 >
                   <Gamepad2 className="w-5 h-5 text-purple-600" />

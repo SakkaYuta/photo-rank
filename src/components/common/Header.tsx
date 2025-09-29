@@ -76,7 +76,9 @@ export function Header({ currentView }: HeaderProps = {}) {
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            aria-label="メニューを開く"
+            aria-label="メニュー"
+            title="メニュー"
+            data-testid="hamburger-menu"
           >
             {mobileMenuOpen ? (
               <X className="w-6 h-6 text-gray-600" />

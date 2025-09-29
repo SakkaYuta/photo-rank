@@ -42,7 +42,11 @@ test.describe('Smoke Tests', () => {
     // Check if mobile menu button or PhotoRank header is visible on small screens
     const mobileMenuButton = page.locator('button[aria-label="メニューを開く"]');
     const photoRankHeader = page.getByRole('link', { name: 'ホームへ' });
-    await expect(mobileMenuButton.or(photoRankHeader)).toBeVisible();
+
+    // Check if either element is visible (use conditional check instead of .or())
+    const isMobileMenuVisible = await mobileMenuButton.isVisible();
+    const isPhotoRankVisible = await photoRankHeader.isVisible();
+    expect(isMobileMenuVisible || isPhotoRankVisible).toBe(true);
   });
 
   test('should load without JavaScript errors', async ({ page }) => {

@@ -80,20 +80,33 @@ export const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 dark:bg-gray-950">
-      <div className="mx-auto max-w-7xl">
-        <h1 className="mb-6 sm:mb-8 text-xl sm:text-3xl font-bold">管理ダッシュボード</h1>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      {/* Admin Welcome Section */}
+      <div className="bg-white shadow-sm border-b border-gray-200 dark:bg-gray-900 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
+              管理ダッシュボード
+            </h1>
+            <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400">
+              システム全体の状況を監視できます
+            </p>
+          </div>
+        </div>
+      </div>
 
-        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+
+        <div className="mb-6 sm:mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <MetricCard title="本日の売上" value={metrics?.todayRevenue || 0} prefix="¥" trend="up" change={12} />
           <MetricCard title="決済成功率" value={metrics?.successRate || 0} suffix="%" trend={(metrics?.successRate || 0) > 95 ? 'up' : 'down'} />
           <MetricCard title="期限切れロック" value={metrics?.expiredLocks || 0} suffix="件" trend={(metrics?.expiredLocks || 0) === 0 ? 'neutral' : 'down'} />
           <MetricCard title="エラー数" value={metrics?.recentErrors?.length || 0} suffix="件" trend={(metrics?.recentErrors?.length || 0) === 0 ? 'neutral' : 'down'} />
         </div>
 
-        <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-900 lg:col-span-2">
-            <h3 className="mb-4 text-lg font-semibold">売上推移（7日間）</h3>
+        <div className="mb-6 sm:mb-8 grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
+          <div className="rounded-lg bg-white p-4 sm:p-6 shadow-sm border border-gray-200 dark:bg-gray-900 dark:border-gray-800 lg:col-span-2">
+            <h3 className="mb-4 text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">売上推移（7日間）</h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={revenueData}>
                 <CartesianGrid strokeDasharray="3 3" />
