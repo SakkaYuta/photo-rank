@@ -10,7 +10,11 @@ import {
   DollarSign,
   Camera,
   TrendingUp,
-  ChevronDown
+  ChevronDown,
+  Menu,
+  X,
+  Home,
+  Search
 } from 'lucide-react';
 
 const CreatorDashboard: React.FC = () => {
@@ -23,6 +27,7 @@ const CreatorDashboard: React.FC = () => {
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [pendingStatusChanges, setPendingStatusChanges] = useState<Map<string, boolean>>(new Map());
   const [hasChanges, setHasChanges] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -47,20 +52,41 @@ const CreatorDashboard: React.FC = () => {
     loadDashboardData();
   }, [user?.id]);
 
-  // ドロップダウンを閉じるためのイベントリスナー
+  // ドロップダウンを外側クリックで閉じる（内側は維持）
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      setStatusDropdown(null);
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      // ステータスドロップダウンが開いている場合、対象内のクリックは維持
+      if (statusDropdown) {
+        const within = target.closest(`[data-dropdown-work="${statusDropdown}"]`);
+        if (!within) setStatusDropdown(null);
+      }
+      // メニューは外側クリックで閉じる（メニューコンテナ内のクリックは除外）
+      if (isMenuOpen) {
+        const withinMenu = target.closest('[data-menu-container]');
+        if (!withinMenu) setIsMenuOpen(false);
+      }
     };
 
-    if (statusDropdown) {
+    if (statusDropdown || isMenuOpen) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [statusDropdown]);
+  }, [statusDropdown, isMenuOpen]);
 
   const goToCreate = () => {
     import('@/utils/navigation').then(m => m.navigate('create'))
+  }
+
+  const goToDashboard = () => {
+    import('@/utils/navigation').then(m => m.navigate('dashboard'))
+    setIsMenuOpen(false)
+  }
+
+  const goToBattle = () => {
+    import('@/utils/navigation').then(m => m.navigate('battle'))
+    setIsMenuOpen(false)
   }
 
   const handleStatusChange = (workId: string, newStatus: boolean) => {
@@ -153,12 +179,63 @@ const CreatorDashboard: React.FC = () => {
               )}
               <button
                 onClick={goToCreate}
-                className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 whitespace-nowrap text-sm sm:text-base transition-all duration-200 ease-in-out"
+                className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 items-center gap-2 whitespace-nowrap text-sm sm:text-base transition-all duration-200 ease-in-out"
               >
                 <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="hidden sm:inline">新しい作品をアップロード</span>
                 <span className="sm:hidden">作品投稿</span>
               </button>
+
+              {/* ハンバーガーメニューボタン */}
+              <div className="relative" data-menu-container>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsMenuOpen(!isMenuOpen);
+                  }}
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200 ease-in-out"
+                  aria-label="メニュー"
+                >
+                  {isMenuOpen ? (
+                    <X className="w-5 h-5" />
+                  ) : (
+                    <Menu className="w-5 h-5" />
+                  )}
+                </button>
+
+                {/* ドロップダウンメニュー */}
+                {isMenuOpen && (
+                  <div
+                    className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={goToDashboard}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                    >
+                      <Home className="w-4 h-4" />
+                      ダッシュボード
+                    </button>
+                    <button
+                      onClick={() => {
+                        goToCreate();
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                    >
+                      <Upload className="w-4 h-4" />
+                      新しい作品をアップロード
+                    </button>
+                    <button
+                      onClick={goToBattle}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                    >
+                      <Search className="w-4 h-4" />
+                      バトルを探す
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -305,9 +382,9 @@ const CreatorDashboard: React.FC = () => {
                         </div>
                         <div className="text-right">
                           <p className="font-semibold text-gray-900">¥{work.revenue.toLocaleString()}</p>
-                          <div className="relative">
+                          <div className="relative" data-dropdown-work={work.id}>
                             <button
-                              onClick={() => toggleStatusDropdown(work.id)}
+                              onClick={(e) => { e.stopPropagation(); toggleStatusDropdown(work.id); }}
                               disabled={updatingStatus === 'all'}
                               className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full transition-colors ${
                                 hasChange
@@ -329,7 +406,7 @@ const CreatorDashboard: React.FC = () => {
                             </button>
 
                             {statusDropdown === work.id && (
-                              <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                              <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-10" onClick={(e) => e.stopPropagation()}>
                                 <button
                                   onClick={() => handleStatusChange(work.id, true)}
                                   className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 rounded-t-lg ${
