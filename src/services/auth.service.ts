@@ -27,7 +27,9 @@ export async function signInWithGoogle(userType: UserType = 'general') {
       queryParams: {
         prompt: 'select_account',
         // scopes はデフォルトで十分（openid email profile）。必要なら拡張
-      }
+      },
+      // 確実にPKCEコードフローで返す（/auth/callback?code=... 対応）
+      flowType: 'pkce'
     }
   })
   if (error) throw error

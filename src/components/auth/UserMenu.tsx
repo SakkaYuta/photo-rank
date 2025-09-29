@@ -22,7 +22,7 @@ export function UserMenu() {
   if (loading) return <div className="h-8 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-800" />
   if (!profile) return (
     <>
-      <button className="btn btn-primary" onClick={() => setOpen(true)}>ログイン</button>
+      <button className="btn btn-primary" onClick={() => setOpen(true)}>新規登録</button>
       {open && <AuthModal onClose={() => setOpen(false)} />}
     </>
   )

@@ -16,7 +16,27 @@ export function AuthCallbackGate() {
         return
       }
       if (!code) {
-        setMessage('認証コードが見つかりません。')
+        // まず既にセッションが存在するか確認（Implicitフローやブラウザ差異の保険）
+        const { data: sessionData } = await supabase.auth.getSession()
+        if (sessionData.session) {
+          // セッションがあれば通常フローへ
+          let redirect = '#merch'
+          try {
+            if (nextParam) {
+              const decoded = decodeURIComponent(nextParam)
+              redirect = decoded.startsWith('#') ? decoded : `#${decoded}`
+            } else {
+              const saved = localStorage.getItem('postLoginRedirect')
+              if (saved) redirect = saved.startsWith('#') ? saved : `#${saved}`
+            }
+            localStorage.removeItem('postLoginRedirect')
+            localStorage.removeItem('pendingSignUp')
+          } catch {}
+          try { window.history.replaceState(null, '', '/auth/callback') } catch {}
+          window.location.hash = redirect
+          return
+        }
+        setMessage('認証コードが見つかりません。リダイレクトURLの設定（Additional Redirect URLs）をご確認ください。')
         return
       }
       try {
