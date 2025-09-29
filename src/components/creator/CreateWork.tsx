@@ -13,6 +13,7 @@ import { getPartnerProducts } from '@/services/partner.service'
 import type { ManufacturingPartner, FactoryProduct } from '@/types/partner.types'
 import { supabase } from '../../services/supabaseClient'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
+import { processUploadedWorkImage } from '@/services/uploadPipeline.service'
 
 export function CreateWork() {
   const [step, setStep] = useState<1 | 2 | 3>(1)
@@ -569,18 +570,28 @@ export function CreateWork() {
               try {
                 const { data: { user } } = await supabase.auth.getUser()
                 if (!user || !requireAuth()) throw new Error('ログインが必要です')
-                const uploads: string[] = []
+                const secureUploads: string[] = []
                 for (const file of pick) {
+                  // Step 1: Upload to temporary location
                   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
-                  const path = `uploads/works/${user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
-                  const { error: upErr } = await supabase.storage.from(UPLOAD_BUCKET).upload(path, file, { upsert: false, cacheControl: '3600' })
+                  const tempPath = `uploads/works/${user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+                  const { error: upErr } = await supabase.storage.from(UPLOAD_BUCKET).upload(tempPath, file, { upsert: false, cacheControl: '3600' })
                   if (upErr) throw upErr
-                  const { data } = supabase.storage.from(UPLOAD_BUCKET).getPublicUrl(path)
-                  uploads.push(data.publicUrl)
+
+                  // Step 2: Process through secure pipeline (sanitize + watermark)
+                  const result = await processUploadedWorkImage(tempPath)
+                  if (!result.ok || !result.preview?.path) {
+                    throw new Error(result.error || 'セキュア処理に失敗しました')
+                  }
+
+                  // Step 3: Use watermarked preview URL for display
+                  const { data } = supabase.storage.from(result.preview.bucket).getPublicUrl(result.preview.path)
+                  secureUploads.push(data.publicUrl)
                 }
-                setImages(prev => [...prev, ...uploads])
+                setImages(prev => [...prev, ...secureUploads])
               } catch (err: any) {
                 setMessage(err?.message || '画像のアップロードに失敗しました')
+                showToast({ message: err?.message || '画像のアップロードに失敗しました', variant: 'error' })
               } finally {
                 setBusy(false)
                 // ローカルプレビューURLを解放してクリア
@@ -602,7 +613,8 @@ export function CreateWork() {
           {(images.length + localPreviews.length) >= 5 && (
             <p className="text-xs text-red-600">上限の5枚に達しました。新しい画像を追加するには既存の画像を削除してください。</p>
           )}
-          <p className="text-xs text-gray-500">最大5枚まで選択できます。同時出品数は選択した枚数分（最大5件）になります。</p>
+          <p className="text-xs text-gray-500">最大5枚まで選択できます。同時出品数は選択した枚数分（最大5件）になります。<br />
+            ※アップロードされた画像は自動的にサニタイズ処理され、透かし入りプレビューとして表示されます。</p>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
           {/* アップロード済み（リモートURL） */}
