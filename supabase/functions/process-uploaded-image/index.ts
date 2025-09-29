@@ -16,12 +16,28 @@ async function validateImageInput(buffer: ArrayBuffer, originalMimeType?: string
     throw new Error(`File too large: ${Math.round(buffer.byteLength / 1024 / 1024)}MB exceeds ${MAX_BYTES / 1024 / 1024}MB limit`)
   }
 
+  // Basic buffer validation
+  if (buffer.byteLength < 100) {
+    throw new Error('File too small, likely corrupted')
+  }
+
   // Image format validation via Sharp
   const image = Sharp(buffer)
-  const meta = await image.metadata()
+  let meta
+  try {
+    meta = await image.metadata()
+  } catch (e) {
+    throw new Error('Invalid image file, cannot read metadata')
+  }
 
+  // MIME type validation - check both original and detected
   if (!meta.format || !ALLOWED_MIME.has(`image/${meta.format}`)) {
     throw new Error(`Unsupported image format: ${meta.format}`)
+  }
+
+  // Cross-check original MIME if provided
+  if (originalMimeType && !ALLOWED_MIME.has(originalMimeType)) {
+    throw new Error(`Original MIME type not allowed: ${originalMimeType}`)
   }
 
   if (!meta.width || !meta.height) {
@@ -32,9 +48,25 @@ async function validateImageInput(buffer: ArrayBuffer, originalMimeType?: string
     throw new Error(`Image dimensions too large: ${meta.width}x${meta.height} exceeds ${MAX_DIMENSION}px limit`)
   }
 
+  // Minimum dimension check (avoid 1px tracker images)
+  if (meta.width < 32 || meta.height < 32) {
+    throw new Error('Image dimensions too small: minimum 32x32 pixels required')
+  }
+
   // Additional security checks
   if (meta.density && meta.density > 600) {
     throw new Error('Image density too high, potential security risk')
+  }
+
+  // Check for suspicious metadata
+  if (meta.pages && meta.pages > 1) {
+    throw new Error('Multi-page images not supported')
+  }
+
+  // Memory bomb protection
+  const pixelCount = meta.width * meta.height
+  if (pixelCount > 100000000) { // 100MP limit
+    throw new Error('Image too large: exceeds pixel count limit')
   }
 
   return { width: meta.width, height: meta.height, format: meta.format }
@@ -189,11 +221,17 @@ serve(async (req) => {
       { headers: { 'content-type': 'application/json' } }
     )
   } catch (e: any) {
-    // Log full error for monitoring but sanitize client response
-    console.error('Image processing error:', {
+    // Generate error ID for tracking
+    const errorId = crypto.randomUUID()
+
+    // Log full error for monitoring with error ID
+    console.error(`[${errorId}] Image processing error:`, {
       message: e?.message,
       stack: e?.stack,
-      userId: (req as any).user?.id
+      userId: (req as any).user?.id,
+      timestamp: new Date().toISOString(),
+      userAgent: req.headers.get('user-agent'),
+      origin: req.headers.get('origin')
     })
 
     const msg = e?.message || 'internal error'
@@ -203,21 +241,36 @@ serve(async (req) => {
     // Categorize errors for appropriate response
     if (/auth|forbid|unauth/i.test(msg)) {
       code = 401
-      sanitizedMsg = 'Authentication required'
+      sanitizedMsg = '認証が必要です'
     } else if (/rate limit|too many/i.test(msg)) {
       code = 429
-      sanitizedMsg = msg // Rate limit messages are safe to expose
-    } else if (/file too large|unsupported|invalid|dimensions|format/i.test(msg)) {
+      sanitizedMsg = 'アップロード頻度制限に達しました。しばらく時間を置いてから再試行してください。'
+    } else if (/file too large|too small|corrupted/i.test(msg)) {
       code = 400
-      sanitizedMsg = msg // Validation errors are safe to expose
+      sanitizedMsg = 'ファイルサイズが無効です。10MB以下で100バイト以上のファイルを選択してください。'
+    } else if (/unsupported.*format|invalid.*format|mime/i.test(msg)) {
+      code = 400
+      sanitizedMsg = 'サポートされていない画像形式です。JPEG、PNG、WebP形式を使用してください。'
+    } else if (/dimensions|pixel|too small.*required/i.test(msg)) {
+      code = 400
+      sanitizedMsg = '画像サイズが無効です。32x32ピクセル以上、8000x8000ピクセル以下の画像を使用してください。'
+    } else if (/invalid.*image|cannot.*read|metadata/i.test(msg)) {
+      code = 400
+      sanitizedMsg = '画像ファイルが破損しているか無効です。別のファイルを選択してください。'
+    } else if (/multi-page|pages/i.test(msg)) {
+      code = 400
+      sanitizedMsg = '複数ページの画像はサポートされていません。'
     } else {
       // Internal errors - don't leak implementation details
       code = 500
-      sanitizedMsg = 'Image processing failed. Please try again.'
+      sanitizedMsg = '画像処理中にエラーが発生しました。時間を置いて再試行してください。'
     }
 
     return new Response(
-      JSON.stringify({ error: sanitizedMsg }),
+      JSON.stringify({
+        error: sanitizedMsg,
+        errorId: errorId // Include error ID for support purposes
+      }),
       { status: code, headers: { 'content-type': 'application/json' } }
     )
   }

@@ -5,6 +5,7 @@ export type ProcessResult = {
   original?: { bucket: string; path: string; signedUrl?: string }
   preview?: { bucket: string; path: string; signedUrl?: string }
   error?: string
+  errorId?: string // For debugging support
 }
 
 /**
@@ -25,6 +26,7 @@ export type RegenResult = {
   ok: boolean
   preview?: { bucket: string; path: string }
   error?: string
+  errorId?: string // For debugging support
 }
 
 export async function regeneratePreviewFromOriginal(originalPath: string, workId?: string): Promise<RegenResult> {
