@@ -239,6 +239,35 @@ const OrganizerDashboard: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
+          {[
+            {
+              title: 'イベント管理', icon: Calendar, onClick: () => import('@/utils/navigation').then(m => m.navigate('events'))
+            },{
+              title: '売上管理', icon: DollarSign, onClick: () => import('@/utils/navigation').then(m => m.navigate('organizer-revenue'))
+            },{
+              title: '銀行口座設定', icon: DollarSign, onClick: () => import('@/utils/navigation').then(m => m.navigate('account-settings'))
+            },{
+              title: '規約・ガイドライン', icon: AlertCircle, onClick: () => import('@/utils/navigation').then(m => m.navigate('terms'))
+            },{
+              title: 'アカウント設定', icon: Users, onClick: () => import('@/utils/navigation').then(m => m.navigate('account-settings'))
+            },{
+              title: 'オーガナイザー窓口', icon: MessageSquare, onClick: () => import('@/utils/navigation').then(m => m.navigate('organizer-support'))
+            },{
+              title: '所属解除申請', icon: XCircle, onClick: () => import('@/utils/navigation').then(m => m.navigate('organizer-leave'))
+            },{
+              title: 'インボイス設定', icon: Award, onClick: () => import('@/utils/navigation').then(m => m.navigate('organizer-invoice'))
+            }
+          ].map((a, i) => (
+            <button key={i} onClick={a.onClick} className="bg-white p-4 rounded-lg shadow-sm border text-left hover:shadow transition">
+              <div className="flex items-center gap-3">
+                <a.icon className="w-5 h-5 text-blue-600" />
+                <div className="font-medium text-gray-900">{a.title}</div>
+              </div>
+            </button>
+          ))}
+        </div>
         {/* Stats Overview */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <div className="bg-white p-6 rounded-lg shadow-sm">

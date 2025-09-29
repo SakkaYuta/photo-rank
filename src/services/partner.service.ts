@@ -2,6 +2,24 @@ import { supabase } from './supabaseClient'
 import type { ManufacturingPartner, FactoryProduct, ManufacturingOrder, PartnerReview } from '../types'
 
 export async function getCurrentPartnerProfile(): Promise<ManufacturingPartner | null> {
+  // まずは Supabase の実データを優先
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data, error } = await supabase
+        .from('manufacturing_partners')
+        .select('*')
+        .eq('owner_user_id', user.id)
+        .single()
+
+      if (!error && data) return data as ManufacturingPartner
+      if (error && error.code !== 'PGRST116') throw error
+    }
+  } catch (e) {
+    console.warn('getCurrentPartnerProfile: Supabase fetch failed, falling back if sample enabled', e)
+  }
+
+  // サンプルモードのみ、フォールバックのデモパートナーを返す
   if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
     return {
       id: 'demo-partner-1',
@@ -11,39 +29,62 @@ export async function getCurrentPartnerProfile(): Promise<ManufacturingPartner |
       avg_rating: 4.5,
       ratings_count: 12,
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     } as any
   }
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-  
-  const { data, error } = await supabase
-    .from('manufacturing_partners')
-    .select('*')
-    .eq('owner_user_id', user.id)
-    .single()
-  
-  if (error) {
-    if (error.code === 'PGRST116') return null // Not found
-    throw error
-  }
-  return data as ManufacturingPartner
+
+  return null
 }
 
 export async function getPartnerProducts(partnerId: string): Promise<FactoryProduct[]> {
-  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || partnerId.startsWith('demo')) {
+  // デモIDは Supabase に存在しないので、明示的にフォールバックのみ
+  if (partnerId.startsWith('demo')) {
     return [
-      { id: 'prod-1', partner_id: partnerId, product_type: 'tshirt', base_cost: 1500, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-      { id: 'prod-2', partner_id: partnerId, product_type: 'mug', base_cost: 800, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: 'prod-1', partner_id: partnerId, product_type: 'tshirt', base_cost: 1500, lead_time_days: 7, minimum_quantity: 1, maximum_quantity: 1000, is_active: true, options: { display_name: 'スタンダードTシャツ' }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: 'prod-2', partner_id: partnerId, product_type: 'mug', base_cost: 800, lead_time_days: 7, minimum_quantity: 1, maximum_quantity: 1000, is_active: true, options: { display_name: 'セラミックマグ' }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
     ] as any
   }
+
+  // Supabase から取得（優先）。失敗時のみサンプルを返す
+  try {
+    const { data, error } = await supabase
+      .from('factory_products')
+      .select('*')
+      .eq('partner_id', partnerId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return (data || []) as FactoryProduct[]
+  } catch (e) {
+    console.warn('getPartnerProducts: Supabase fetch failed, falling back if sample enabled', e)
+    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+      return [
+        { id: 'prod-1', partner_id: partnerId, product_type: 'tshirt', base_cost: 1500, lead_time_days: 7, minimum_quantity: 1, maximum_quantity: 1000, is_active: true, options: { display_name: 'スタンダードTシャツ' }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 'prod-2', partner_id: partnerId, product_type: 'mug', base_cost: 800, lead_time_days: 7, minimum_quantity: 1, maximum_quantity: 1000, is_active: true, options: { display_name: 'セラミックマグ' }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      ] as any
+    }
+    throw e
+  }
+}
+
+export async function getFactoryProductById(id: string): Promise<FactoryProduct | null> {
   const { data, error } = await supabase
     .from('factory_products')
     .select('*')
-    .eq('partner_id', partnerId)
-    .order('created_at', { ascending: false })
-  
+    .eq('id', id)
+    .maybeSingle()
   if (error) throw error
-  return data as FactoryProduct[]
+  return (data || null) as FactoryProduct | null
+}
+
+export async function getPartnerById(partnerId: string): Promise<ManufacturingPartner | null> {
+  const { data, error } = await supabase
+    .from('manufacturing_partners')
+    .select('*')
+    .eq('id', partnerId)
+    .maybeSingle()
+  if (error) throw error
+  return (data || null) as ManufacturingPartner | null
 }
 
 export async function createFactoryProduct(product: Omit<FactoryProduct, 'id' | 'created_at' | 'updated_at'>): Promise<FactoryProduct> {
@@ -234,11 +275,11 @@ export async function getPartnerStats(partnerId: string) {
   const reviews = reviewsResult.data || []
 
   const totalOrders = orders.length
-  const pendingOrders = orders.filter(o => o.status === 'accepted' || o.status === 'in_production').length
-  const completedOrders = orders.filter(o => o.status === 'shipped').length
+  const pendingOrders = orders.filter((o: any) => o.status === 'accepted' || o.status === 'in_production').length
+  const completedOrders = orders.filter((o: any) => o.status === 'shipped').length
 
-  const averageRating = reviews.length > 0 
-    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
+  const averageRating = reviews.length > 0
+    ? reviews.reduce((sum: any, review: any) => sum + review.rating, 0) / reviews.length
     : 0
 
   return {
@@ -254,14 +295,31 @@ export async function getPartnerStats(partnerId: string) {
 // ===== パートナー設定の更新 =====
 export async function updatePartnerSettings(
   partnerId: string,
-  updates: { contact_email?: string | null; webhook_url?: string | null }
+  updates: {
+    contact_email?: string | null
+    webhook_url?: string | null
+    company_name?: string | null
+    contact_phone?: string | null
+    address?: Record<string, any> | null
+    website_url?: string | null
+    description?: string | null
+    capabilities?: Record<string, any> | null
+    shipping_info?: Record<string, any> | null
+  }
 ): Promise<ManufacturingPartner> {
   if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || partnerId.startsWith('demo')) {
     // サンプル環境ではローカルで即時反映する体裁のみ
     return {
       id: partnerId,
       name: 'デモ製造パートナー',
+      company_name: updates.company_name || 'デモ工場',
       contact_email: updates.contact_email || 'partner@example.com',
+      contact_phone: updates.contact_phone || null as any,
+      address: updates.address || null as any,
+      website_url: updates.website_url || null as any,
+      description: updates.description || null as any,
+      capabilities: updates.capabilities || null as any,
+      shipping_info: updates.shipping_info || null as any,
       status: 'approved',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -273,6 +331,13 @@ export async function updatePartnerSettings(
     .update({
       contact_email: updates.contact_email ?? null,
       webhook_url: updates.webhook_url ?? null,
+      company_name: updates.company_name ?? undefined,
+      contact_phone: updates.contact_phone ?? undefined,
+      address: (updates.address as any) ?? undefined,
+      website_url: updates.website_url ?? undefined,
+      description: updates.description ?? undefined,
+      capabilities: (updates.capabilities as any) ?? undefined,
+      shipping_info: (updates.shipping_info as any) ?? undefined,
       updated_at: new Date().toISOString(),
     })
     .eq('id', partnerId)

@@ -1,6 +1,6 @@
 // Central route registry to ease Router migration
 export const allowedViews = [
-  'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','battle-search','creator-profile','live-battle','account-settings','products-marketplace','goods-item-selector','creator-goods','payment-methods','receipt','faq'
+  'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','organizer-revenue','organizer-support','organizer-leave','organizer-invoice','battle-search','creator-profile','live-battle','account-settings','products-marketplace','goods-item-selector','creator-goods','payment-methods','receipt','faq'
 ] as const
 
 export type ViewKey = typeof allowedViews[number]
@@ -63,6 +63,11 @@ export const ROUTES_META: Record<ViewKey, RouteMeta> = {
   // Organizer
   'organizer-dashboard': { requireAuth: true, roles: ['organizer','admin'], title: 'オーガナイザー', showInNav: true, navOrder: 10, icon: 'Calendar' },
   'events': { requireAuth: true, roles: ['organizer','admin'], title: 'イベント', showInNav: true, navOrder: 40, icon: 'Calendar' },
+  // Organizer subviews
+  'organizer-revenue': { requireAuth: true, roles: ['organizer','admin'], title: '売上管理' },
+  'organizer-support': { requireAuth: true, roles: ['organizer','admin'], title: 'オーガナイザー窓口' },
+  'organizer-leave': { requireAuth: true, roles: ['organizer','admin'], title: '所属解除申請' },
+  'organizer-invoice': { requireAuth: true, roles: ['organizer','admin'], title: 'インボイス設定' },
   'contests': { requireAuth: true, roles: ['organizer','admin'], title: 'コンテスト', showInNav: true, navOrder: 50, icon: 'Trophy' },
 
   // Admin

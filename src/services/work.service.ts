@@ -13,7 +13,7 @@ export async function listTrendingWorks(limit = 20): Promise<Work[]> {
   const { data, error } = await supabase
     .from('works')
     .select('*')
-    .eq('is_published', true)
+    .eq('is_active', true)
     .order('created_at', { ascending: false })
     .limit(limit)
   if (error) throw error
@@ -41,7 +41,7 @@ export async function searchWorks(params: WorkSearchParams): Promise<Work[]> {
   let query = supabase
     .from('works')
     .select('*')
-    .eq('is_published', true)
+    .eq('is_active', true)
 
   if (q && q.trim()) {
     query = query.ilike('title', `%${q.trim()}%`)

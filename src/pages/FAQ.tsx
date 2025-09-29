@@ -83,6 +83,16 @@ const faqCategories: FAQCategory[] = [
         id: 'delivery-date',
         question: '配送日時の指定はできますか？',
         answer: '申し訳ございませんが、現在配送日時の指定は承っておりません。\n・ご不在の場合は再配達をご利用ください\n・将来的には指定サービスの提供を予定しております'
+      },
+      {
+        id: 'carriers',
+        question: 'どの配送業者で届きますか？',
+        answer: '佐川急便株式会社、ヤマト運輸株式会社でお届けします。\n・配送業者は商品や地域により異なる場合があります'
+      },
+      {
+        id: 'address-change',
+        question: 'お届け先の変更はできますか？',
+        answer: 'ご注文確定後の配送先変更は原則できません。\n・出荷後の転送は各配送業者の転送サービスをご利用ください'
       }
     ]
   },
@@ -110,6 +120,11 @@ const faqCategories: FAQCategory[] = [
         id: 'order-confirmation',
         question: '注文確認メールが届きません',
         answer: '以下をご確認ください。\n・迷惑メールフォルダをご確認ください\n・メールアドレスに誤りがないかご確認ください\n・ドメイン指定受信設定をご確認ください（@seai.co.jpからのメールを受信許可）\n・それでも届かない場合はお問い合わせください'
+      },
+      {
+        id: 'minor-users',
+        question: '未成年でも購入できますか？',
+        answer: '未成年の方は、親権者（法定代理人）の同意が必要です。'
       }
     ]
   },
@@ -149,6 +164,11 @@ const faqCategories: FAQCategory[] = [
         id: 'item-quality',
         question: 'アイテムの品質はどうですか？',
         answer: '高品質な素材を使用し、プロの印刷技術で制作しています。色あせしにくく、洗濯にも強い仕上がりです。'
+      },
+      {
+        id: 'tolerances',
+        question: '仕上がりの許容範囲はありますか？',
+        answer: '製造工程上の特性により、以下の許容差があります。\n・色味：モニター環境や製造ロットにより差が生じる場合があります\n・アパレル製品：寸法表より±2〜3cm\n・バッグ/小物：寸法表より±5%\n・上記範囲内は良品となります'
       }
     ]
   },
@@ -161,6 +181,51 @@ const faqCategories: FAQCategory[] = [
         id: 'payment-methods',
         question: '利用できる支払い方法を教えて',
         answer: 'クレジットカード（Visa、Mastercard、JCB、American Express、Diners Club、Discover）、Apple Pay、Google Pay、コンビニ決済、銀行振込がご利用いただけます。'
+      },
+      {
+        id: 'payment-deadlines',
+        question: '支払い期限はありますか？',
+        answer: 'コンビニ決済はご注文日から14日以内、銀行振込はご注文日から7日以内にお支払いください。\n・期限を過ぎると自動的にキャンセルとなります\n・銀行振込の振込手数料はお客様負担です'
+      },
+      {
+        id: 'installments',
+        question: '分割払いやリボ払いは使えますか？',
+        answer: '現在は一括払いのみ対応しています（分割・リボ払いは不可）。'
+      },
+      {
+        id: 'wallets',
+        question: 'デジタルウォレットは使えますか？',
+        answer: 'Apple Pay と Google Pay に対応しています。対応デバイス/ブラウザでご利用いただけます。'
+      },
+      {
+        id: 'card-security',
+        question: 'カード情報は保存されますか？安全ですか？',
+        answer: 'カード情報は当社サーバーには保存されません。決済はStripeの安全な環境で処理され、PCI DSSに準拠し、3Dセキュアにも対応しています。'
+      },
+      {
+        id: 'refund-fee',
+        question: '返金手数料はかかりますか？',
+        answer: 'クレジットカードの返金に手数料はかかりません。\n・コンビニ決済/銀行振込の返金は返金手数料250円（税込275円）はお客様負担です'
+      },
+      {
+        id: 'refund-timing',
+        question: '返金にはどのくらい時間がかかりますか？',
+        answer: 'クレジットカードは5〜10営業日程度（カード会社経由）で返金されます。\n・コンビニ決済/銀行振込は銀行振込で返金します（金融機関・手続き状況により所要日数は異なります）'
+      },
+      {
+        id: 'convenience-limit',
+        question: 'コンビニ決済の上限金額はありますか？',
+        answer: '30万円を超えるご注文にはコンビニ決済はご利用いただけません。'
+      },
+      {
+        id: 'bank-notes',
+        question: '銀行振込の注意点はありますか？',
+        answer: '振込人名義の前に必ず注文番号をご入力ください。\n・複数の注文をまとめてお振込みの場合は、すべての注文番号をご入力ください'
+      },
+      {
+        id: 'receipt-issuing',
+        question: '領収書は発行できますか？',
+        answer: 'Stripe決済では決済完了時にレシートが自動送信されます。\n・出荷完了の翌日以降はマイページからPDF領収書の発行・再発行が可能です\n・商品への領収書/納品書の同梱は行っていません'
       }
     ]
   },
@@ -173,6 +238,16 @@ const faqCategories: FAQCategory[] = [
         id: 'contact',
         question: 'お問い合わせ方法を教えて',
         answer: 'お問い合わせは以下の方法でお受けしています。\n・メール：photorank@seai.co.jp\n・お問い合わせフォーム（準備中）\n・営業時間：平日10:00〜17:00（土日祝日を除く）'
+      },
+      {
+        id: 'response-time',
+        question: 'お問い合わせの返信目安はどのくらいですか？',
+        answer: '通常、1〜2営業日以内にご返信いたします（状況により前後する場合があります）。'
+      },
+      {
+        id: 'inserts',
+        question: '商品に納品書や領収書は同梱されますか？',
+        answer: 'いいえ、同梱していません。必要な場合はマイページから領収書を取得してください。'
       }
     ]
   }
@@ -210,6 +285,22 @@ export function FAQ() {
 
   const handleQuestionClick = (itemId: string) => {
     setExpandedItem(expandedItem === itemId ? null : itemId)
+  }
+
+  const handlePopularQuestionClick = (itemId: string) => {
+    const category = faqCategories.find(cat => cat.items.some(i => i.id === itemId))
+    if (category) {
+      // カテゴリー表示に切り替えてから対象項目を展開
+      setSelectedCategory(category.id)
+      setExpandedItem(itemId)
+      // スクロールして見つけやすくする（任意）
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: window.scrollY + 1 })
+      })
+    } else {
+      // カテゴリーが見つからない場合は単純にトグル
+      handleQuestionClick(itemId)
+    }
   }
 
   return (
@@ -283,7 +374,7 @@ export function FAQ() {
                   return (
                     <button
                       key={index}
-                      onClick={() => faqItem && handleQuestionClick(faqItem.id)}
+                      onClick={() => faqItem && handlePopularQuestionClick(faqItem.id)}
                       className="w-full px-6 py-4 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors"
                     >
                       <span className="text-gray-900">{question}</span>

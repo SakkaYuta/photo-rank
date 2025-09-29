@@ -9,7 +9,9 @@ import { loadStripe } from '@stripe/stripe-js'
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { PurchaseSuccessModal } from '../ui/SuccessModal'
 import { AddressService, type UserAddress } from '@/services/address.service'
+import { getPartnerById } from '@/services/partner.service'
 import { Analytics } from '@/services/analytics.service'
+import { supabase } from '@/services/supabaseClient'
 
 const pk = (import.meta as any).env?.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined
 const stripePromise = pk ? loadStripe(pk) : null
@@ -158,6 +160,10 @@ const CheckoutForm: React.FC<{
   const [selectedAddressId, setSelectedAddressId] = useState<string>('')
   const [adding, setAdding] = useState(false)
   const [agree, setAgree] = useState(false)
+  const [shippingInfos, setShippingInfos] = useState<Array<{ partnerId: string; partnerName: string; info: any }>>([])
+  const [missingShippingPartners, setMissingShippingPartners] = useState<Array<{ partnerId: string; partnerName: string }>>([])
+  const [shippingInfoVersion, setShippingInfoVersion] = useState(0)
+  const [liveShippingCalc, setLiveShippingCalc] = useState<ShippingCalculation>(shippingCalculation)
 
   const [newAddr, setNewAddr] = useState({
     name: '', postal_code: '', prefecture: '', city: '', address1: '', address2: '', phone: '', is_default: true,
@@ -171,6 +177,81 @@ const CheckoutForm: React.FC<{
       setSelectedAddressId(def?.id || '')
     })()
   }, [])
+
+  // 住所変更やカート内容に応じて送料を再計算（沖縄料金等を適用）
+  React.useEffect(() => {
+    let active = true
+    ;(async () => {
+      try {
+        const pref = addresses.find(a => a.id === selectedAddressId)?.prefecture || undefined
+        const calc = await ShippingService.calculateShippingAsync(cartItems, { destinationPref: pref })
+        if (active) setLiveShippingCalc(calc)
+      } catch {
+        if (active) setLiveShippingCalc(shippingCalculation)
+      }
+    })()
+    return () => { active = false }
+  }, [cartItems, addresses, selectedAddressId, shippingInfoVersion])
+
+  // 購入ページ表示用の「商品のお届けについて」を工場設定から取得
+  React.useEffect(() => {
+    (async () => {
+      const ids = Array.from(new Set((cartItems || []).map(i => i.factoryId).filter(Boolean))) as string[]
+      if (ids.length === 0) { setShippingInfos([]); setMissingShippingPartners([]); return }
+      try {
+        const results: Array<{ partnerId: string; partnerName: string; info: any }> = []
+        const missing: Array<{ partnerId: string; partnerName: string }> = []
+        for (const pid of ids) {
+          const p = await getPartnerById(pid)
+          if (p) {
+            const name = p.company_name || p.name
+            if ((p as any).shipping_info) {
+              results.push({ partnerId: pid, partnerName: name, info: (p as any).shipping_info })
+            } else {
+              missing.push({ partnerId: pid, partnerName: name })
+            }
+          } else {
+            missing.push({ partnerId: pid, partnerName: `工場ID: ${pid}` })
+          }
+        }
+        setShippingInfos(results)
+        setMissingShippingPartners(missing)
+        setShippingInfoVersion(v => v + 1)
+      } catch (e) {
+        console.warn('failed to load shipping info from partners', e)
+        setShippingInfos([])
+        setMissingShippingPartners([])
+      }
+    })()
+  }, [cartItems])
+
+  // Realtime: チェックアウト中も配送情報の更新を反映
+  React.useEffect(() => {
+    const ids = Array.from(new Set((cartItems || []).map(i => i.factoryId).filter(Boolean))) as string[]
+    if (ids.length === 0) return
+    const channels = ids.map(pid => (
+      supabase
+        .channel(`checkout-shipping-${pid}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'manufacturing_partners', filter: `id=eq.${pid}` }, async () => {
+          try {
+            const p = await getPartnerById(pid)
+            const name = (p?.company_name || p?.name || `工場ID: ${pid}`) as string
+            const info = (p as any)?.shipping_info
+            setShippingInfos(prev => {
+              const others = prev.filter(x => x.partnerId !== pid)
+              return info ? [...others, { partnerId: pid, partnerName: name, info }] : others
+            })
+            setMissingShippingPartners(prev => {
+              const others = prev.filter(x => x.partnerId !== pid)
+              return info ? others : [...others, { partnerId: pid, partnerName: name }]
+            })
+            setShippingInfoVersion(v => v + 1)
+          } catch {}
+        })
+        .subscribe()
+    ))
+    return () => { channels.forEach(ch => { try { supabase.removeChannel(ch) } catch {} }) }
+  }, [cartItems])
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -276,6 +357,92 @@ const CheckoutForm: React.FC<{
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* 送料未設定の工場がある場合の注意 */}
+      {missingShippingPartners.length > 0 && (
+        <div className="p-4 border border-yellow-200 bg-yellow-50 text-yellow-800 rounded-lg">
+          <div className="font-semibold mb-1">一部の工場で送料設定が未入力です</div>
+          <div className="text-sm">以下の工場は送料情報が設定されていないため、表示送料は暫定値です。住所に応じて確定するか、工場設定の更新後に反映されます。</div>
+          <ul className="list-disc list-inside mt-2 text-sm">
+            {missingShippingPartners.map(m => (
+              <li key={m.partnerId}>{m.partnerName}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {/* 沖縄県向け強調案内 */}
+      {(() => {
+        const pref = addresses.find(a => a.id === selectedAddressId)?.prefecture || ''
+        const isOkinawa = pref.includes('沖縄')
+        if (!isOkinawa || shippingInfos.length === 0) return null
+        return (
+          <div className="p-4 rounded-lg border border-orange-200 bg-orange-50 text-orange-800">
+            <div className="font-semibold mb-1">沖縄県へのお届けに関する注意</div>
+            <div className="text-sm">お届け先が沖縄県の場合、送料や到着目安、取扱い条件が異なる場合があります。以下をご確認ください。</div>
+            {shippingInfos.map(s => (
+              <div key={s.partnerId} className="mt-2 text-sm">
+                <div className="font-medium">提供工場: {s.partnerName}</div>
+                <ul className="list-disc list-inside space-y-1 mt-1">
+                  {(Array.isArray(s.info.cautions) ? s.info.cautions : []).map((c: string, idx: number) => (
+                    <li key={`c-${idx}`}>{c}</li>
+                  ))}
+                  {(Array.isArray(s.info.split_cautions) ? s.info.split_cautions : []).map((c: string, idx: number) => (
+                    <li key={`sc-${idx}`}>{c}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
+      {/* 商品のお届けについて（工場設定より） */}
+      {shippingInfos.length > 0 && (
+        <div className="p-4 border rounded-lg bg-white dark:bg-gray-800">
+          <h3 className="text-lg font-semibold mb-2">商品のお届けについて</h3>
+          {shippingInfos.map(s => (
+            <div key={s.partnerId} className="mb-4 last:mb-0">
+              <div className="text-sm text-gray-600 dark:text-gray-300 mb-1">提供工場: {s.partnerName}</div>
+              <div className="text-sm">
+                <div className="font-medium text-gray-900 dark:text-gray-100">{s.info.method_title || '宅配便'}</div>
+                {s.info.per_order_note && (
+                  <div className="text-gray-700 dark:text-gray-300">{s.info.per_order_note}</div>
+                )}
+                <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-gray-700 dark:text-gray-300">
+                  {s.info.carrier_name && (<div>配送会社: {s.info.carrier_name}</div>)}
+                  <div>
+                    送料: {typeof s.info.fee_general_jpy === 'number' ? `全国（沖縄を除く）税込¥${s.info.fee_general_jpy.toLocaleString()}` : '—'}
+                    {typeof s.info.fee_okinawa_jpy === 'number' ? ` / 沖縄 税込¥${s.info.fee_okinawa_jpy.toLocaleString()}` : ''}
+                  </div>
+                  {s.info.eta_text && (<div>到着目安: {s.info.eta_text}</div>)}
+                </div>
+                {Array.isArray(s.info.cautions) && s.info.cautions.length > 0 && (
+                  <div className="mt-2">
+                    <div className="font-medium">注意事項</div>
+                    <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300">
+                      {s.info.cautions.map((c: string, idx: number) => (
+                        <li key={idx}>{c}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {(s.info.split_title || s.info.split_desc || (Array.isArray(s.info.split_cautions) && s.info.split_cautions.length > 0)) && (
+                  <div className="mt-3">
+                    <div className="font-medium">{s.info.split_title || '分納について'}</div>
+                    {s.info.split_desc && (<div className="text-sm text-gray-700 dark:text-gray-300">{s.info.split_desc}</div>)}
+                    {Array.isArray(s.info.split_cautions) && s.info.split_cautions.length > 0 && (
+                      <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 mt-1">
+                        {s.info.split_cautions.map((c: string, idx: number) => (
+                          <li key={idx}>{c}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* 配送先 */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">配送先</label>
@@ -347,24 +514,24 @@ const CheckoutForm: React.FC<{
       <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-3">
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-600 dark:text-gray-400">商品点数</span>
-          <span className="font-medium">{shippingCalculation.totalItems}点</span>
+          <span className="font-medium">{liveShippingCalc.totalItems}点</span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-600 dark:text-gray-400">商品小計</span>
-          <span className="font-medium">{formatJPY(shippingCalculation.totalSubtotal)}</span>
+          <span className="font-medium">{formatJPY(liveShippingCalc.totalSubtotal)}</span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
             <Truck className="w-4 h-4" />
             送料合計
           </span>
-          <span className="font-medium">{formatJPY(shippingCalculation.totalShipping)}</span>
+          <span className="font-medium">{formatJPY(liveShippingCalc.totalShipping)}</span>
         </div>
         <div className="border-t border-gray-200 dark:border-gray-600 pt-2">
           <div className="flex justify-between items-center">
             <span className="text-lg font-semibold">合計金額</span>
             <span className="text-xl font-bold text-primary-600">
-              {formatJPY(shippingCalculation.grandTotal)}
+              {formatJPY(liveShippingCalc.grandTotal)}
             </span>
           </div>
         </div>
@@ -405,16 +572,89 @@ export const CartView: React.FC = () => {
   const { items, updateQty, removeFromCart, clearCart } = useCart()
   const [showCheckout, setShowCheckout] = useState(false)
   const [showGrouped, setShowGrouped] = useState(true)
+  const [shippingInfos, setShippingInfos] = useState<Array<{ partnerId: string; partnerName: string; info: any }>>([])
+  const [missingShippingPartners, setMissingShippingPartners] = useState<Array<{ partnerId: string; partnerName: string }>>([])
+  const [shippingInfoVersion, setShippingInfoVersion] = useState(0)
 
-  // 送料計算
-  const shippingCalculation = useMemo(() => {
-    return ShippingService.calculateShipping(items)
+  // 送料計算（工場設定 shipping_info を優先）
+  const [shippingCalculation, setShippingCalculation] = useState<ShippingCalculation>({ factoryGroups: [], totalItems: 0, totalSubtotal: 0, totalShipping: 0, grandTotal: 0 })
+  React.useEffect(() => {
+    let active = true
+    ;(async () => {
+      try {
+        const calc = await ShippingService.calculateShippingAsync(items)
+        if (active) setShippingCalculation(calc)
+      } catch {
+        // フォールバック: 同期モック計算
+        if (active) setShippingCalculation(ShippingService.calculateShipping(items))
+      }
+    })()
+    return () => { active = false }
+  }, [items, shippingInfoVersion])
+
+  // Realtime: 対象工場の配送設定更新を監視して反映
+  React.useEffect(() => {
+    const ids = Array.from(new Set((items || []).map(i => i.factoryId).filter(Boolean))) as string[]
+    if (ids.length === 0) return
+    const channels = ids.map(pid => (
+      supabase
+        .channel(`cart-shipping-${pid}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'manufacturing_partners', filter: `id=eq.${pid}` }, async () => {
+          try {
+            const p = await getPartnerById(pid)
+            const name = (p?.company_name || p?.name || `工場ID: ${pid}`) as string
+            const info = (p as any)?.shipping_info
+            setShippingInfos(prev => {
+              const others = prev.filter(x => x.partnerId !== pid)
+              return info ? [...others, { partnerId: pid, partnerName: name, info }] : others
+            })
+            setMissingShippingPartners(prev => {
+              const others = prev.filter(x => x.partnerId !== pid)
+              return info ? others : [...others, { partnerId: pid, partnerName: name }]
+            })
+            setShippingInfoVersion(v => v + 1)
+          } catch {}
+        })
+        .subscribe()
+    ))
+    return () => { channels.forEach(ch => { try { supabase.removeChannel(ch) } catch {} }) }
   }, [items])
 
   // 最適化提案
   const optimizationSuggestions = useMemo(() => {
     return ShippingService.getShippingOptimizationSuggestions(shippingCalculation)
   }, [shippingCalculation])
+
+  // カート一覧にも「商品のお届けについて」を表示するため、工場設定から配送情報を取得
+  React.useEffect(() => {
+    (async () => {
+      const ids = Array.from(new Set((items || []).map(i => i.factoryId).filter(Boolean))) as string[]
+      if (ids.length === 0) { setShippingInfos([]); setMissingShippingPartners([]); return }
+      try {
+        const results: Array<{ partnerId: string; partnerName: string; info: any }> = []
+        const missing: Array<{ partnerId: string; partnerName: string }> = []
+        for (const pid of ids) {
+          const p = await getPartnerById(pid)
+          if (p) {
+            const name = p.company_name || p.name
+            if ((p as any).shipping_info) {
+              results.push({ partnerId: pid, partnerName: name, info: (p as any).shipping_info })
+            } else {
+              missing.push({ partnerId: pid, partnerName: name })
+            }
+          } else {
+            missing.push({ partnerId: pid, partnerName: `工場ID: ${pid}` })
+          }
+        }
+        setShippingInfos(results)
+        setMissingShippingPartners(missing)
+      } catch (e) {
+        console.warn('failed to load shipping info (cart view)', e)
+        setShippingInfos([])
+        setMissingShippingPartners([])
+      }
+    })()
+  }, [items])
 
   if (items.length === 0) {
     return (
@@ -503,6 +743,66 @@ export const CartView: React.FC = () => {
         </div>
       )}
 
+      {/* 商品のお届けについて（工場設定より） */}
+      {shippingInfos.length > 0 && (
+        <div className="mb-6 p-4 border rounded-lg bg-white dark:bg-gray-800">
+          <h3 className="text-lg font-semibold mb-2">商品のお届けについて</h3>
+          {shippingInfos.map(s => (
+            <div key={s.partnerId} className="mb-4 last:mb-0">
+              <div className="text-sm text-gray-600 dark:text-gray-300 mb-1">提供工場: {s.partnerName}</div>
+              <div className="text-sm">
+                <div className="font-medium text-gray-900 dark:text-gray-100">{s.info.method_title || '宅配便'}</div>
+                {s.info.per_order_note && (
+                  <div className="text-gray-700 dark:text-gray-300">{s.info.per_order_note}</div>
+                )}
+                <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-gray-700 dark:text-gray-300">
+                  {s.info.carrier_name && (<div>配送会社: {s.info.carrier_name}</div>)}
+                  <div>
+                    送料: {typeof s.info.fee_general_jpy === 'number' ? `全国（沖縄を除く）税込¥${s.info.fee_general_jpy.toLocaleString()}` : '—'}
+                    {typeof s.info.fee_okinawa_jpy === 'number' ? ` / 沖縄 税込¥${s.info.fee_okinawa_jpy.toLocaleString()}` : ''}
+                  </div>
+                  {s.info.eta_text && (<div>到着目安: {s.info.eta_text}</div>)}
+                </div>
+                {Array.isArray(s.info.cautions) && s.info.cautions.length > 0 && (
+                  <div className="mt-2">
+                    <div className="font-medium">注意事項</div>
+                    <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300">
+                      {s.info.cautions.map((c: string, idx: number) => (
+                        <li key={idx}>{c}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {(s.info.split_title || s.info.split_desc || (Array.isArray(s.info.split_cautions) && s.info.split_cautions.length > 0)) && (
+                  <div className="mt-3">
+                    <div className="font-medium">{s.info.split_title || '分納について'}</div>
+                    {s.info.split_desc && (<div className="text-sm text-gray-700 dark:text-gray-300">{s.info.split_desc}</div>)}
+                    {Array.isArray(s.info.split_cautions) && s.info.split_cautions.length > 0 && (
+                      <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 mt-1">
+                        {s.info.split_cautions.map((c: string, idx: number) => (
+                          <li key={idx}>{c}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {missingShippingPartners.length > 0 && (
+        <div className="mb-6 p-4 border border-yellow-200 bg-yellow-50 text-yellow-800 rounded-lg">
+          <div className="font-semibold mb-1">一部の工場で送料設定が未入力です</div>
+          <div className="text-sm">以下の工場は送料情報が設定されていないため、表示送料は暫定値です。チェックアウト時の住所に応じて確定するか、工場設定の更新後に反映されます。</div>
+          <ul className="list-disc list-inside mt-2 text-sm">
+            {missingShippingPartners.map(m => (
+              <li key={m.partnerId}>{m.partnerName}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="space-y-4 mb-8">
         {items.map(item => (
           <CartItemCard
@@ -528,6 +828,7 @@ export const CartView: React.FC = () => {
             </span>
             <span className="font-medium">{formatJPY(shippingCalculation.totalShipping)}</span>
           </div>
+          <div className="text-xs text-gray-500">最終的な送料は配送先住所の選択後（チェックアウト画面）に確定します。沖縄県は別料金となります。</div>
           <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
             <div className="flex justify-between items-center">
               <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">

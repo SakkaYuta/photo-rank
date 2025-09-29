@@ -26,7 +26,7 @@ export const useUserRole = () => {
 
     getCurrentUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
       setUser(session?.user || null);
     });
 

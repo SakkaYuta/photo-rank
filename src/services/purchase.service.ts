@@ -131,12 +131,12 @@ export class PurchaseService {
         .eq('stripe_payment_intent_id', paymentIntentId)
 
       if (data && data.length > 0) {
-        const completedItems = data.filter(item => item.status === 'paid')
+        const completedItems = data.filter((item: any) => item.status === 'paid')
         if (completedItems.length === data.length) {
           return {
             status: 'completed',
-            purchaseIds: completedItems.map(item => item.id),
-            workIds: completedItems.map(item => item.work_id)
+            purchaseIds: completedItems.map((item: any) => item.id),
+            workIds: completedItems.map((item: any) => item.work_id)
           }
         }
       }

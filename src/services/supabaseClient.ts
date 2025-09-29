@@ -14,10 +14,6 @@ export const supabase = g.__supabase__ ?? createClient(supabaseUrl, supabaseAnon
     persistSession: true,
     detectSessionInUrl: true,
   },
-  // If realtime is not required in dev, drastically reduce chatter. Adjust as needed.
-  realtime: {
-    params: { eventsPerSecond: 0 },
-  },
 })
 
 if (!g.__supabase__) g.__supabase__ = supabase

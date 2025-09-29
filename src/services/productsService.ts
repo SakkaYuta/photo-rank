@@ -230,7 +230,7 @@ export async function fetchProductsByIds(productIds: string[]): Promise<Product[
       const works = data || [];
 
       // クリエイター情報をバッチで取得
-      const creatorIds = Array.from(new Set(works.map(w => w.creator_id).filter(Boolean)));
+      const creatorIds = Array.from(new Set(works.map((w: any) => w.creator_id).filter(Boolean)));
       let profiles: Record<string, any> = {};
 
       if (creatorIds.length > 0) {
@@ -240,11 +240,11 @@ export async function fetchProductsByIds(productIds: string[]): Promise<Product[
           .in('id', creatorIds);
 
         if (upp) {
-          profiles = Object.fromEntries(upp.map(p => [p.id, p]));
+          profiles = Object.fromEntries(upp.map((p: any) => [p.id, p]));
         }
       }
 
-      const products = works.map(work => ({
+      const products = works.map((work: any) => ({
         id: work.id,
         title: work.title,
         description: work.description || '',

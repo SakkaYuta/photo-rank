@@ -36,7 +36,7 @@ test.describe('User & Creator Flows', () => {
       }
 
       // 4. ハンバーガーメニューからカート画面へのナビゲーションをテスト
-      const hamburgerButton = page.locator('button[aria-label="メニューを開く"]');
+      const hamburgerButton = page.locator('button[aria-label="メニュー"]');
 
       if (await hamburgerButton.isVisible()) {
         await hamburgerButton.click();
@@ -64,8 +64,8 @@ test.describe('User & Creator Flows', () => {
       await page.waitForLoadState('networkidle');
 
       // ログインが必要な場合のメッセージまたはログインボタンを確認
-      const loginElements = page.getByRole('button', { name: /ログイン|Login/ }).or(
-        page.getByText(/ログインが必要|認証が必要|サインイン/)
+      const loginElements = page.getByRole('button', { name: /新規登録|ログイン|Login/ }).or(
+        page.getByText(/ログインが必要|認証が必要|サインイン|登録/)
       );
 
       const isLoginRequired = await loginElements.count() > 0;
@@ -79,7 +79,7 @@ test.describe('User & Creator Flows', () => {
 
     test('should navigate through creator profile to products', async ({ page }) => {
       // クリエイター検索ページへ
-      await page.goto('/#creator-search');
+      await page.goto('/#search');
       await page.waitForLoadState('networkidle');
 
       // 検索機能のテスト（サンプルデータがある場合）
@@ -182,7 +182,7 @@ test.describe('User & Creator Flows', () => {
       const publicPages = [
         '/#merch',
         '/#trending',
-        '/#creator-search',
+        '/#search',
         '/#battle-search'
       ];
 
@@ -210,7 +210,7 @@ test.describe('User & Creator Flows', () => {
       const dashboards = [
         { url: '/#general-dashboard', name: 'General Dashboard' },
         { url: '/#creator-dashboard', name: 'Creator Dashboard' },
-        { url: '/#admin-dashboard', name: 'Admin Dashboard' }
+        { url: '/#admin', name: 'Admin Dashboard' }
       ];
 
       for (const dashboard of dashboards) {
@@ -220,7 +220,7 @@ test.describe('User & Creator Flows', () => {
         // リダイレクトされていない場合のみチェック
         if (page.url().includes(dashboard.url.replace('/#', ''))) {
           // 統一されたコンテナ幅クラスの確認
-          const container = page.locator('.max-w-7xl').first();
+          const container = page.locator('.max-w-6xl, .max-w-7xl').first();
           if (await container.isVisible()) {
             console.log(`${dashboard.name}: max-w-7xl コンテナ確認`);
           }
@@ -240,7 +240,7 @@ test.describe('User & Creator Flows', () => {
       // モバイル表示のテスト
       await page.setViewportSize({ width: 375, height: 667 });
 
-      const testPages = ['/#merch', '/#creator-search'];
+      const testPages = ['/#merch', '/#search'];
 
       for (const pagePath of testPages) {
         await page.goto(pagePath);
@@ -295,7 +295,7 @@ test.describe('User & Creator Flows', () => {
       });
 
       // 主要ページをチェック
-      const pages = ['/#merch', '/#creator-search', '/#trending'];
+      const pages = ['/#merch', '/#search', '/#trending'];
 
       for (const pagePath of pages) {
         await page.goto(pagePath);

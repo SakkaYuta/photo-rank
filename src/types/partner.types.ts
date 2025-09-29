@@ -9,6 +9,7 @@ export type ManufacturingPartner = {
   website_url?: string | null
   description?: string | null
   capabilities?: Record<string, any> | null
+  shipping_info?: Record<string, any> | null
   status: 'pending' | 'approved' | 'suspended'
   is_active?: boolean
   is_featured?: boolean

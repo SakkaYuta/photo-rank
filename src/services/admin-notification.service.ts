@@ -184,7 +184,7 @@ export class AdminNotificationService {
       by_type: {} as Record<string, number>
     }
 
-    data?.forEach(notification => {
+    data?.forEach((notification: any) => {
       if (!notification.read) {
         stats.unread++
       }

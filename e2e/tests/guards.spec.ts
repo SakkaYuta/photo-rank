@@ -16,7 +16,7 @@ test.describe('Route Guards', () => {
   });
 
   test('should redirect unauthenticated user from admin dashboard', async ({ page }) => {
-    await page.goto('/#admin-dashboard');
+    await page.goto('/#admin');
     await page.waitForLoadState('networkidle');
 
     // Should be redirected to home
@@ -46,7 +46,7 @@ test.describe('Route Guards', () => {
     const publicPages = [
       '/#merch',
       '/#trending',
-      '/#creator-search',
+      '/#search',
       '/#battle-search'
     ];
 
@@ -62,13 +62,13 @@ test.describe('Route Guards', () => {
     }
   });
 
-  test('should display login button on public pages when not authenticated', async ({ page }) => {
+  test('should display sign-up/login button on public pages when not authenticated', async ({ page }) => {
     await page.goto('/#merch');
     await page.waitForLoadState('networkidle');
 
-    // Should show login button (try multiple selectors)
-    const loginButton = page.getByRole('button', { name: /ログイン|Login|log in/i });
-    const loginLink = page.getByRole('link', { name: /ログイン|Login|log in/i });
-    await expect(loginButton.or(loginLink)).toBeVisible();
+    // Should show sign-up/login button (try multiple labels)
+    const ctaButton = page.getByRole('button', { name: /新規登録|ログイン|Login|log in/i });
+    const ctaLink = page.getByRole('link', { name: /新規登録|ログイン|Login|log in/i });
+    await expect(ctaButton.or(ctaLink)).toBeVisible();
   });
 });

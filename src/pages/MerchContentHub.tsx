@@ -59,9 +59,9 @@ const MerchContentHub: React.FC = () => {
           .from(SAMPLE_BUCKET)
           .list(CREATOR_PREFIX, { limit: 10, sortBy: { column: 'name', order: 'asc' } })
         const creatorUrls = (creatorList || [])
-          .filter(it => it.name && !it.name.endsWith('/'))
+          .filter((it: any) => it.name && !it.name.endsWith('/'))
           .slice(0, 4)
-          .map(it => supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(`${CREATOR_PREFIX}/${it.name}`).data.publicUrl)
+          .map((it: any) => supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(`${CREATOR_PREFIX}/${it.name}`).data.publicUrl)
         if (creatorUrls.length) setSampleCreatorImages(creatorUrls)
       } catch { /* noop */ }
       try {
@@ -70,9 +70,9 @@ const MerchContentHub: React.FC = () => {
           .from(SAMPLE_BUCKET)
           .list(CONTENT_PREFIX, { limit: 10, sortBy: { column: 'name', order: 'asc' } })
         const contentUrls = (contentList || [])
-          .filter(it => it.name && !it.name.endsWith('/'))
+          .filter((it: any) => it.name && !it.name.endsWith('/'))
           .slice(0, 4)
-          .map(it => supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(`${CONTENT_PREFIX}/${it.name}`).data.publicUrl)
+          .map((it: any) => supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(`${CONTENT_PREFIX}/${it.name}`).data.publicUrl)
         if (contentUrls.length) setSampleContentImages(contentUrls)
       } catch { /* noop */ }
     })()

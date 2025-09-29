@@ -40,7 +40,7 @@ test.describe('Smoke Tests', () => {
     await page.waitForLoadState('networkidle');
 
     // Check if mobile menu button or PhotoRank header is visible on small screens
-    const mobileMenuButton = page.locator('button[aria-label="メニューを開く"]');
+    const mobileMenuButton = page.locator('button[aria-label="メニュー"]');
     const photoRankHeader = page.getByRole('link', { name: 'ホームへ' });
 
     // Check if either element is visible (use conditional check instead of .or())

@@ -25,7 +25,7 @@ export const OrderTracking = ({ orderId }: { orderId: string }) => {
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'manufacturing_orders', filter: `id=eq.${orderId}` },
-        (payload) => setOrder((cur: any) => ({ ...(cur || {}), ...(payload.new as any) }))
+        (payload: any) => setOrder((cur: any) => ({ ...(cur || {}), ...(payload.new as any) }))
       )
       .subscribe()
 

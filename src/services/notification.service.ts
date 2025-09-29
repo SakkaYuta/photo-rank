@@ -260,7 +260,7 @@ export class NotificationService {
         retry: 0
       }
 
-      data.forEach(notification => {
+      data.forEach((notification: any) => {
         stats[notification.status as keyof typeof stats]++
       })
 

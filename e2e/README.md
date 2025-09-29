@@ -44,9 +44,9 @@ npm run report
 
 ## Configuration
 
-- **Base URL**: Set via `BASE_URL` environment variable (default: http://localhost:3002)
-- **Web Server**: Automatically starts parent dev server (`npm run dev`) before tests
-- **Browsers**: Tests run on Chromium, Firefox, WebKit, Mobile Chrome, and Mobile Safari
+- Base URL: `BASE_URL` env var (default: http://localhost:3000)
+- Web Server: Automatically starts parent dev server (`npm run dev`) before tests
+- Browsers: Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari
 
 ## Test Structure
 
@@ -58,13 +58,13 @@ npm run report
 ### Route Guards (`guards.spec.ts`)
 - Authentication redirects for protected routes
 - Public page accessibility
-- Login button visibility for unauthenticated users
+- Sign-up/login button visibility for unauthenticated users
 
 ## Environment Variables
 
 ```bash
 # Custom base URL (optional)
-BASE_URL=http://localhost:3002 npm test
+BASE_URL=http://localhost:3000 npm test
 
 # CI environment (affects retry behavior)
 CI=true npm test
@@ -89,9 +89,9 @@ npx playwright test --project=chromium
 
 ## Troubleshooting
 
-1. **Port conflicts**: Make sure the dev server is running on the expected port
-2. **Browser installation**: Run `npx playwright install --with-deps` if browsers are missing
-3. **Network issues**: Ensure the application is accessible at the base URL
+1. Port conflicts: Ensure the dev server runs on 3000 (Vite default here)
+2. Browser installation: Run `npx playwright install --with-deps` if browsers are missing
+3. Network issues: Ensure the application is accessible at the base URL
 
 ## CI/CD Integration
 

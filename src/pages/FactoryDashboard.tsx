@@ -3,6 +3,7 @@ import { useUserRole } from '../hooks/useUserRole';
 import { usePartnerAuth } from '../hooks/usePartnerAuth';
 import { getPartnerStats, getPartnerOrders, updateOrderStatus } from '../services/partner.service';
 import type { ManufacturingOrder } from '../types/partner.types';
+import { supabase } from '@/services/supabaseClient';
 import {
   Package,
   Clock,
@@ -25,7 +26,6 @@ const FactoryDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [productFilter, setProductFilter] = useState<string>('')
-  const [mdText, setMdText] = useState<string>('')
   const [statusDropdown, setStatusDropdown] = useState<string | null>(null)
   const [pendingStatusChanges, setPendingStatusChanges] = useState<Map<string, ManufacturingOrder['status']>>(new Map())
   const [hasChanges, setHasChanges] = useState(false)
@@ -138,6 +138,16 @@ const FactoryDashboard: React.FC = () => {
         return newStatus ? { ...o, status: newStatus } : o;
       }));
 
+      // 進捗に応じたダッシュボード数値を即時更新（リアルタイム到着前のフォロー）
+      if (partner?.id) {
+        try {
+          const s = await getPartnerStats(partner.id)
+          setStats(s)
+        } catch (e) {
+          // noop
+        }
+      }
+
       // 変更をクリア
       setPendingStatusChanges(new Map());
       setHasChanges(false);
@@ -159,34 +169,77 @@ const FactoryDashboard: React.FC = () => {
     setStatusDropdown(statusDropdown === orderId ? null : orderId);
   };
 
-  async function applyMarkdownUpdates() {
-    // Markdownの各行: "- <order_id>: <status>" or "<order_id> -> <status>"
-    const lines = mdText.split(/\r?\n/)
-    const updates: { id: string; status: ManufacturingOrder['status'] }[] = []
-    for (const raw of lines) {
-      const line = raw.trim()
-      if (!line) continue
-      const m = line.match(/^-?\s*([A-Za-z0-9_-]+)\s*(?:[:\-\>]{1,2})\s*([a-z_]+)/)
-      if (!m) continue
-      const id = m[1]
-      const st = m[2] as ManufacturingOrder['status']
-      if (!['submitted','accepted','in_production','shipped','cancelled','failed'].includes(st)) continue
-      updates.push({ id, status: st })
+
+  // リアルタイム更新: 注文・商品・レビューの変更を監視して統計と一覧を更新
+  useEffect(() => {
+    const sample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+    if (!partner?.id || partnerLoading || sample) return
+
+    // 注文の変更: 一覧と統計を取り直す（JOIN形状の差異を吸収するためリロード）
+    const ordersChannel = supabase
+      .channel(`factory-dashboard-orders-${partner.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'manufacturing_orders',
+        filter: `partner_id=eq.${partner.id}`,
+      }, async () => {
+        try {
+          const [o, s] = await Promise.all([
+            getPartnerOrders(partner.id),
+            getPartnerStats(partner.id),
+          ])
+          setOrders(o || [])
+          setStats(s)
+          setError(null)
+        } catch (e) {
+          console.error('Realtime refresh (orders) error:', e)
+        }
+      })
+      .subscribe()
+
+    // 商品の変更: 有効商品数など統計のみ更新
+    const productsChannel = supabase
+      .channel(`factory-dashboard-products-${partner.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'factory_products',
+        filter: `partner_id=eq.${partner.id}`,
+      }, async () => {
+        try {
+          const s = await getPartnerStats(partner.id)
+          setStats(s)
+        } catch (e) {
+          console.error('Realtime refresh (products) error:', e)
+        }
+      })
+      .subscribe()
+
+    // レビューの変更: 平均評価/件数の統計を更新
+    const reviewsChannel = supabase
+      .channel(`factory-dashboard-reviews-${partner.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'partner_reviews',
+        filter: `partner_id=eq.${partner.id}`,
+      }, async () => {
+        try {
+          const s = await getPartnerStats(partner.id)
+          setStats(s)
+        } catch (e) {
+          console.error('Realtime refresh (reviews) error:', e)
+        }
+      })
+      .subscribe()
+
+    return () => {
+      try { supabase.removeChannel(ordersChannel) } catch {}
+      try { supabase.removeChannel(productsChannel) } catch {}
+      try { supabase.removeChannel(reviewsChannel) } catch {}
     }
-    if (updates.length === 0) return
-    try {
-      await Promise.all(updates.map(u => updateOrderStatus(u.id, u.status)))
-      // ローカル反映
-      setOrders(prev => prev.map(o => {
-        const up = updates.find(x => x.id === o.id)
-        return up ? { ...o, status: up.status } as ManufacturingOrder : o
-      }))
-      setMdText('')
-    } catch (e) {
-      console.error('Status update failed', e)
-      alert('ステータス更新に失敗しました')
-    }
-  }
+  }, [partner?.id, partnerLoading])
 
   // デモデータ生成
   const genDemoStats = () => ({
@@ -274,7 +327,7 @@ const FactoryDashboard: React.FC = () => {
                 onClick={() => import('@/utils/navigation').then(m => m.navigate('partner-settings'))}
               >
                 <Settings className="w-5 h-5" />
-                工場設定
+                <span>設定</span>
               </button>
             </div>
           </div>
@@ -388,26 +441,6 @@ const FactoryDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* ステータス一括更新（Markdown） */}
-            <div className="bg-white rounded-lg shadow-sm">
-              <div className="p-6 border-b">
-                <h2 className="text-lg font-semibold text-gray-900">ステータス一括更新（Markdown）</h2>
-              </div>
-              <div className="p-6 space-y-3">
-                <p className="text-sm text-gray-600">
-                  例: <code>ORD-001: in_production</code> や <code>ORD-002 -&gt; shipped</code> を1行ずつ記述
-                </p>
-                <textarea
-                  className="w-full border rounded-lg px-3 py-2 text-xs sm:text-sm min-h-[100px] sm:min-h-[120px]"
-                  placeholder={"ORD-001: in_production\nORD-002 -> shipped"}
-                  value={mdText}
-                  onChange={(e) => setMdText(e.target.value)}
-                />
-                <div className="flex justify-end">
-                  <button onClick={applyMarkdownUpdates} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">更新する</button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 

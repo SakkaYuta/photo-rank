@@ -11,6 +11,7 @@ import { GoodsPreviewCarousel } from '@/components/goods/GoodsPreviewCarousel'
 import type { PreviewSlide } from '@/components/goods/GoodsPreviewCarousel'
 import GOODS_MOCKUPS from '@/config/goods-mockups'
 import { getFactoryProductMockups } from '@/services/factory-mockups.service'
+import { getFactoryProductById } from '@/services/partner.service'
 
 // グッズアイテムの型定義
 interface GoodsItem {
@@ -80,11 +81,16 @@ const GoodsItemSelector: React.FC = () => {
           ;(window as any).__FACTORY_MOCKS__ = mocks // 開発デバッグ用
           setFactoryMockups(mocks.map(m => ({ mockupUrl: m.image_url, geometry: (m as any).geometry } as any)))
         } catch (e) { console.warn('factoryProductId provided but fetch failed', e) }
+        try {
+          const fp = await getFactoryProductById(factoryProductId)
+          if (fp) setFactoryPartnerId(fp.partner_id)
+        } catch (e) { console.warn('getFactoryProductById failed', e) }
       })()
     }
   }, []);
 
   const [factoryMockups, setFactoryMockups] = useState<Array<{ mockupUrl: string; geometry?: any }>>([])
+  const [factoryPartnerId, setFactoryPartnerId] = useState<string | null>(null)
 
   const loadGoodsItems = () => {
     // グッズアイテムのマスターデータ
@@ -397,6 +403,7 @@ const GoodsItemSelector: React.FC = () => {
       title: `${selectedProduct?.title || '商品'} - ${selectedItem.name}`,
       price: calculatePrice(),
       imageUrl: selectedProduct?.image_url || selectedItem.image,
+      factoryId: factoryPartnerId || undefined,
     }
 
     addToCart(cartItem, quantity)
