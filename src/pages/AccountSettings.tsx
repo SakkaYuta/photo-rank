@@ -386,6 +386,8 @@ function PayoutPanel() {
     address2: '',
   })
   const [saving, setSaving] = useState(false)
+  const [isTaxable, setIsTaxable] = useState<boolean>(false)
+  const [invoiceNumber, setInvoiceNumber] = useState('')
 
   useEffect(() => {
     (async () => {
@@ -413,6 +415,15 @@ function PayoutPanel() {
           address1: id.address1 || '',
           address2: id.address2 || '',
         })
+      } catch {}
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data } = await supabase.from('users').select('metadata').eq('id', user.id).maybeSingle()
+          const meta = (data as any)?.metadata || {}
+          if (typeof meta.is_taxable_business === 'boolean') setIsTaxable(Boolean(meta.is_taxable_business))
+          if (meta.invoice_registration_number) setInvoiceNumber(String(meta.invoice_registration_number))
+        }
       } catch {}
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
