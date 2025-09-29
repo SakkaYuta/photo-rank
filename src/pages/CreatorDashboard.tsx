@@ -52,7 +52,7 @@ const CreatorDashboard: React.FC = () => {
     loadDashboardData();
   }, [user?.id]);
 
-  // ドロップダウンを外側クリックで閉じる（内側は維持）
+  // ドロップダウンを外側クリック/Escで閉じる（内側は維持）
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
@@ -68,10 +68,20 @@ const CreatorDashboard: React.FC = () => {
         if (!withinMenu) setIsMenuOpen(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (statusDropdown) setStatusDropdown(null);
+        if (isMenuOpen) setIsMenuOpen(false);
+      }
+    };
 
     if (statusDropdown || isMenuOpen) {
       document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.removeEventListener('click', handleClickOutside);
+        document.removeEventListener('keydown', handleKeyDown);
+      };
     }
   }, [statusDropdown, isMenuOpen]);
 
@@ -177,14 +187,7 @@ const CreatorDashboard: React.FC = () => {
                   </button>
                 </div>
               )}
-              <button
-                onClick={goToCreate}
-                className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 items-center gap-2 whitespace-nowrap text-sm sm:text-base transition-all duration-200 ease-in-out"
-              >
-                <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="hidden sm:inline">新しい作品をアップロード</span>
-                <span className="sm:hidden">作品投稿</span>
-              </button>
+
 
               {/* ハンバーガーメニューボタン */}
               <div className="relative" data-menu-container>
@@ -384,6 +387,10 @@ const CreatorDashboard: React.FC = () => {
                           <p className="font-semibold text-gray-900">¥{work.revenue.toLocaleString()}</p>
                           <div className="relative" data-dropdown-work={work.id}>
                             <button
+                              type="button"
+                              aria-haspopup="menu"
+                              aria-expanded={statusDropdown === work.id}
+                              aria-controls={`status-menu-${work.id}`}
                               onClick={(e) => { e.stopPropagation(); toggleStatusDropdown(work.id); }}
                               disabled={updatingStatus === 'all'}
                               className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full transition-colors ${
@@ -406,8 +413,15 @@ const CreatorDashboard: React.FC = () => {
                             </button>
 
                             {statusDropdown === work.id && (
-                              <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-10" onClick={(e) => e.stopPropagation()}>
+                              <div
+                                id={`status-menu-${work.id}`}
+                                role="menu"
+                                aria-labelledby={`status-toggle-${work.id}`}
+                                className="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-10"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <button
+                                  role="menuitem"
                                   onClick={() => handleStatusChange(work.id, true)}
                                   className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 rounded-t-lg ${
                                     currentStatus ? 'text-gray-400' : 'text-gray-900'
@@ -417,6 +431,7 @@ const CreatorDashboard: React.FC = () => {
                                   公開中
                                 </button>
                                 <button
+                                  role="menuitem"
                                   onClick={() => handleStatusChange(work.id, false)}
                                   className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 rounded-b-lg ${
                                     !currentStatus ? 'text-gray-400' : 'text-gray-900'

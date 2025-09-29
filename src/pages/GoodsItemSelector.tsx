@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Info, Check, Package, Truck, Clock, Star } from 'lucide-react';
 import { resolveImageUrl } from '@/utils/imageFallback'
@@ -11,7 +11,8 @@ import { GoodsPreviewCarousel } from '@/components/goods/GoodsPreviewCarousel'
 import type { PreviewSlide } from '@/components/goods/GoodsPreviewCarousel'
 import GOODS_MOCKUPS from '@/config/goods-mockups'
 import { getFactoryProductMockups } from '@/services/factory-mockups.service'
-import { getFactoryProductById } from '@/services/partner.service'
+import { getFactoryProductById, getPartnerById, getPartnerProducts } from '@/services/partner.service'
+import type { FactoryProduct } from '@/types/partner.types'
 
 // グッズアイテムの型定義
 interface GoodsItem {
@@ -43,6 +44,15 @@ const GoodsItemSelector: React.FC = () => {
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [recentGoodsIds, setRecentGoodsIds] = useState<string[]>([]);
+
+  // 検索・フィルター用のステート
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortKey, setSortKey] = useState<string>('popular');
+  const [filterSize, setFilterSize] = useState<string>('');
+  const [filterColor, setFilterColor] = useState<string>('');
+  const [priceMin, setPriceMin] = useState<string>('');
+  const [priceMax, setPriceMax] = useState<string>('');
 
   const { addToCart } = useCart();
   const { showToast } = useToast();
@@ -83,7 +93,7 @@ const GoodsItemSelector: React.FC = () => {
         } catch (e) { console.warn('factoryProductId provided but fetch failed', e) }
         try {
           const fp = await getFactoryProductById(factoryProductId)
-          if (fp) setFactoryPartnerId(fp.partner_id)
+          if (fp) { setFactoryPartnerId(fp.partner_id); setCurrentFactoryProduct(fp) }
         } catch (e) { console.warn('getFactoryProductById failed', e) }
       })()
     }
@@ -91,6 +101,25 @@ const GoodsItemSelector: React.FC = () => {
 
   const [factoryMockups, setFactoryMockups] = useState<Array<{ mockupUrl: string; geometry?: any }>>([])
   const [factoryPartnerId, setFactoryPartnerId] = useState<string | null>(null)
+  const [factoryShippingInfo, setFactoryShippingInfo] = useState<any | null>(null)
+  const [showSizeGuide, setShowSizeGuide] = useState(false)
+  const sizeGuideModalRef = useRef<HTMLDivElement | null>(null)
+  const sizeGuideCloseBtnRef = useRef<HTMLButtonElement | null>(null)
+  
+  // 作品メタデータから工場モデルがあれば工場を推定
+  useEffect(() => {
+    const pm = (selectedProduct as any)?.metadata?.product_model_id || (selectedProduct as any)?.product_model_id
+    if (!pm) return
+    ;(async () => {
+      try {
+        const fp = await getFactoryProductById(pm)
+        if (fp) { setFactoryPartnerId(fp.partner_id); setCurrentFactoryProduct(fp) }
+      } catch (e) { console.warn('getFactoryProductById (work meta) failed', e) }
+    })()
+  }, [selectedProduct])
+  const [currentFactoryProduct, setCurrentFactoryProduct] = useState<FactoryProduct | null>(null)
+  const [factoryProducts, setFactoryProducts] = useState<FactoryProduct[]>([])
+  const [factoryGoods, setFactoryGoods] = useState<GoodsItem[]>([])
 
   const loadGoodsItems = () => {
     // グッズアイテムのマスターデータ
@@ -364,6 +393,155 @@ const GoodsItemSelector: React.FC = () => {
     setGoodsItems(items);
   };
 
+  // サイズ/カラーが1種類しかない場合は自動選択して操作を短縮
+  useEffect(() => {
+    if (!selectedItem) return
+    if (selectedItem.sizes && selectedItem.sizes.length === 1) {
+      setSelectedSize(selectedItem.sizes[0])
+    }
+    if (selectedItem.colors && selectedItem.colors.length === 1) {
+      setSelectedColor(selectedItem.colors[0])
+    }
+    // 数量の初期化（念のため）
+    setQuantity(Math.max(selectedItem.minOrder || 1, 1))
+  }, [selectedItem])
+
+  // サイズ表モーダルのフォーカストラップとESCクローズ
+  useEffect(() => {
+    if (!showSizeGuide) return
+    const modal = sizeGuideModalRef.current
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setShowSizeGuide(false)
+        return
+      }
+      if (e.key === 'Tab' && modal) {
+        const focusables = modal.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+        )
+        if (focusables.length === 0) return
+        const first = focusables[0]
+        const last = focusables[focusables.length - 1]
+        const active = document.activeElement as HTMLElement | null
+        if (e.shiftKey) {
+          if (active === first || !modal.contains(active)) {
+            last.focus()
+            e.preventDefault()
+          }
+        } else {
+          if (active === last) {
+            first.focus()
+            e.preventDefault()
+          }
+        }
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    // 初期フォーカスを閉じるボタンへ
+    setTimeout(() => sizeGuideCloseBtnRef.current?.focus(), 0)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [showSizeGuide])
+
+  // 選択されたアイテムを最近見たグッズ履歴に追加
+  useEffect(() => {
+    if (selectedItem) {
+      setRecentGoodsIds(prev => {
+        const filtered = prev.filter(id => id !== selectedItem.id);
+        return [selectedItem.id, ...filtered].slice(0, 5); // 最大5件まで
+      });
+    }
+  }, [selectedItem]);
+
+  // カテゴリ切替時は選択状態を解除（誤選択防止）
+  useEffect(() => {
+    setSelectedItem(null)
+    setSelectedSize('')
+    setSelectedColor('')
+    setQuantity(1)
+  }, [selectedCategory])
+
+  // 工場の配送情報取得（送料目安表示用）
+  useEffect(() => {
+    let active = true
+    if (!factoryPartnerId) { setFactoryShippingInfo(null); return }
+    getPartnerById(factoryPartnerId)
+      .then((p) => { if (active) setFactoryShippingInfo((p as any)?.shipping_info || null) })
+      .catch(() => { if (active) setFactoryShippingInfo(null) })
+    return () => { active = false }
+  }, [factoryPartnerId])
+
+  // 工場商品の取得とUI用へのマッピング
+  useEffect(() => {
+    let active = true
+    if (!factoryPartnerId) { setFactoryProducts([]); setFactoryGoods([]); return }
+    getPartnerProducts(factoryPartnerId)
+      .then((list) => {
+        if (!active) return
+        setFactoryProducts(list)
+        const feeRate = 0.1
+        const margin = (selectedProduct as any)?.metadata?.creator_margin || null
+        const toMarginYen = (baseCost: number) => {
+          if (!margin) return 0
+          if (margin.type === 'percent') return Math.floor(baseCost * ((Number(margin.value)||0)/100))
+          return Number(margin.value)||0
+        }
+        const mapped: GoodsItem[] = list.map((fp: any) => {
+          const opt: any = fp.options || {}
+          const baseCost = fp.base_cost
+          const estPrice = Math.max(0, Math.floor(baseCost * (1 + feeRate) + toMarginYen(baseCost)))
+          return {
+            id: fp.id,
+            name: opt.display_name || opt.product_name || fp.product_type,
+            category: opt.category || 'homeware',
+            description: opt.description || '',
+            basePrice: estPrice,
+            productionTime: opt.production_time || `${fp.lead_time_days}日`,
+            minOrder: fp.minimum_quantity ?? 1,
+            features: Array.isArray(opt.features) ? opt.features : [],
+            image: opt.image_url || opt.image || defaultImages.product,
+            mockups: [],
+            sizes: Array.isArray(opt.sizes) ? opt.sizes : undefined,
+            colors: Array.isArray(opt.colors) ? opt.colors : undefined,
+            materials: opt.materials || undefined,
+            printArea: opt.print_area || opt.printArea || undefined,
+            popularity: 4,
+            isRecommended: !!opt.is_recommended,
+            discountRate: typeof opt.discount_rate === 'number' ? opt.discount_rate : undefined,
+            ...( { __factoryId: fp.partner_id, __factoryProductId: fp.id, __leadDays: fp.lead_time_days, __maxQty: fp.maximum_quantity ?? undefined, __baseCost: baseCost } as any )
+          } as any
+        })
+        setFactoryGoods(mapped)
+      })
+      .catch((e) => { console.warn('getPartnerProducts failed', e); if (active) { setFactoryProducts([]); setFactoryGoods([]) } })
+    return () => { active = false }
+  }, [factoryPartnerId, selectedProduct])
+
+  // 製作期間またはリードタイムからお届け目安を推定
+  const getEstimatedDelivery = (productionTime?: string, leadDays?: number) => {
+    if (typeof leadDays === 'number' && leadDays > 0) {
+      const addDays = (d: number) => {
+        const dt = new Date(); dt.setDate(dt.getDate() + d)
+        const m = dt.getMonth() + 1, day = dt.getDate()
+        return `${m}月${day}日`
+      }
+      return `${addDays(leadDays)} 以降お届け目安`
+    }
+    if (!productionTime) return ''
+    const match = productionTime.match(/(\d+)[^\d]+(\d+)?/)
+    const addDays = (d: number) => {
+      const dt = new Date(); dt.setDate(dt.getDate() + d)
+      const m = dt.getMonth() + 1, day = dt.getDate()
+      return `${m}月${day}日`
+    }
+    if (match) {
+      const min = parseInt(match[1], 10)
+      const max = match[2] ? parseInt(match[2], 10) : min
+      return `${addDays(min)} 〜 ${addDays(max)} お届け目安`
+    }
+    return ''
+  }
+
   // カテゴリー一覧
   const categories = [
     { id: 'all', name: 'すべて' },
@@ -376,9 +554,66 @@ const GoodsItemSelector: React.FC = () => {
   ];
 
   // フィルタリングされたアイテム
-  const filteredItems = selectedCategory === 'all'
-    ? goodsItems
-    : goodsItems.filter(item => item.category === selectedCategory);
+  const filteredItems = useMemo(() => {
+    // ベース候補（工場商品があれば優先、なければ静的）
+    let items: GoodsItem[] = factoryGoods.length > 0 ? factoryGoods : goodsItems;
+
+    // 作品のenabled_familiesでタイプを絞る
+    const ef = (selectedProduct as any)?.metadata?.enabled_families || (selectedProduct as any)?.enabled_families || undefined
+    if (ef && Array.isArray(ef) && ef.length > 0) {
+      items = items.filter(it => ef.some((f: string) => (it.id || '').includes(f) || ((it as any).product_type || '').includes(f)))
+    }
+
+    // カテゴリフィルター
+    if (selectedCategory !== 'all') {
+      items = items.filter(item => item.category === selectedCategory);
+    }
+
+    // 検索クエリフィルター
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      items = items.filter(item =>
+        item.name.toLowerCase().includes(query) ||
+        item.description.toLowerCase().includes(query) ||
+        (item.materials && item.materials.toLowerCase().includes(query))
+      );
+    }
+
+    // サイズフィルター
+    if (filterSize) {
+      items = items.filter(item => item.sizes?.includes(filterSize));
+    }
+
+    // カラーフィルター
+    if (filterColor) {
+      items = items.filter(item => item.colors?.includes(filterColor));
+    }
+
+    // 価格フィルター
+    const minPrice = priceMin ? parseInt(priceMin, 10) : 0;
+    const maxPrice = priceMax ? parseInt(priceMax, 10) : Infinity;
+    items = items.filter(item => item.basePrice >= minPrice && item.basePrice <= maxPrice);
+
+    // ソート
+    switch (sortKey) {
+      case 'popular':
+        items.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+        break;
+      case 'recommended':
+        items.sort((a, b) => Number(!!b.isRecommended) - Number(!!a.isRecommended));
+        break;
+      case 'priceLow':
+        items.sort((a, b) => a.basePrice - b.basePrice);
+        break;
+      case 'priceHigh':
+        items.sort((a, b) => b.basePrice - a.basePrice);
+        break;
+      default:
+        break;
+    }
+
+    return items;
+  }, [goodsItems, factoryGoods, selectedProduct, selectedCategory, searchQuery, filterSize, filterColor, priceMin, priceMax, sortKey]);
 
   // カートに追加
   const handleAddToCart = () => {
@@ -403,7 +638,17 @@ const GoodsItemSelector: React.FC = () => {
       title: `${selectedProduct?.title || '商品'} - ${selectedItem.name}`,
       price: calculatePrice(),
       imageUrl: selectedProduct?.image_url || selectedItem.image,
-      factoryId: factoryPartnerId || undefined,
+      factoryId: factoryPartnerId || (selectedItem as any).__factoryId || undefined,
+      factoryProductId: (selectedItem as any).__factoryProductId || undefined,
+      workId: selectedProduct?.id || undefined,
+      variant: {
+        size: selectedSize || undefined,
+        color: selectedColor || undefined,
+      },
+      constraints: {
+        minOrder: selectedItem.minOrder,
+        maxOrder: (selectedItem as any).__maxQty || undefined,
+      }
     }
 
     addToCart(cartItem, quantity)
@@ -424,8 +669,10 @@ const GoodsItemSelector: React.FC = () => {
     return Math.floor(baseTotal - discount);
   };
 
+  const canAddToCart = !!(selectedItem && (!selectedItem.sizes || selectedSize) && (!selectedItem.colors || selectedColor))
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen bg-gray-50 ${selectedItem ? 'pb-28' : ''}`}>
       {/* ヘッダー */}
       <div className="bg-white shadow-sm border-b sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
@@ -467,6 +714,28 @@ const GoodsItemSelector: React.FC = () => {
         </div>
       )}
 
+      {/* 最近見たグッズ */}
+      {recentGoodsIds.length > 0 && (
+        <div className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
+            <div className="text-sm text-gray-600 mb-2">最近見たグッズ</div>
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {recentGoodsIds.map(id => {
+                const it = goodsItems.find(x=>x.id===id)
+                if (!it) return null
+                return (
+                  <button key={id} className="min-w-[160px] bg-gray-50 rounded border hover:shadow px-3 py-2 text-left" onClick={()=>{ setSelectedItem(it); setQuantity(Math.max(it.minOrder||1,1)); setSelectedSize(''); setSelectedColor('') }}>
+                    <img src={it.image} alt={it.name} className="w-full h-24 object-cover rounded" />
+                    <div className="mt-1 text-sm text-black truncate">{it.name}</div>
+                    <div className="text-xs text-gray-600">¥{it.basePrice.toLocaleString()}</div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* カテゴリーフィルター */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
@@ -484,6 +753,48 @@ const GoodsItemSelector: React.FC = () => {
                 {category.name}
               </button>
             ))}
+          </div>
+          {/* 検索/並び替え/絞り込み */}
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+            <div className="md:col-span-2">
+              <label className="block text-xs text-gray-600 mb-1">キーワード検索</label>
+              <input value={searchQuery} onChange={(e)=>setSearchQuery(e.target.value)} placeholder="グッズ名や説明で検索" className="w-full px-3 py-2 border rounded" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">並び替え</label>
+              <select value={sortKey} onChange={(e)=> setSortKey(e.target.value as any)} className="w-full px-3 py-2 border rounded">
+                <option value="popular">人気順</option>
+                <option value="recommended">おすすめ</option>
+                <option value="priceLow">価格が安い</option>
+                <option value="priceHigh">価格が高い</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">サイズ</label>
+                <select value={filterSize} onChange={(e)=> setFilterSize(e.target.value)} className="w-full px-3 py-2 border rounded">
+                  <option value="">すべて</option>
+                  {Array.from(new Set((factoryGoods.length>0?factoryGoods:goodsItems).flatMap(i=>i.sizes||[]))).map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">カラー</label>
+                <select value={filterColor} onChange={(e)=> setFilterColor(e.target.value)} className="w-full px-3 py-2 border rounded">
+                  <option value="">すべて</option>
+                  {Array.from(new Set((factoryGoods.length>0?factoryGoods:goodsItems).flatMap(i=>i.colors||[]))).map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="md:col-span-2 grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">価格（最小）</label>
+                <input value={priceMin} onChange={(e)=> setPriceMin(e.target.value)} type="number" className="w-full px-3 py-2 border rounded" placeholder="0" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">価格（最大）</label>
+                <input value={priceMax} onChange={(e)=> setPriceMax(e.target.value)} type="number" className="w-full px-3 py-2 border rounded" placeholder="10000" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -697,6 +1008,7 @@ const GoodsItemSelector: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       サイズ <span className="text-red-500">*</span>
+                      <button type="button" className="ml-3 text-xs underline text-blue-600" onClick={() => setShowSizeGuide(true)}>サイズ表を見る</button>
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {selectedItem.sizes.map(size => (
@@ -743,11 +1055,11 @@ const GoodsItemSelector: React.FC = () => {
                 {/* 数量選択 */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    数量（最小注文数: {selectedItem.minOrder}個）
+                    数量（最小: {selectedItem.minOrder}個{(selectedItem as any).__maxQty ? ` / 最大: ${(selectedItem as any).__maxQty}個` : ''}）
                   </label>
                   <div className="flex items-center gap-4">
-                    <button
-                      onClick={() => setQuantity(Math.max(selectedItem.minOrder, quantity - 1))}
+                      <button
+                      onClick={() => setQuantity(Math.max(selectedItem.minOrder, Math.min(quantity - 1, (selectedItem as any).__maxQty || Number.MAX_SAFE_INTEGER)))}
                       className="w-10 h-10 border-2 border-gray-400 bg-white rounded-lg hover:bg-gray-100 text-black font-medium"
                     >
                       −
@@ -755,12 +1067,19 @@ const GoodsItemSelector: React.FC = () => {
                     <input
                       type="number"
                       value={quantity}
-                      onChange={(e) => setQuantity(Math.max(selectedItem.minOrder, parseInt(e.target.value) || selectedItem.minOrder))}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value) || selectedItem.minOrder
+                        const max = (selectedItem as any).__maxQty || Number.MAX_SAFE_INTEGER
+                        setQuantity(Math.max(selectedItem.minOrder, Math.min(v, max)))
+                      }}
                       className="w-20 px-3 py-2 border-2 border-gray-400 bg-white rounded-lg text-center text-black focus:border-blue-500 focus:outline-none"
                       min={selectedItem.minOrder}
                     />
                     <button
-                      onClick={() => setQuantity(quantity + 1)}
+                      onClick={() => {
+                        const max = (selectedItem as any).__maxQty || Number.MAX_SAFE_INTEGER
+                        setQuantity(Math.min(quantity + 1, max))
+                      }}
                       className="w-10 h-10 border-2 border-gray-400 bg-white rounded-lg hover:bg-gray-100 text-black font-medium"
                     >
                       +
@@ -772,15 +1091,28 @@ const GoodsItemSelector: React.FC = () => {
               {/* 価格表示 */}
               <div className="border-t pt-4 mb-6">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-600">単価</span>
+                  <span className="text-gray-600">単価（見込）</span>
                   <span className="font-medium text-black">
                     ¥{selectedItem.basePrice.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-gray-600">数量</span>
-                  <span className="font-medium text-black">×{quantity}</span>
+                  <span className="font-medium text-black">×{quantity}{(selectedItem as any).__maxQty ? `（最大${(selectedItem as any).__maxQty}）` : ''}</span>
                 </div>
+                {/* 送料目安 */}
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-600">送料（目安）</span>
+                  <span className="font-medium text-black">
+                    {factoryShippingInfo?.fee_general_jpy ? `¥${Number(factoryShippingInfo.fee_general_jpy).toLocaleString()}` : 'カートで計算'}
+                  </span>
+                </div>
+                {/* お届け目安 */}
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-600">お届け目安</span>
+                  <span className="font-medium text-black">{getEstimatedDelivery(selectedItem.productionTime, (currentFactoryProduct as any)?.lead_time_days) || '製作期間に準じます'}</span>
+                </div>
+                <div className="text-xs text-gray-500 mb-2">表記は工場のリードタイムに基づく目安です（状況により前後する場合があります）。</div>
                 {selectedItem.discountRate && (
                   <div className="flex items-center justify-between mb-2 text-green-600">
                     <span>割引（{selectedItem.discountRate}%OFF）</span>
@@ -793,6 +1125,7 @@ const GoodsItemSelector: React.FC = () => {
                     ¥{calculatePrice().toLocaleString()}
                   </span>
                 </div>
+                <div className="text-xs text-gray-500 mt-1">税込・送料別（カートで確定）</div>
               </div>
 
               {/* アクションボタン */}
@@ -810,6 +1143,98 @@ const GoodsItemSelector: React.FC = () => {
                     (selectedItem.colors && !selectedColor)
                   }
                   className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <ShoppingCart className="w-5 h-5" />
+                  カートに追加
+                </button>
+              </div>
+
+              {/* 推薦/回遊セクション */}
+              <div className="mt-10">
+                <h4 className="text-sm font-semibold text-gray-800 mb-3">この作品の他グッズ</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {((factoryGoods.length>0?factoryGoods:goodsItems)
+                    .filter(i=> (i as any).id!==selectedItem.id)
+                    .filter(i=> {
+                      const sameFactory = (i as any).__factoryId && (selectedItem as any).__factoryId && (i as any).__factoryId === (selectedItem as any).__factoryId
+                      const sameCategory = i.category === selectedItem.category
+                      return sameFactory || sameCategory
+                    })
+                    .slice(0,3)).map(i => (
+                    <button key={(i as any).id || i.name} className="text-left bg-gray-50 rounded border hover:shadow p-2" onClick={()=>{ setSelectedItem(i); setQuantity(Math.max(i.minOrder||1,1)); setSelectedSize(''); setSelectedColor('') }}>
+                      <img src={i.image} alt={i.name} className="w-full h-24 object-cover rounded" />
+                      <div className="mt-1 text-sm text-black truncate">{i.name}</div>
+                      <div className="text-xs text-gray-600">¥{i.basePrice.toLocaleString()}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-6">
+                <h4 className="text-sm font-semibold text-gray-800 mb-3">よく一緒に購入される</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {((factoryGoods.length>0?factoryGoods:goodsItems)
+                    .filter(i=> (i as any).id!==selectedItem.id)
+                    .sort((a,b)=> Number(!!b.isRecommended) - Number(!!a.isRecommended) || (b.popularity||0)-(a.popularity||0))
+                    .slice(0,3)).map(i => (
+                    <button key={(i as any).id || i.name} className="text-left bg-gray-50 rounded border hover:shadow p-2" onClick={()=>{ setSelectedItem(i); setQuantity(Math.max(i.minOrder||1,1)); setSelectedSize(''); setSelectedColor('') }}>
+                      <img src={i.image} alt={i.name} className="w-full h-24 object-cover rounded" />
+                      <div className="mt-1 text-sm text-gray-900 truncate">{i.name}</div>
+                      <div className="text-xs text-gray-600">¥{i.basePrice.toLocaleString()}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* サイズ表モーダル */}
+      {showSizeGuide && selectedItem?.sizes && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" aria-hidden={!showSizeGuide}>
+          <div ref={sizeGuideModalRef} role="dialog" aria-modal="true" aria-labelledby="size-guide-title" className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 id="size-guide-title" className="text-lg font-semibold text-gray-900">サイズ表</h3>
+              <button ref={sizeGuideCloseBtnRef} className="text-gray-500 hover:text-gray-800" onClick={() => setShowSizeGuide(false)} aria-label="サイズ表を閉じる">×</button>
+            </div>
+            <div className="space-y-2 text-sm text-gray-800">
+              <p>対応サイズ（目安）:</p>
+              <div className="flex flex-wrap gap-2">
+                {selectedItem.sizes.map((s) => (
+                  <span key={s} className="px-2 py-1 bg-gray-100 rounded">{s}</span>
+                ))}
+              </div>
+              <p className="text-xs text-gray-600 mt-2">※商品により実寸は前後します。詳しいサイズ実測や採寸ガイドは商品ページの仕様に準じます。</p>
+            </div>
+            <div className="mt-6 text-right">
+              <button className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700" onClick={() => setShowSizeGuide(false)}>閉じる</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 下部固定の合計バー */}
+      {selectedItem && (
+        <div className="fixed bottom-0 inset-x-0 bg-white border-t shadow-lg z-40">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-sm text-gray-600 truncate">{selectedItem.name}{selectedSize ? ` / ${selectedItem.sizes ? selectedSize : ''}` : ''}{selectedColor ? ` / ${selectedItem.colors ? selectedColor : ''}` : ''}</div>
+                <div className="flex items-center gap-3">
+                  <div className="text-xl font-bold text-black">¥{calculatePrice().toLocaleString()}</div>
+                  <div className="text-xs text-gray-500">税込・送料別{factoryShippingInfo?.fee_general_jpy ? `（送料目安 ¥${Number(factoryShippingInfo.fee_general_jpy).toLocaleString()}）` : ''}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setSelectedItem(null)}
+                  className="hidden sm:inline-flex px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={handleAddToCart}
+                  disabled={!canAddToCart}
+                  className={`px-5 py-3 rounded-lg text-white font-medium flex items-center gap-2 ${canAddToCart ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-300 cursor-not-allowed'}`}
                 >
                   <ShoppingCart className="w-5 h-5" />
                   カートに追加
