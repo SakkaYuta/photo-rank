@@ -7,8 +7,29 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return corsPreflightResponse()
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: corsHeaders })
   try {
+    // Origin allowlist (optional)
+    try {
+      const allowed = (Deno.env.get('ALLOWED_ORIGINS') || '').split(',').map(s => s.trim()).filter(Boolean)
+      const origin = req.headers.get('Origin') || ''
+      if (allowed.length > 0 && origin && !allowed.includes(origin)) {
+        return new Response('Forbidden origin', { status: 403, headers: corsHeaders })
+      }
+    } catch (_) {}
     const user = await authenticateUser(req)
     const supabase = getSupabaseAdmin()
+
+    // Rate limit per user to avoid abuse (e.g., 5 req/min)
+    try {
+      const { data: canProceed } = await supabase.rpc('check_rate_limit', {
+        p_user_id: user.id,
+        p_action: 'create_konbini_intent',
+        p_limit: 5,
+        p_window_minutes: 1,
+      })
+      if (canProceed === false) {
+        return new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429, headers: { ...corsHeaders, 'content-type': 'application/json' } })
+      }
+    } catch (_) {}
 
     const { items, description, metadata, address_id } = await req.json().catch(() => ({})) as any
     if (!Array.isArray(items) || items.length === 0) {
@@ -41,9 +62,18 @@ serve(async (req) => {
       }
     } catch (_) {}
     const normalized = items.map((it: any) => ({ work_id: String(it?.work_id || it?.id || ''), qty: Math.max(1, Math.floor(Number(it?.qty || 1))) }))
+    // qty 上限と不正値のチェック（防御）
+    if (normalized.some(x => !x.work_id || !Number.isFinite(x.qty) || x.qty < 1 || x.qty > 100)) {
+      return new Response(JSON.stringify({ error: 'invalid items (qty must be 1-100)' }), { status: 400, headers: { ...corsHeaders, 'content-type': 'application/json' } })
+    }
     const workIds = Array.from(new Set(normalized.map((x: any) => x.work_id))).filter(Boolean)
     const { data: works } = await supa.from('works').select('id, price, factory_id, is_active, is_published').in('id', workIds)
     if (!works || works.length === 0) return new Response(JSON.stringify({ error: 'works not found' }), { status: 400, headers: { ...corsHeaders, 'content-type': 'application/json' } })
+    for (const w of works as any[]) {
+      const published = (typeof w.is_published === 'boolean' ? w.is_published : false) || (typeof w.is_active === 'boolean' ? w.is_active : false)
+      if (!published) return new Response(JSON.stringify({ error: `unavailable work: ${w.id}` }), { status: 400, headers: { ...corsHeaders, 'content-type': 'application/json' } })
+      if (!Number.isFinite(Number(w.price)) || Number(w.price) <= 0) return new Response(JSON.stringify({ error: `invalid price: ${w.id}` }), { status: 400, headers: { ...corsHeaders, 'content-type': 'application/json' } })
+    }
     // map price
     const priceMap = Object.fromEntries(works.map(w => [w.id, Math.max(0, Number(w.price||0))]))
     const subtotal = normalized.reduce((sum: number, it: any) => sum + (priceMap[it.work_id] || 0) * it.qty, 0)

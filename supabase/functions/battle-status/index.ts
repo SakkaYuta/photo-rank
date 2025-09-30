@@ -4,7 +4,7 @@ import { getSupabaseAdmin, authenticateUser } from '../_shared/client.ts'
 serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 })
   try {
-    await authenticateUser(req) // any authenticated user can view status
+    const user = await authenticateUser(req) // any authenticated user can view status; details gated below
     const supabase = getSupabaseAdmin()
     const body = await req.json().catch(() => ({})) as { battle_id?: string }
     const battleId = body?.battle_id
@@ -16,6 +16,12 @@ serve(async (req) => {
       .eq('id', battleId)
       .single()
     if (bErr || !battle) return new Response(JSON.stringify({ error: 'battle not found' }), { status: 404, headers: { 'content-type': 'application/json' } })
+
+    // Visibility gate: if private and requester is not participant, reject
+    const isParticipant = [battle.challenger_id, battle.opponent_id].includes(user.id)
+    if ((battle as any).visibility === 'private' && !isParticipant) {
+      return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { 'content-type': 'application/json' } })
+    }
 
     // Aggregate cheer points (100 per ticket)
     const { data: tickets } = await supabase

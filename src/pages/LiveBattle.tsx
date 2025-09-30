@@ -5,6 +5,7 @@ import { purchaseCheerTicket, purchaseBattleGoods, getBattleStatus, purchaseChee
 import { BATTLE_GOODS_TYPES } from '@/utils/constants'
 import { formatJPY } from '@/utils/helpers'
 import { supabase } from '@/services/supabaseClient'
+import { invalidateBattleCache } from '@/utils/cache'
 import { StripeCheckout } from '@/components/checkout/StripeCheckout'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 
@@ -161,10 +162,10 @@ const LiveBattle: React.FC = () => {
     const channel = supabase
       .channel(`live-battle-${battleId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cheer_tickets', filter: `battle_id=eq.${battleId}` }, async () => {
-        try { await refreshFromBackend(battleId) } catch {}
+        try { invalidateBattleCache(battleId); await refreshFromBackend(battleId) } catch {}
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'battles', filter: `id=eq.${battleId}` }, async () => {
-        try { await refreshFromBackend(battleId) } catch {}
+        try { invalidateBattleCache(battleId); await refreshFromBackend(battleId) } catch {}
       })
       .subscribe()
 

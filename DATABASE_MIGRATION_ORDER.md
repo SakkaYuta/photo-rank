@@ -50,6 +50,9 @@ supabase/migrations/20250922_rls_policy_fixes.sql
 supabase/migrations/20250922_v5_0_core.sql
 supabase/migrations/20250922_v5_0_storage.sql
 
+# 15. 追加セキュリティ修正（RLSとsearch_path固定）
+supabase/migrations/20250930_security_fixes.sql
+
 # 14. テストデータ（開発時のみ）
 supabase/migrations/20241218_test_data_tables.sql
 ```

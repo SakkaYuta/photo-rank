@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { requestBattle, getBattleStatus } from '@/services/battle.service'
+import { invalidateBattleCache } from '@/utils/cache'
 import { supabase } from '@/services/supabaseClient'
 import { SAMPLE_BATTLES, SAMPLE_PARTICIPANTS, SAMPLE_SCORES } from '@/sample/battleSamples'
 import { resolveImageUrl } from '@/utils/imageFallback'
@@ -88,10 +89,11 @@ export const BattleRoom: React.FC = () => {
     if (!battleId) return
     const channel = supabase.channel(`battle-${battleId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cheer_tickets', filter: `battle_id=eq.${battleId}` }, async () => {
-        try { const s = await getBattleStatus(battleId); setScores(s.scores || {}); setParticipants(s.participants || {}); setRecent(s.recent || []) } catch {}
+        try { invalidateBattleCache(battleId); const s = await getBattleStatus(battleId); setScores(s.scores || {}); setParticipants(s.participants || {}); setRecent(s.recent || []) } catch {}
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'battles', filter: `id=eq.${battleId}` }, async () => {
         try {
+          invalidateBattleCache(battleId)
           const s = await getBattleStatus(battleId)
           setStatus(s.battle.status)
           setStartTime(s.battle.start_time)

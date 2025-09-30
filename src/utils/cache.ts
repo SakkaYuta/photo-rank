@@ -158,8 +158,25 @@ export const cacheKeys = {
  * Cache TTL 設定（ミリ秒）
  */
 export const cacheTTL = {
+  veryShort: 3 * 1000,       // 3秒 - 超短期（SWR/ポーリング）
   short: 1 * 60 * 1000,      // 1分 - リアルタイム性が重要
   medium: 5 * 60 * 1000,     // 5分 - 一般的なデータ
   long: 30 * 60 * 1000,      // 30分 - 変更頻度が低い
   veryLong: 2 * 60 * 60 * 1000, // 2時間 - 静的に近いデータ
 };
+
+/**
+ * バトル系キャッシュの無効化ヘルパ
+ */
+export function invalidateBattleCache(battleId: string) {
+  if (!battleId) return
+  try { cache.delete(`battle-status:${battleId}`) } catch {}
+}
+
+export function invalidateBattleListsCache() {
+  try { cache.deletePattern(`^list-battles:`) } catch {}
+}
+
+export function invalidateInvitesCache() {
+  try { cache.delete('list-my-battle-invitations') } catch {}
+}

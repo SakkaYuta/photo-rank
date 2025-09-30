@@ -137,6 +137,22 @@ serve(async (req) => {
             supabase,
             pi
           );
+          // Cheer points purchase: award points via cheer_tickets
+          if (pi?.metadata?.type === 'cheer_points' && pi.metadata.user_id && pi.metadata.battle_id && pi.metadata.creator_id && pi.metadata.points) {
+            try {
+              const battleId = pi.metadata.battle_id as string
+              const creatorId = pi.metadata.creator_id as string
+              const supporterId = pi.metadata.user_id as string
+              const points = Math.max(0, parseInt(String(pi.metadata.points), 10) || 0)
+              if (points > 0) {
+                await supabase
+                  .from('cheer_tickets')
+                  .insert({ battle_id: battleId, supporter_id: supporterId, creator_id: creatorId, amount: points, exclusive_options: { mode: 'paid_points', payment_intent_id: pi.id } })
+              }
+            } catch (e) {
+              console.error('Failed to award cheer points:', e)
+            }
+          }
           // Link purchase to live_offer if applicable
           // tagging handled by finalize RPC insert; no-op here
         }
