@@ -23,7 +23,7 @@ export function CreateWork() {
   const [category, setCategory] = useState('wallpaper')
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState<number | ''>(1000)
-  const [isPrivate, setIsPrivate] = useState(true)
+  const [isPrivate, setIsPrivate] = useState(false)
   // 在庫管理
   const [stockQuantity, setStockQuantity] = useState<number | ''>(10)
   const [isDigitalProduct, setIsDigitalProduct] = useState(true)
@@ -42,6 +42,8 @@ export function CreateWork() {
   const [multiSubmit, setMultiSubmit] = useState(false)
   // ローカルプレビュー（アップロード前の即時表示用）
   const [localPreviews, setLocalPreviews] = useState<string[]>([])
+  // クリエイター取り分（任意・円）
+  const [creatorMargin, setCreatorMargin] = useState<number | ''>(1000)
 
   // Sections refs for error scrolling
   const titleRef = useRef<HTMLDivElement | null>(null)
@@ -97,10 +99,10 @@ export function CreateWork() {
     const basePrice = typeof price === 'number' ? price : 0
     const cost = Number(estimatedCost || 0)
     const ship = Number(estimatedShippingCost || 0)
-    const creatorMargin = 0
+    const creatorMarginVal = Number(creatorMargin || 0)
     const fee = Math.floor(basePrice * feeRate)
-    return { basePrice, cost, ship, fee, creatorMargin, gross: basePrice - cost - ship - fee }
-  }, [price, estimatedCost, estimatedShippingCost])
+    return { basePrice, cost, ship, fee, creatorMargin: creatorMarginVal, gross: basePrice - cost - ship - fee }
+  }, [price, estimatedCost, estimatedShippingCost, creatorMargin])
 
   // ===== 工場カタログ・製品の接続 =====
   const [partners, setPartners] = useState<ManufacturingPartner[]>([])
@@ -113,9 +115,12 @@ export function CreateWork() {
   const [confirmChecks, setConfirmChecks] = useState({ infoAccurate: false, agreeRules: false })
   // おすすめ設定（Step2: 工場・仕様）
   const [useRecommended, setUseRecommended] = useState(true)
+  const [showFactorySelector, setShowFactorySelector] = useState(false)
 
   const applyRecommendedSettings = async () => {
     try {
+      // 既に工場がプリファレンス等で設定済みなら上書きしない
+      if (factoryId) return
       if (!Array.isArray(partners) || partners.length === 0) return
       // 1) おすすめ工場: 承認済み + 評価/実績が高そうなもの、なければ先頭
       const sorted = [...partners].sort((a: any, b: any) => {
@@ -171,11 +176,19 @@ export function CreateWork() {
   }
 
   useEffect(() => {
-    if (useRecommended) {
+    if (useRecommended && !factoryId) {
       applyRecommendedSettings()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [useRecommended])
+  }, [useRecommended, factoryId])
+
+  // パートナー一覧が後から読み込まれる場合にも、おすすめ設定を自動適用
+  useEffect(() => {
+    if (useRecommended && !factoryId && Array.isArray(partners) && partners.length > 0) {
+      applyRecommendedSettings()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partners, useRecommended])
 
   useEffect(() => {
     // 入力の一時保存（再描画や一時的なアンマウント時に消えないように）
@@ -188,6 +201,7 @@ export function CreateWork() {
         if (Array.isArray(s.originalPaths)) setImageOriginalStoragePaths(s.originalPaths)
         if (typeof s.ipConfirmed === 'boolean') setIpConfirmed(s.ipConfirmed)
         if (typeof s.policyAccepted === 'boolean') setPolicyAccepted(s.policyAccepted)
+        // 取り分UIは提供しないため復元対象外
       }
     } catch {}
   }, [])
@@ -201,10 +215,11 @@ export function CreateWork() {
         originalPaths: imageOriginalStoragePaths,
         ipConfirmed,
         policyAccepted,
+        creatorMargin,
       }
       localStorage.setItem('cw_state_v1', JSON.stringify(payload))
     } catch {}
-  }, [images, imagePreviewStoragePaths, imageOriginalStoragePaths, ipConfirmed, policyAccepted])
+  }, [images, imagePreviewStoragePaths, imageOriginalStoragePaths, ipConfirmed, policyAccepted, creatorMargin])
 
   const clearPersistedState = () => {
     try { localStorage.removeItem('cw_state_v1') } catch {}
@@ -321,12 +336,12 @@ export function CreateWork() {
   useEffect(() => {
     const cost = Number(estimatedCost || 0)
     const ship = Number(estimatedShippingCost || 0)
-    const margin = 0
+    const margin = Number(creatorMargin || 0)
     const denom = 1 - feeRate
     const suggested = Math.max(0, Math.ceil((cost + ship + margin) / (denom || 1)))
     // Step1で価格入力を削除したため、自動提案で上書き
     setPrice(suggested)
-  }, [estimatedCost, estimatedShippingCost])
+  }, [estimatedCost, estimatedShippingCost, creatorMargin])
 
   const productTypeToCategory = (t: string): string => {
     const s = (t || '').toLowerCase()
@@ -462,7 +477,7 @@ export function CreateWork() {
         enabled_families: enabledFamilies, // 従来の互換：カテゴリキー配列
         enabled_categories: enabledFamilies,
         enabled_product_types: enabledProductTypes,
-        creator_margin: null,
+        creator_margin: { type: 'fixed', value: Number(creatorMargin || 0) },
         product_type: isDigitalProduct ? 'digital' : 'physical',
         stock_quantity: !isDigitalProduct && variantStockMode==='stock' ? (typeof stockQuantity==='number'? stockQuantity: 0) : null,
         variant_stock_mode: !isDigitalProduct ? variantStockMode : 'made_to_order',
@@ -480,7 +495,22 @@ export function CreateWork() {
         print_surfaces: printSurfaces,
         price_breakdown_preview: finalPricePreview,
       } as any)))
-      setMessage(isPrivate ? `${targetImages.length}件の作品を下書き保存しました` : `${targetImages.length}件の作品を公開しました`)
+      const doneMsg = isPrivate ? `${targetImages.length}件の作品を下書き保存しました` : `${targetImages.length}件の作品を公開しました`
+      setMessage(doneMsg)
+      // 成功トーストで明確に通知 + マイ作品へ遷移
+      try { showToast({ message: doneMsg, variant: 'success' }) } catch {}
+      // 遷移案内のポップを追加
+      try { showToast({ message: isPrivate ? '下書き保存しました。マイ作品に移動中…' : '公開しました。マイ作品に移動中…', variant: 'default' }) } catch {}
+      try {
+        // 少し待ってから遷移して、トーストが視認できるようにする
+        setTimeout(() => {
+          import('@/utils/navigation')
+            .then(m => m.navigate('myworks'))
+            .catch(() => { try { window.location.hash = '#myworks' } catch {} })
+        }, 800)
+      } catch {
+        try { window.location.hash = '#myworks' } catch {}
+      }
       // 簡易リセット（必要に応じて保持）
       setTitle('')
       setDescription('')
@@ -527,7 +557,8 @@ export function CreateWork() {
     imagesOk: images.length > 0,
     legalOk: ipConfirmed && policyAccepted,
     factoryOk: !!factoryId,
-    modelOk: !!productModelId,
+    // モデル選択は不要仕様に変更
+    modelOk: true,
     periodOk,
   }
 
@@ -535,7 +566,7 @@ export function CreateWork() {
   const imagesError = !validations.imagesOk
   const legalError = !validations.legalOk
   const factoryError = step >= 2 && !validations.factoryOk
-  const modelError = step >= 2 && !validations.modelOk
+  // const modelError = step >= 2 && !validations.modelOk
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -1014,25 +1045,30 @@ export function CreateWork() {
       {step === 2 && <>
       {/* おすすめ設定 */}
       <section className="bg-white rounded-lg shadow-sm border space-y-3 p-6">
-        <label className="flex items-start gap-2 text-sm text-black">
-          <input type="checkbox" checked={useRecommended} onChange={(e)=> setUseRecommended(e.target.checked)} />
-          <span>
-            <span className="font-bold">おすすめの設定で進める</span>
-            <span className="block text-xs text-gray-600">公式推奨の工場・モデル・配送/在庫設定を自動で反映します（後から変更可能）。</span>
-          </span>
-        </label>
+        <div className="flex items-start justify-between gap-3">
+          <label className="flex items-start gap-2 text-sm text-black">
+            <input type="checkbox" checked={useRecommended} onChange={(e)=> setUseRecommended(e.target.checked)} />
+            <span>
+              <span className="font-bold">おすすめの設定で進める</span>
+              <span className="block text-xs text-gray-600">公式推奨の工場・配送/在庫設定を自動で反映します（後から変更可能）。</span>
+            </span>
+          </label>
+          {useRecommended && (
+            <Button type="button" variant="secondary" size="sm" onClick={() => setUseRecommended(false)}>自分でカスタマイズする</Button>
+          )}
+        </div>
       </section>
       {/* エラー要約（Step2） */}
-      {(triedStep2Next && (!validations.factoryOk || !validations.modelOk)) && (
+      {(triedStep2Next && (!validations.factoryOk)) && (
         <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded mb-4">
           <div className="font-medium mb-1">入力に不備があります。以下を修正してください。</div>
           <ul className="list-disc list-inside text-sm">
             {!validations.factoryOk && <li>工場を選択してください。</li>}
-            {!validations.modelOk && <li>商品タイプ（モデル）を選択してください。</li>}
           </ul>
         </div>
       )}
       {/* 工場選択（マーケットプレイス風カードUI） */}
+      {!useRecommended && (
       <section ref={factoryRef} className={`bg-white rounded-lg shadow-sm border space-y-3 p-6 ${factoryError ? 'border-red-300 ring-2 ring-red-100' : ''}`}>
         <span className="block text-sm font-bold text-black">工場選択
           <span title="この項目は必須です" className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-red-700 bg-red-50 border border-red-200 text-[10px]">必須</span>
@@ -1119,50 +1155,9 @@ export function CreateWork() {
           </div>
         )}
       </section>
+      )}
 
-      {/* 商品タイプ（モデル） - カードUI */}
-      <section ref={modelRef} className={`bg-white rounded-lg shadow-sm border space-y-3 p-6 ${modelError ? 'border-red-300 ring-2 ring-red-100' : ''}`}>
-        <span className="block text-sm font-bold text-black">商品タイプ（モデル）
-          <span title="この項目は必須です" className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-red-700 bg-red-50 border border-red-200 text-[10px]">必須</span>
-          {factoryId && !productModelId && <AlertCircle className="inline ml-2 text-red-600 h-4 w-4 align-middle" />}
-        </span>
-        {factoryId ? (
-          partnerProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {partnerProducts.map((prod) => {
-                const selected = prod.id === productModelId
-                const title = prod.options?.display_name || prod.product_type
-                return (
-                  <button
-                    key={prod.id}
-                    type="button"
-                    onClick={() => setProductModelId(prod.id)}
-                    className={`text-left rounded-lg border p-4 hover:shadow transition ${selected ? 'border-blue-600 ring-2 ring-blue-200' : 'border-gray-200'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <img src={defaultImages.product} alt="model" className="w-14 h-14 rounded object-cover border" />
-                      <div className="min-w-0">
-                        <div className="font-medium text-black truncate">{title}</div>
-                        <div className="text-xs text-gray-600">原価 {prod.base_cost} 円 / リード {prod.lead_time_days} 日</div>
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          <span className="inline-flex items-center px-2 py-0.5 text-[10px] rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                            {productTypeToCategory(prod.product_type)}
-                          </span>
-                          <span className="inline-flex items-center px-2 py-0.5 text-[10px] rounded-full bg-gray-50 text-gray-700 border">{prod.product_type}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          ) : (
-            <p className="text-xs text-gray-600">この工場には選択可能なモデルがありません</p>
-          )
-        ) : (
-          <p className="text-xs text-gray-600">先に工場を選択してください</p>
-        )}
-      </section>
+      {/* 商品タイプ（モデル） - UI削除 */}
 
       {/* 商品タイプ・在庫設定は受注生産を基本とするためUI削除 */}
 
@@ -1174,21 +1169,49 @@ export function CreateWork() {
 
       {/* 印刷仕様（削除） */}
 
+      {/* 取り分（クリエイター） */}
+      <section className="bg-white rounded-lg shadow-sm border space-y-3 p-6">
+        <span className="block text-sm font-bold text-black">取り分（クリエイター）</span>
+        <div className="grid grid-cols-1 gap-3">
+          <div>
+            <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+              <span>0 円</span>
+              <span>設定値: <span className="font-semibold text-black">{Number(creatorMargin || 0).toLocaleString()} 円</span></span>
+              <span>10,000 円</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={10000}
+              step={100}
+              value={Number(creatorMargin || 0)}
+              onChange={(e) => setCreatorMargin(Math.max(0, Math.min(10000, Number(e.target.value || 0))))}
+              className="w-full accent-purple-600"
+              aria-label="取り分（円）"
+            />
+          </div>
+          <div className="text-xs text-gray-600">
+            原価と配送コスト、手数料にこの取り分を加味して販売価格を自動提案します。現在の提案価格: <span className="font-semibold text-black">{typeof price==='number'? price: 0} 円</span>
+          </div>
+        </div>
+      </section>
+
       {/* 価格（概算） */}
       <section className="bg-white rounded-lg shadow-sm border space-y-3 p-6">
         <span className="block text-sm font-bold text-black">価格の最終確認（概算）</span>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="text-sm p-2 bg-gray-50 rounded">
-            <div className="text-xs text-gray-600">工場原価（自動）</div>
-            <div className="font-medium">{Number(estimatedCost || 0)} 円</div>
+          <div className="text-sm p-2 bg-gray-50 rounded text-gray-900">
+            <div className="text-xs text-gray-700">工場原価（自動）</div>
+            <div className="font-medium text-black">{Number(estimatedCost || 0)} 円</div>
           </div>
-          <div className="text-sm p-2 bg-gray-50 rounded">
-            <div className="text-xs text-gray-600">配送コスト（自動）</div>
-            <div className="font-medium">{Number(estimatedShippingCost || 0)} 円</div>
+          <div className="text-sm p-2 bg-gray-50 rounded text-gray-900">
+            <div className="text-xs text-gray-700">配送コスト（自動）</div>
+            <div className="font-medium text-black">{Number(estimatedShippingCost || 0)} 円</div>
           </div>
-          <div className="text-sm p-2 bg-gray-50 rounded">
-            <div>販売価格（自動提案）: {typeof price==='number'? price: 0} 円</div>
-            <div>手数料(参考): {Math.floor((typeof price==='number'? price: 0) * feeRate)} 円</div>
+          <div className="text-sm p-2 bg-gray-50 rounded text-gray-900">
+            <div className="text-gray-800">販売価格（自動提案）: <span className="font-semibold text-black">{typeof price==='number'? price: 0} 円</span></div>
+            <div className="text-gray-800">手数料(参考): <span className="font-medium text-black">{Math.floor((typeof price==='number'? price: 0) * feeRate)} 円</span></div>
+            <div className="text-gray-800">取り分(設定): <span className="font-medium text-black">{Number(creatorMargin || 0)} 円</span></div>
           </div>
         </div>
       </section>
@@ -1204,13 +1227,6 @@ export function CreateWork() {
               showToast({ message: '工場の選択は必須です。', variant: 'error' });
               scrollTo(factoryRef.current);
               const firstBtn = factoryRef.current?.querySelector('button') as HTMLButtonElement | null
-              firstBtn?.focus()
-              return
-            }
-            if (!productModelId) {
-              showToast({ message: '商品タイプ（モデル）の選択は必須です。', variant: 'error' });
-              scrollTo(modelRef.current);
-              const firstBtn = modelRef.current?.querySelector('button') as HTMLButtonElement | null
               firstBtn?.focus()
               return
             }
@@ -1290,10 +1306,7 @@ export function CreateWork() {
                     {validations.factoryOk ? <CheckCircle2 className="text-green-600 h-4 w-4"/> : <XCircle className="text-red-600 h-4 w-4"/>}
                     <span>工場選択</span>
                   </li>
-                  <li className="flex items-center gap-2">
-                    {validations.modelOk ? <CheckCircle2 className="text-green-600 h-4 w-4"/> : <XCircle className="text-red-600 h-4 w-4"/>}
-                    <span>商品タイプ（モデル）</span>
-                  </li>
+                  {/* モデル選択は不要のため削除 */}
                 </ul>
               </div>
               {/* 注意事項リンク */}
@@ -1306,7 +1319,7 @@ export function CreateWork() {
               <div className="space-y-3">
                 <label className="flex items-start gap-2">
                   <input type="checkbox" checked={confirmChecks.infoAccurate} onChange={(e)=> setConfirmChecks(v=>({...v, infoAccurate: e.target.checked}))} />
-                  <span>入力内容（タイトル/説明/販売期間/画像/工場・モデル）に誤りがないことを確認しました。</span>
+                  <span>入力内容（タイトル/説明/販売期間/画像/工場）に誤りがないことを確認しました。</span>
                 </label>
                 <label className="flex items-start gap-2">
                   <input type="checkbox" checked={confirmChecks.agreeRules} onChange={(e)=> setConfirmChecks(v=>({...v, agreeRules: e.target.checked}))} />
