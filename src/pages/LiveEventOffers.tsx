@@ -37,7 +37,7 @@ const LiveEventOffers: React.FC = () => {
     if (!eventId) return
     const ch = supabase
       .channel(`live-offers-${eventId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_offers', filter: `live_event_id=eq.${eventId}` }, payload => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_offers', filter: `live_event_id=eq.${eventId}` }, (payload: any) => {
         const row: any = (payload as any).new
         setOffers(prev => prev.map(o => o.id === row.id ? { ...o, ...row } : o))
       })

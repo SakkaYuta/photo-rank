@@ -26,6 +26,7 @@ const LiveBattle: React.FC = () => {
   const [purchaseQuantity, setPurchaseQuantity] = useState<number>(1)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
+  const [message, setMessage] = useState<string>('')
   const [userId, setUserId] = useState<string>('')
   const [remainingSeconds, setRemainingSeconds] = useState<number>(3600)
   // バトルの残り時間（サーバーの開始時刻+持ち時間から算出）
@@ -187,7 +188,7 @@ const LiveBattle: React.FC = () => {
     if (!battleId) return
     const ch = supabase
       .channel(`live-offers-${battleId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_offers', filter: `live_event_id=eq.${battleId}` }, payload => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_offers', filter: `live_event_id=eq.${battleId}` }, (payload: any) => {
         const row: any = (payload as any).new
         setLiveOffers(prev => prev.map(o => o.id === row.id ? { ...o, ...row } : o))
       })

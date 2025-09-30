@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { APP_NAME } from '../../utils/constants'
 import { UserMenu } from '../auth/UserMenu'
-import { ShoppingCart, Menu, X, Settings } from 'lucide-react'
+import { ShoppingCart, Menu, X, Settings, Bell } from 'lucide-react'
 import { useCart } from '@/contexts/CartContext'
 import RoleSwitcher from '../RoleSwitcher'
 import { useUserRole } from '../../hooks/useUserRole'
 import { useNav } from '@/contexts/NavContext'
 import { allowedViews as ROUTES, ROUTES_META, type RoleKey } from '@/routes'
+import { useEffect } from 'react'
+import { listMyNotifications, markNotificationRead } from '@/services/userNotifications.service'
 
 interface HeaderProps {
   currentView?: string
@@ -18,6 +20,9 @@ export function Header({ currentView }: HeaderProps = {}) {
   const count = items.reduce((s, it) => s + it.qty, 0)
   const { navigate } = useNav()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [notifLoading, setNotifLoading] = useState(false)
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
 
   // 役割に応じたヘッダーメニュー（モバイルで表示）
   // ヘッダーは useUserRole の userType に忠実に従う（誤った工場優先を避ける）
@@ -77,7 +82,24 @@ export function Header({ currentView }: HeaderProps = {}) {
   // 右側の表示は常に維持し、要素ごとに表示可否を制御
   const shouldHideRightSide = false
 
+  const refreshNotifications = async (silent = true) => {
+    if (!user) { setNotifications([]); setUnreadCount(0); return }
+    if (!silent) setNotifLoading(true)
+    try {
+      const items = await listMyNotifications(20)
+      setNotifications(items)
+      setUnreadCount(items.filter((n: any) => !n.read).length)
+    } catch {
+      // noop
+    } finally {
+      if (!silent) setNotifLoading(false)
+    }
+  }
+
+  useEffect(() => { refreshNotifications(true) }, [user?.id])
+
   return (
+    <>
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-soft">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
         <a
@@ -92,33 +114,38 @@ export function Header({ currentView }: HeaderProps = {}) {
 
 
         {/* デスクトップメニュー */}
-        <div className="hidden md:flex items-center gap-3 flex-shrink-0 overflow-visible">
-          {user && <RoleSwitcher />}
-          {user && !isFactory && userType !== 'creator' && userType !== 'organizer' && (
+        <div className="hidden md:flex items-center gap-3 flex-shrink-0 overflow-visible relative">
+          {user && (
             <button
               className="relative rounded-lg p-2 hover:bg-primary-50 transition-colors group"
-              onClick={handleCartClick}
-              aria-label="カートを見る"
+              onClick={async () => { await refreshNotifications(false) }}
+              aria-label="通知"
+              title="通知"
             >
-              <ShoppingCart className="w-5 h-5 text-gray-600 group-hover:text-primary-600 transition-colors" />
-              {count > 0 && (
-                <span className="absolute -top-1 -right-1 inline-flex items-center justify-center rounded-full bg-primary-600 text-white text-xs h-5 min-w-[20px] px-1 font-medium">
-                  {count}
+              <Bell className="w-5 h-5 text-gray-600 group-hover:text-primary-600 transition-colors" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 inline-flex items-center justify-center rounded-full bg-red-500 text-white text-xs h-5 min-w-[20px] px-1 font-medium">
+                  {unreadCount}
                 </span>
               )}
             </button>
           )}
           {user && (
             <button
-              className="rounded-lg p-2 hover:bg-primary-50 transition-colors group"
-              onClick={() => navigate('account-settings')}
-              aria-label="アカウント設定"
-              title="アカウント設定"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 rounded-lg hover:bg-primary-50 transition-colors group"
+              aria-label="メニュー"
+              title="メニュー"
+              data-testid="hamburger-menu"
             >
-              <Settings className="w-5 h-5 text-gray-600 group-hover:text-primary-600 transition-colors" />
+              {mobileMenuOpen ? (
+                <X className="w-6 h-6 text-gray-600 group-hover:text-primary-600 transition-colors" />
+              ) : (
+                <Menu className="w-6 h-6 text-gray-600 group-hover:text-primary-600 transition-colors" />
+              )}
             </button>
           )}
-          <UserMenu />
+          {!user && <UserMenu />}
         </div>
 
         {/* モバイルメニューボタン */}
@@ -128,6 +155,21 @@ export function Header({ currentView }: HeaderProps = {}) {
             <div className="md:hidden">
               <UserMenu />
             </div>
+          )}
+          {user && (
+            <button
+              className="relative rounded-lg p-2 hover:bg-gray-100 transition-colors"
+              onClick={async () => { await refreshNotifications(false) }}
+              aria-label="通知"
+              title="通知"
+            >
+              <Bell className="w-6 h-6 text-gray-600" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 inline-flex items-center justify-center rounded-full bg-red-500 text-white text-xs h-5 min-w-[20px] px-1 font-medium">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
           )}
           {user && (
             <button
@@ -147,9 +189,9 @@ export function Header({ currentView }: HeaderProps = {}) {
         </div>
       </div>
 
-      {/* モバイルメニュー */}
+      {/* メニュー（モバイル＆デスクトップ） */}
       {user && mobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-200 bg-white">
+        <div className="border-t border-gray-200 bg-white">
           <div className="px-4 py-3 space-y-3">
 
             {user && (
@@ -157,6 +199,7 @@ export function Header({ currentView }: HeaderProps = {}) {
                 <RoleSwitcher />
               </div>
             )}
+
             {user && !isFactory && userType !== 'creator' && userType !== 'organizer' && (
               <button
                 className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
@@ -205,5 +248,6 @@ export function Header({ currentView }: HeaderProps = {}) {
         </div>
       )}
     </header>
+</>
   )
 }

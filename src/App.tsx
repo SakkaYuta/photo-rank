@@ -62,6 +62,7 @@ import LeaveRequest from './pages/organizer/LeaveRequest'
 import InvoiceSettings from './pages/organizer/InvoiceSettings'
 import OrganizerRevenue from './pages/organizer/RevenueManagement'
 import OrganizerGuidelines from './pages/organizer/OrganizerGuidelines'
+import BattleInvitations from './pages/BattleInvitations'
 
 type ViewKey = typeof ROUTES[number]
 
@@ -456,6 +457,11 @@ function App() {
               {view === 'battle-search' && (
                 <PartialErrorBoundary name="バトル検索">
                   <BattleSearch />
+                </PartialErrorBoundary>
+              )}
+              {view === 'battle-invitations' && (
+                <PartialErrorBoundary name="バトル招待一覧">
+                  <BattleInvitations />
                 </PartialErrorBoundary>
               )}
               {view === 'live-offers' && (

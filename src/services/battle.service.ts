@@ -26,6 +26,20 @@ export async function finishBattle(battleId: string, winnerId: string): Promise<
   if (error) throw error
 }
 
+export async function acceptBattle(battleId: string, reason?: string): Promise<void> {
+  const { error } = await supabase.functions.invoke('battle-accept', {
+    body: { battle_id: battleId, ...(reason ? { reason } : {}) }
+  })
+  if (error) throw error
+}
+
+export async function declineBattle(battleId: string, reason?: string): Promise<void> {
+  const { error } = await supabase.functions.invoke('battle-decline', {
+    body: { battle_id: battleId, ...(reason ? { reason } : {}) }
+  })
+  if (error) throw error
+}
+
 export async function purchaseCheerTicket(battleId: string, creatorId: string, options?: Record<string, unknown>): Promise<{ ticket_id: string; amount: number; purchased_at: string }> {
   const { data, error } = await supabase.functions.invoke('cheer-ticket-purchase', {
     body: { battle_id: battleId, creator_id: creatorId, options }
@@ -35,7 +49,7 @@ export async function purchaseCheerTicket(battleId: string, creatorId: string, o
 }
 
 export async function getBattleStatus(battleId: string): Promise<{
-  battle: { id: string; challenger_id: string; opponent_id: string; duration_minutes: number; start_time?: string; end_time?: string; status: string; winner_id?: string },
+  battle: { id: string; challenger_id: string; opponent_id: string; duration_minutes: number; start_time?: string; end_time?: string; status: string; winner_id?: string; title?: string; requested_start_at?: string; visibility?: string; description?: string },
   participants?: Record<string, { id: string; display_name?: string; avatar_url?: string }>,
   scores: Record<string, number>,
   totals: { tickets: number; amount: number },
@@ -56,6 +70,12 @@ export async function listBattles(params?: { status?: 'scheduled'|'live'|'finish
   const { data, error } = await supabase.functions.invoke('list-battles', {
     body: { ...(params || {}) }
   })
+  if (error) throw error
+  return data as any
+}
+
+export async function listMyBattleInvitations(): Promise<{ items: any[]; participants: Record<string, any> }> {
+  const { data, error } = await supabase.functions.invoke('list-my-battle-invitations', { body: {} })
   if (error) throw error
   return data as any
 }

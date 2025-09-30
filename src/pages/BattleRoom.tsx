@@ -1,21 +1,24 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { requestBattle, startBattle, finishBattle, purchaseCheerTicket, getBattleStatus, createCheerTicketIntent } from '@/services/battle.service'
-import { StripeCheckout } from '@/components/checkout/StripeCheckout'
-import { useAuth } from '@/hooks/useAuth'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { requestBattle, getBattleStatus } from '@/services/battle.service'
 import { supabase } from '@/services/supabaseClient'
 import { SAMPLE_BATTLES, SAMPLE_PARTICIPANTS, SAMPLE_SCORES } from '@/sample/battleSamples'
 import { resolveImageUrl } from '@/utils/imageFallback'
 import { defaultImages } from '@/utils/defaultImages'
 
 export const BattleRoom: React.FC = () => {
-  const { profile } = useAuth()
   const [battleId, setBattleId] = useState<string>('')
   const [opponentId, setOpponentId] = useState<string>('')
   const [duration, setDuration] = useState<5|30|60>(5)
+  const [battleTitle, setBattleTitle] = useState<string>('')
+  const [visibility, setVisibility] = useState<'public'|'private'>('public')
+  const [requestedStartAt, setRequestedStartAt] = useState<string>('')
+  const [agreeTerms, setAgreeTerms] = useState<boolean>(false)
+  const [nameQuery, setNameQuery] = useState<string>('')
+  const [nameSuggestions, setNameSuggestions] = useState<Array<{ id: string; display_name?: string; avatar_url?: string }>>([])
+  const suggestTimer = useRef<any>(null)
   const [status, setStatus] = useState<string>('idle')
   const [message, setMessage] = useState<string>('')
   const [error, setError] = useState<string>('')
-  const [cheerTarget, setCheerTarget] = useState<string>('')
   const [scores, setScores] = useState<Record<string, number>>({})
   const [participants, setParticipants] = useState<Record<string, { id: string; display_name?: string; avatar_url?: string }>>({})
   const [tick, setTick] = useState<number>(0)
@@ -23,9 +26,11 @@ export const BattleRoom: React.FC = () => {
   const [durationMin, setDurationMin] = useState<number>(5)
   const [useSamples, setUseSamples] = useState<boolean>((import.meta as any).env?.VITE_ENABLE_BATTLE_SAMPLE === 'true')
   const [recent, setRecent] = useState<Array<{ creator_id: string; amount: number; purchased_at: string }>>([])
-  const [cheerClientSecret, setCheerClientSecret] = useState<string | null>(null)
+  
 
   const resetFeedback = () => { setMessage(''); setError('') }
+
+  // バトル開始/終了の操作UIは削除済み
 
   const onRequest = async () => {
     resetFeedback()
@@ -42,7 +47,15 @@ export const BattleRoom: React.FC = () => {
         return
       }
       if (!opponentId) { setError('対戦相手のユーザーIDを入力してください'); return }
-      const res = await requestBattle(opponentId, duration)
+      if (!agreeTerms) { setError('バトル申請の利用規約に同意してください'); return }
+      if (battleTitle && battleTitle.length > 120) { setError('タイトルは120文字以内で入力してください'); return }
+      if (!requestedStartAt) { setError('開始予定は必須です'); return }
+      if (isNaN(new Date(requestedStartAt).getTime())) { setError('開始予定日時の形式が正しくありません'); return }
+      const res = await requestBattle(opponentId, duration, {
+        title: battleTitle || undefined,
+        visibility,
+        requested_start_at: requestedStartAt || undefined,
+      })
       setBattleId(res.battle_id)
       setStatus(res.status)
       setMessage(`バトルを作成しました（ID: ${res.battle_id}）`)
@@ -51,66 +64,6 @@ export const BattleRoom: React.FC = () => {
     }
   }
 
-  const onStart = async () => {
-    resetFeedback()
-    try {
-      if (!battleId) { setError('バトルIDを入力してください'); return }
-      if (useSamples) {
-        setStatus('live')
-        setMessage('デモ：バトルを開始しました')
-        setStartTime(new Date().toISOString())
-      } else {
-        await startBattle(battleId)
-        setStatus('live')
-        setMessage('バトルを開始しました')
-      }
-      // 初期状態取得
-      try {
-        const s = await getBattleStatus(battleId)
-        setScores(s.scores || {})
-        setStartTime(s.battle.start_time)
-        setDurationMin(s.battle.duration_minutes)
-        setParticipants(s.participants || {})
-        setRecent(s.recent || [])
-      } catch {}
-    } catch (e: any) {
-      setError(e?.message || '開始に失敗しました（参加者のみ開始可能/状態が不正）')
-    }
-  }
-
-  const onFinish = async () => {
-    resetFeedback()
-    try {
-      if (!battleId) { setError('バトルIDを入力してください'); return }
-      const winner = cheerTarget || profile?.id || ''
-      if (!winner) { setError('勝者ユーザーIDを入力してください'); return }
-      await finishBattle(battleId, winner)
-      setStatus('finished')
-      setMessage('バトルを終了しました')
-    } catch (e: any) {
-      setError(e?.message || '終了に失敗しました（参加者のみ終了可能/状態が不正）')
-    }
-  }
-
-  const onCheer = async () => {
-    resetFeedback()
-    try {
-      if (!battleId) { setError('バトルIDを入力してください'); return }
-      if (!cheerTarget) { setError('応援するクリエイターのユーザーIDを入力してください'); return }
-      if (useSamples) {
-        setScores(prev => ({ ...prev, [cheerTarget]: (prev[cheerTarget] || 0) + 100 }))
-        setMessage('デモ：応援ポイント +100')
-      } else if ((import.meta as any).env?.VITE_ENABLE_CHEER_CHECKOUT === 'true') {
-        const { clientSecret } = await createCheerTicketIntent(battleId, cheerTarget)
-        setCheerClientSecret(clientSecret)
-      } else {
-        const res = await purchaseCheerTicket(battleId, cheerTarget)
-        setMessage(`応援チケット購入: #${res.ticket_id} / ¥${res.amount}`)
-      }
-    } catch (e: any) {
-      setError(e?.message || 'チケット購入に失敗しました（バトルがLiveである必要）')
-    }
-  }
 
   // Timer: recompute every second when live
   useEffect(() => {
@@ -179,32 +132,123 @@ export const BattleRoom: React.FC = () => {
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500 rounded-full filter blur-3xl opacity-20 animate-pulse"></div>
         <div className="relative z-10 space-y-4">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">🎮</span>
             <h2 className="text-2xl font-black text-white">バトル作成</h2>
           </div>
           {useSamples && (
             <div className="rounded-lg bg-yellow-500 p-3 text-sm text-gray-900 font-semibold inline-flex items-center gap-2 shadow-lg">
-              <span className="text-xl">🎯</span>
               デモモード有効
               <button className="btn btn-xs bg-white hover:bg-gray-100" onClick={() => setUseSamples(false)}>無効化</button>
             </div>
           )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">👤 対戦相手ID</label>
-            <input className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white focus:ring-2 focus:ring-yellow-400 font-semibold text-base" value={opponentId} onChange={e => setOpponentId(e.target.value)} placeholder="相手のユーザーID" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="lg:col-span-2">
+            <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">タイトル（任意）</label>
+            <input className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white focus:ring-2 focus:ring-yellow-400 font-semibold text-base text-gray-900" value={battleTitle} onChange={e => setBattleTitle(e.target.value)} placeholder="例: スピード対決 #1" />
           </div>
           <div>
-            <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">⏱️ バトル時間</label>
-            <select className="select select-bordered w-full bg-white/90 backdrop-blur-sm focus:ring-2 focus:ring-yellow-400 font-bold text-base" value={duration} onChange={e => setDuration(Number(e.target.value) as any)}>
-              <option value={5}>⚡ 5分</option>
-              <option value={30}>🔥 30分</option>
-              <option value={60}>💪 60分</option>
+            <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">公開設定</label>
+            <select className="select select-bordered w-full bg-white/90 backdrop-blur-sm focus:ring-2 focus:ring-yellow-400 font-bold text-base text-gray-900" value={visibility} onChange={e => setVisibility(e.target.value as any)}>
+              <option value="public">公開</option>
+              <option value="private">非公開</option>
             </select>
           </div>
-          <button className="btn bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 border-0 text-gray-900 font-black text-lg shadow-xl transform hover:scale-105 transition-transform h-auto py-3 sm:mt-6" onClick={onRequest}>
-            ⚔️ バトル申請
-          </button>
+          <div className="lg:col-span-2">
+            <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">対戦相手ID</label>
+            <input
+              className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white focus:ring-2 focus:ring-yellow-400 font-semibold text-base text-gray-900"
+              value={opponentId}
+              onChange={e => setOpponentId(e.target.value)}
+              onBlur={async () => {
+                if (!opponentId) return
+                try {
+                  const { data, error } = await supabase
+                    .from('user_public_profiles')
+                    .select('id, display_name, avatar_url')
+                    .eq('id', opponentId)
+                    .single()
+                  ;(window as any)._opPrev = data
+                  const preview = document.getElementById('opponent-preview')
+                  if (preview) {
+                    preview.innerHTML = error || !data
+                      ? '<span class="text-red-200 text-xs">相手が見つかりません</span>'
+                      : `<div class="flex items-center gap-2 text-white/90"><img src="${data.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${data.id}`}" class="w-8 h-8 rounded-full border border-white/30" /><span class="text-sm font-semibold">${data.display_name || data.id.slice(0,8)}</span></div>`
+                  }
+                } catch {}
+              }}
+              placeholder="相手のユーザーID"
+            />
+            <div id="opponent-preview" className="mt-2 min-h-[20px]"></div>
+            <div className="mt-3">
+              <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">🔎 名前で検索（任意）</label>
+              <input
+                className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white text-gray-900"
+                value={nameQuery}
+                onChange={(e) => {
+                  const q = e.target.value
+                  setNameQuery(q)
+                  if (suggestTimer.current) clearTimeout(suggestTimer.current)
+                  suggestTimer.current = setTimeout(async () => {
+                    if (!q || q.length < 2) { setNameSuggestions([]); return }
+                    try {
+                      const { data } = await supabase
+                        .from('user_public_profiles')
+                        .select('id, display_name, avatar_url')
+                        .ilike('display_name', `%${q}%`)
+                        .limit(5)
+                      setNameSuggestions(data || [])
+                    } catch { setNameSuggestions([]) }
+                  }, 300)
+                }}
+                placeholder="相手の表示名を入力（2文字以上）"
+              />
+              {nameSuggestions.length > 0 && (
+                <div className="mt-2 bg-white/90 rounded shadow border max-h-60 overflow-auto">
+                  {nameSuggestions.map(s => (
+                    <button key={s.id} className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2" onClick={() => { setOpponentId(s.id); setNameQuery(''); setNameSuggestions([]) }}>
+                      <img src={s.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${s.id}`} className="w-6 h-6 rounded-full" />
+                      <span className="text-gray-900 text-sm">{s.display_name || s.id.slice(0,8)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">バトル時間</label>
+            <select className="select select-bordered w-full bg-white/90 backdrop-blur-sm focus:ring-2 focus:ring-yellow-400 font-bold text-base text-gray-900" value={duration} onChange={e => setDuration(Number(e.target.value) as any)}>
+              <option value={5}>5分</option>
+              <option value={30}>30分</option>
+              <option value={60}>60分</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">開始予定（必須）</label>
+            <input
+              type="datetime-local"
+              required
+              className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white text-gray-900"
+              value={requestedStartAt}
+              onChange={e => setRequestedStartAt(e.target.value)}
+            />
+            <p className="mt-1 text-xs text-gray-200/90">
+              注意: 開始時刻の1時間前までに相手の承認が得られない場合、この申請は不成立（自動キャンセル）となります。
+            </p>
+          </div>
+          <div className="md:col-span-2 lg:col-span-4 bg-yellow-500/20 border-2 border-yellow-400 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="text-lg font-bold text-yellow-300">バトル報酬ボーナス</h3>
+            </div>
+            <p className="text-white text-sm font-semibold">バトル中の獲得報酬が<span className="text-yellow-300 text-lg font-black">20%アップ</span>！</p>
+          </div>
+          <div className="md:col-span-2 lg:col-span-4">
+            <label className="inline-flex items-center gap-2 text-white mb-3">
+              <input type="checkbox" className="checkbox checkbox-sm" checked={agreeTerms} onChange={e => setAgreeTerms(e.target.checked)} />
+              <span className="text-sm">バトル申請に関する <a className="underline" onClick={() => import('@/utils/navigation').then(m => m.navigate('terms'))}>利用規約</a> に同意します</span>
+            </label>
+            <button className="btn bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 border-0 text-gray-900 font-black text-lg shadow-xl transform hover:scale-105 transition-transform h-auto py-3" onClick={onRequest}>
+              バトル申請
+            </button>
+          </div>
         </div>
         </div>
       </section>
@@ -236,6 +280,8 @@ export const BattleRoom: React.FC = () => {
         </div>
       )}
 
+      {/* removed per request: バトル開始/終了カード */}
+      {/*
       <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-900 to-pink-900 p-6 shadow-2xl border-2 border-red-400">
         <div className="absolute top-0 left-0 w-64 h-64 bg-red-500 rounded-full filter blur-3xl opacity-20 animate-pulse"></div>
         <div className="relative z-10 space-y-4">
@@ -244,27 +290,10 @@ export const BattleRoom: React.FC = () => {
             <h2 className="text-2xl font-black text-white">バトル開始/終了</h2>
           </div>
         <div className="space-y-4">
-          {/* Battle ID and Start */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">🎯 バトルID</label>
-              <input className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white focus:ring-2 focus:ring-green-400 font-mono font-semibold text-base" value={battleId} onChange={e => setBattleId(e.target.value)} placeholder="バトルID（作成後に自動入力）" />
-            </div>
-            <button className="btn bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 border-0 text-white font-black text-lg shadow-xl transform hover:scale-105 transition-transform h-auto py-3 sm:mt-6" onClick={onStart}>
-              🚀 バトル開始
-            </button>
-          </div>
+          {/* Battle ID and Start - removed */}
+          {/* 承認系UIは不要のため削除 */}
 
-          {/* Winner ID and Finish */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">👑 勝者ID（終了時）</label>
-              <input className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white focus:ring-2 focus:ring-red-400 font-semibold text-base" value={cheerTarget} onChange={e => setCheerTarget(e.target.value)} placeholder="空欄の場合は自動判定" />
-            </div>
-            <button className="btn bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 border-0 text-white font-black text-lg shadow-xl transform hover:scale-105 transition-transform h-auto py-3 sm:mt-6" onClick={onFinish}>
-              🏁 バトル終了
-            </button>
-          </div>
+          {/* Winner ID and Finish - removed */}
         </div>
 
         {/* Status Bar */}
@@ -343,38 +372,9 @@ export const BattleRoom: React.FC = () => {
             </div>
           </div>
         )}
-        </div>
-      </section>
 
-      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-900 to-emerald-900 p-6 shadow-2xl border-2 border-green-400">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-green-500 rounded-full filter blur-3xl opacity-20 animate-pulse"></div>
-        <div className="relative z-10 space-y-4">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl">💰</span>
-            <h2 className="text-2xl font-black text-white">応援チケット購入</h2>
-          </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">🌟 応援するクリエイターID</label>
-            <input className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white focus:ring-2 focus:ring-green-400 font-semibold text-base" value={cheerTarget} onChange={e => setCheerTarget(e.target.value)} placeholder="応援したいクリエイターのID" />
-          </div>
-          <button className="btn bg-gradient-to-r from-yellow-400 via-green-400 to-emerald-400 hover:from-yellow-500 hover:via-green-500 hover:to-emerald-500 border-0 text-gray-900 font-black shadow-xl transform hover:scale-105 transition-transform text-lg h-auto py-3 sm:mt-6" onClick={onCheer}>
-            💸 100円で応援
-          </button>
-        </div>
-        {cheerClientSecret && (
-          <div className="max-w-md bg-white/90 backdrop-blur-sm p-6 rounded-xl shadow-2xl">
-            <StripeCheckout clientSecret={cheerClientSecret} workId={battleId}
-              onSuccess={() => { setMessage('応援ありがとうございました！'); setCheerClientSecret(null) }}
-              onError={(m) => setError(m)}
-              onCancel={() => setCheerClientSecret(null)}
-            />
-          </div>
-        )}
-        </div>
-      </section>
+      {/* removed per request: 応援チケット購入カード 完全削除 */}
       </div>
-    </div>
   )
 }
 

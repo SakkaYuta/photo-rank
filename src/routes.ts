@@ -1,6 +1,6 @@
 // Central route registry to ease Router migration
 export const allowedViews = [
-  'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','admin-refunds','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','factory-catalog','factory-item-detail','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','organizer-revenue','organizer-support','organizer-leave','organizer-invoice','organizer-guidelines','battle-search','creator-profile','live-battle','battle-room','account-settings','products-marketplace','goods-item-selector','creator-goods','payment-methods','receipt','faq'
+  'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','admin-refunds','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','factory-catalog','factory-item-detail','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','organizer-revenue','organizer-support','organizer-leave','organizer-invoice','organizer-guidelines','battle-search','creator-profile','live-battle','battle-room','account-settings','products-marketplace','goods-item-selector','creator-goods','payment-methods','receipt','faq','live-offers','battle-invitations'
 ] as const
 
 export type ViewKey = typeof allowedViews[number]
@@ -88,6 +88,8 @@ export const ROUTES_META: Record<ViewKey, RouteMeta> = {
   'creator-profile': {},
   // Live offers (buyer-facing)
   'live-offers': { title: 'ライブ限定', showInNav: false },
+  // Battle invitations (opponent-facing)
+  'battle-invitations': { requireAuth: true, roles: ['creator','admin'], title: 'バトル招待一覧', showInNav: true, navOrder: 46, icon: 'Bell' },
 }
 
 // Default landing per role (used for post-login routing and guard fallbacks)
