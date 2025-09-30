@@ -11,6 +11,7 @@ import { PurchaseSuccessModal } from '../ui/SuccessModal'
 import { AddressService, type UserAddress } from '@/services/address.service'
 import { getPartnerById } from '@/services/partner.service'
 import { Analytics } from '@/services/analytics.service'
+import { acceptBattle, declineBattle, listMyBattleInvitations } from '@/services/battle.service'
 import { supabase } from '@/services/supabaseClient'
 
 const pk = (import.meta as any).env?.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined
@@ -648,6 +649,11 @@ export const CartView: React.FC = () => {
   const [shippingInfos, setShippingInfos] = useState<Array<{ partnerId: string; partnerName: string; info: any }>>([])
   const [missingShippingPartners, setMissingShippingPartners] = useState<Array<{ partnerId: string; partnerName: string }>>([])
   const [shippingInfoVersion, setShippingInfoVersion] = useState(0)
+  const { showToast } = useToast()
+  const [approvalState, setApprovalState] = useState<null | 'approved' | 'rejected'>(null)
+  const [pendingInvites, setPendingInvites] = useState<Array<{ id: string; title?: string; requested_start_at?: string }>>([])
+  const [selectedInviteId, setSelectedInviteId] = useState<string>('')
+  const [approvalReason, setApprovalReason] = useState<string>('')
 
   // 送料計算（工場設定 shipping_info を優先）
   const [shippingCalculation, setShippingCalculation] = useState<ShippingCalculation>({ factoryGroups: [], totalItems: 0, totalSubtotal: 0, totalShipping: 0, grandTotal: 0 })
@@ -692,6 +698,18 @@ export const CartView: React.FC = () => {
     ))
     return () => { channels.forEach(ch => { try { supabase.removeChannel(ch) } catch {} }) }
   }, [items])
+
+  // Load pending invites for selection
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await listMyBattleInvitations()
+        const rows = (res?.items || []).map((b:any) => ({ id: b.id, title: b.title, requested_start_at: b.requested_start_at }))
+        setPendingInvites(rows)
+        if (!selectedInviteId && rows.length > 0) setSelectedInviteId(rows[0].id)
+      } catch {}
+    })()
+  }, [])
 
   // 最適化提案
   const optimizationSuggestions = useMemo(() => {
@@ -913,6 +931,67 @@ export const CartView: React.FC = () => {
             </div>
           </div>
         </div>
+        {/* 承認/非承認操作 */}
+        <div className="mb-3 space-y-2">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <select className="flex-1 select select-bordered"
+              value={selectedInviteId}
+              onChange={e => setSelectedInviteId(e.target.value)}
+            >
+              {pendingInvites.length === 0 ? (
+                <option value="">保留中の招待はありません</option>
+              ) : pendingInvites.map(inv => (
+                <option key={inv.id} value={inv.id}>{inv.title || 'バトル招待'}（{inv.requested_start_at ? new Date(inv.requested_start_at).toLocaleString('ja-JP') : '未定'}）</option>
+              ))}
+            </select>
+            <input className="flex-1 input input-bordered" placeholder="理由（任意）" value={approvalReason} onChange={e=>setApprovalReason(e.target.value)} />
+          </div>
+          <div className="flex items-center gap-3">
+          <button
+            onClick={async () => {
+              try {
+                const bid = selectedInviteId || (() => { try { return localStorage.getItem('pending_battle_id') || '' } catch { return '' } })()
+                if (bid) {
+                  await acceptBattle(bid, approvalReason?.trim() || undefined)
+                  showToast({ message: '申請を承認し、開始通知を予約しました', variant: 'success' })
+                } else {
+                  showToast({ message: '対象の申請が見つかりません（招待詳細から選択してください）', variant: 'warning' })
+                }
+                setApprovalState('approved')
+              } catch (e: any) {
+                showToast({ message: e?.message || '承認に失敗しました', variant: 'error' })
+              }
+            }}
+            className="flex-1 py-2 px-3 rounded-lg border border-green-300 text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
+          >
+            承認
+          </button>
+          <button
+            onClick={async () => {
+              try {
+                const bid = selectedInviteId || (() => { try { return localStorage.getItem('pending_battle_id') || '' } catch { return '' } })()
+                if (bid) {
+                  await declineBattle(bid, approvalReason?.trim() || undefined)
+                  showToast({ message: '申請を削除しました', variant: 'success' })
+                } else {
+                  showToast({ message: '対象の申請が見つかりません（招待詳細から選択してください）', variant: 'warning' })
+                }
+                setApprovalState('rejected')
+              } catch (e: any) {
+                showToast({ message: e?.message || '非承認に失敗しました', variant: 'error' })
+              }
+            }}
+            className="flex-1 py-2 px-3 rounded-lg border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
+          >
+            非承認
+          </button>
+          </div>
+        </div>
+        {approvalState && (
+          <div className={`text-sm mb-3 ${approvalState==='approved' ? 'text-green-700' : 'text-red-700'}`}>
+            現在のステータス: {approvalState === 'approved' ? '承認済み' : '非承認'}
+          </div>
+        )}
 
         <button
           onClick={() => {

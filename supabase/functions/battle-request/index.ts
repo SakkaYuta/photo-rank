@@ -33,11 +33,18 @@ serve(async (req) => {
     if (!['public','private'].includes(visibility)) {
       return new Response(JSON.stringify({ error: 'invalid visibility' }), { status: 400, headers: { 'content-type': 'application/json' } })
     }
-    if (reqStartAt && isNaN(reqStartAt.getTime())) {
-      return new Response(JSON.stringify({ error: 'invalid requested_start_at' }), { status: 400, headers: { 'content-type': 'application/json' } })
+    if (!reqStartAt || isNaN(reqStartAt.getTime())) {
+      return new Response(JSON.stringify({ error: 'requested_start_at is required' }), { status: 400, headers: { 'content-type': 'application/json' } })
+    }
+    // Minimum lead time (default 15 minutes)
+    const minLeadMin = Number(Deno.env.get('BATTLE_MIN_LEAD_MINUTES') || '15')
+    const now = Date.now()
+    const minAllowed = now + minLeadMin * 60 * 1000
+    if (reqStartAt.getTime() < minAllowed) {
+      return new Response(JSON.stringify({ error: `requested_start_at must be at least ${minLeadMin} minutes from now` }), { status: 400, headers: { 'content-type': 'application/json' } })
     }
 
-    // Eligibility check
+    // Eligibility check (challenger)
     const { data: elig } = await supabase
       .from('battle_eligibility')
       .select('is_eligible')
@@ -46,6 +53,30 @@ serve(async (req) => {
     if (!elig?.is_eligible) {
       return new Response(JSON.stringify({ error: 'not eligible' }), { status: 403, headers: { 'content-type': 'application/json' } })
     }
+
+    // Opponent exists and not self
+    if (opponentId === user.id) {
+      return new Response(JSON.stringify({ error: 'cannot battle yourself' }), { status: 400, headers: { 'content-type': 'application/json' } })
+    }
+    const { data: opponent, error: oppErr } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', opponentId)
+      .single()
+    if (oppErr || !opponent) {
+      return new Response(JSON.stringify({ error: 'opponent not found' }), { status: 404, headers: { 'content-type': 'application/json' } })
+    }
+    // Optional eligibility for opponent (best-effort)
+    try {
+      const { data: oElig } = await supabase
+        .from('battle_eligibility')
+        .select('is_eligible')
+        .eq('user_id', opponentId)
+        .single()
+      if (oElig && oElig.is_eligible === false) {
+        return new Response(JSON.stringify({ error: 'opponent not eligible' }), { status: 403, headers: { 'content-type': 'application/json' } })
+      }
+    } catch {}
 
     // Rate limit (10/day)
     try {
@@ -78,6 +109,26 @@ serve(async (req) => {
     if (error) {
       return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: { 'content-type': 'application/json' } })
     }
+    // Create invitation (best effort)
+    try {
+      await supabase
+        .from('battle_invitations')
+        .insert({ battle_id: data.id, inviter_id: user.id, opponent_id: opponentId, status: 'pending' })
+    } catch (_) {}
+
+    // In-app notification to opponent
+    try {
+      await supabase
+        .from('user_notifications')
+        .insert({
+          user_id: opponentId,
+          type: 'battle_request',
+          title: 'バトル申請が届きました',
+          message: `タイトル: ${title || '(未設定)'} / 時間: ${duration}分 / 開始予定: ${reqStartAt ? reqStartAt.toISOString() : '(未定)'}`,
+          data: { battle_id: data.id, title, duration, requested_start_at: reqStartAt ? reqStartAt.toISOString() : null }
+        })
+    } catch (_) {}
+
     return new Response(JSON.stringify({
       battle_id: data.id,
       status: data.status,

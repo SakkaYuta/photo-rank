@@ -12,7 +12,7 @@ serve(async (req) => {
 
     const { data: battle, error: bErr } = await supabase
       .from('battles')
-      .select('id, challenger_id, opponent_id, duration_minutes, start_time, end_time, status, winner_id, overtime_count')
+      .select('id, challenger_id, opponent_id, duration_minutes, start_time, end_time, status, winner_id, overtime_count, opponent_accepted, title, requested_start_at, visibility, description')
       .eq('id', battleId)
       .single()
     if (bErr || !battle) return new Response(JSON.stringify({ error: 'battle not found' }), { status: 404, headers: { 'content-type': 'application/json' } })

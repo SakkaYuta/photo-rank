@@ -7,8 +7,8 @@ serve(async (req) => {
     // allow any authenticated user
     await authenticateUser(req)
     const supabase = getSupabaseAdmin()
-    const body = await req.json().catch(() => ({})) as { status?: 'scheduled'|'live'|'finished', limit?: number, offset?: number, duration?: 5|30|60 }
-    const { status, limit = 20, offset = 0, duration } = body
+    const body = await req.json().catch(() => ({})) as { status?: 'scheduled'|'live'|'finished', limit?: number, offset?: number, duration?: 5|30|60, only_mine?: boolean }
+    const { status, limit = 20, offset = 0, duration, only_mine } = body
 
     let query = supabase
       .from('battles')
@@ -18,6 +18,12 @@ serve(async (req) => {
 
     if (status) query = query.eq('status', status)
     if (duration) query = query.eq('duration_minutes', duration)
+    if (only_mine) {
+      // challenger or opponent is me
+      // Use OR filter
+      // @ts-ignore
+      query = query.or(`challenger_id.eq.${user.id},opponent_id.eq.${user.id}`)
+    }
 
     const { data: rows, error } = await query
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: { 'content-type': 'application/json' } })

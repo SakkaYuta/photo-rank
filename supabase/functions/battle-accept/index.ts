@@ -26,6 +26,14 @@ serve(async (req) => {
       .update({ opponent_accepted: true, opponent_response_reason: reason || null, opponent_response_at: new Date().toISOString() })
       .eq('id', battleId)
     if (updErr) return new Response(JSON.stringify({ error: updErr.message }), { status: 400, headers: { 'content-type': 'application/json' } })
+
+    // Update invitation if exists (best effort)
+    try {
+      await supabase
+        .from('battle_invitations')
+        .update({ status: 'accepted' })
+        .eq('battle_id', battleId)
+    } catch (_) {}
     
     // In-app notifications to both parties
     try {

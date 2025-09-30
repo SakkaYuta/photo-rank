@@ -11,6 +11,7 @@ import {
   TrendingUp,
   ChevronDown
 } from 'lucide-react';
+import { listBattles } from '@/services/battle.service'
 
 const CreatorDashboard: React.FC = () => {
   const { userProfile, user, userType } = useUserRole();
@@ -22,6 +23,10 @@ const CreatorDashboard: React.FC = () => {
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [pendingStatusChanges, setPendingStatusChanges] = useState<Map<string, boolean>>(new Map());
   const [hasChanges, setHasChanges] = useState(false);
+  const [battleLoading, setBattleLoading] = useState(true)
+  const [battleError, setBattleError] = useState<string | null>(null)
+  const [battleStatus, setBattleStatus] = useState<'finished'|'live'|'scheduled'|'all'>('finished')
+  const [battleHistory, setBattleHistory] = useState<Array<{ id: string; role: 'challenger'|'opponent'; opponentName: string; status: string; start_time?: string; end_time?: string; result?: 'win'|'lose'|'draw' }>>([])
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -44,7 +49,33 @@ const CreatorDashboard: React.FC = () => {
     };
 
     loadDashboardData();
-  }, [user?.id]);
+    const loadBattles = async (status?: 'finished'|'live'|'scheduled') => {
+      if (!user?.id) { setBattleLoading(false); setBattleHistory([]); return }
+      try {
+        setBattleLoading(true); setBattleError(null)
+        const params: any = { limit: 50, only_mine: true }
+        if (status) params.status = status
+        const { items, participants } = await listBattles(params)
+        const mapped = (items || []).map(b => {
+          const amChallenger = b.challenger_id === user.id
+          const opponentId = amChallenger ? b.opponent_id : b.challenger_id
+          const oppName = participants?.[opponentId]?.display_name || opponentId?.slice(0,8)
+          let result: 'win'|'lose'|'draw' | undefined = undefined
+          if (b.winner_id) {
+            result = b.winner_id === user.id ? 'win' : 'lose'
+          }
+          return { id: b.id, role: (amChallenger ? 'challenger' : 'opponent') as 'challenger'|'opponent', opponentName: oppName, status: b.status, start_time: b.start_time, end_time: b.end_time, result }
+        })
+        setBattleHistory(mapped)
+      } catch (e: any) {
+        setBattleError(e?.message || 'バトル履歴の取得に失敗しました')
+        setBattleHistory([])
+      } finally {
+        setBattleLoading(false)
+      }
+    }
+    loadBattles(battleStatus === 'all' ? undefined : battleStatus)
+  }, [user?.id, battleStatus]);
 
   // ドロップダウンを外側クリック/Escで閉じる（内側は維持）
   useEffect(() => {
@@ -412,10 +443,98 @@ const CreatorDashboard: React.FC = () => {
                   <div className="flex items-center justify-between py-2">
                     <span className="text-sm text-gray-600">今月の売上</span>
                     <span className="font-semibold text-green-600">¥{dashboardData?.stats.monthlyGrowth.revenue.toLocaleString() || 0}</span>
-                  </div>
-                </div>
+            </div>
+          </div>
+        </div>
+
+        {/* バトル履歴 */}
+        <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="p-4 sm:p-6 border-b">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">バトル履歴</h2>
+                <p className="text-sm text-gray-600 mt-1">過去の対戦結果を確認できます</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {([
+                  {k:'finished', label:'終了'},
+                  {k:'live', label:'進行中'},
+                  {k:'scheduled', label:'予定'},
+                  {k:'all', label:'すべて'},
+                ] as const).map(t => (
+                  <button
+                    key={t.k}
+                    onClick={() => setBattleStatus(t.k)}
+                    className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                      battleStatus === t.k
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >{t.label}</button>
+                ))}
+                <button
+                  className="ml-2 px-3 py-1.5 rounded-full text-sm border border-gray-300 hover:bg-gray-50"
+                  onClick={() => {
+                    const st = battleStatus === 'all' ? undefined : battleStatus
+                    ;(async () => {
+                      setBattleLoading(true)
+                      setBattleError(null)
+                      try {
+                        const params: any = { limit: 50, only_mine: true }
+                        if (st) params.status = st
+                        const { items, participants } = await listBattles(params)
+                        const mapped = (items || []).map(b => {
+                          const amC = b.challenger_id === user?.id
+                          const oppId = amC ? b.opponent_id : b.challenger_id
+                          const oppName = participants?.[oppId]?.display_name || oppId?.slice(0, 8)
+                          let result: 'win' | 'lose' | undefined = undefined
+                          if (b.winner_id) result = b.winner_id === user?.id ? 'win' : 'lose'
+                          return { id: b.id, role: amC ? 'challenger' : 'opponent', opponentName: oppName, status: b.status, start_time: b.start_time, end_time: b.end_time, result }
+                        })
+                        setBattleHistory(mapped as any)
+                      } catch (e: any) {
+                        setBattleError(e?.message || 'バトル履歴の再取得に失敗しました')
+                      } finally {
+                        setBattleLoading(false)
+                      }
+                    })()
+                  }}
+                >再読込</button>
               </div>
             </div>
+          </div>
+          <div className="p-4 sm:p-6">
+            {battleLoading ? (
+              <div className="space-y-3">
+                {Array(3).fill(0).map((_,i)=> (
+                  <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />
+                ))}
+              </div>
+            ) : battleError ? (
+              <div className="text-red-600">{battleError}</div>
+            ) : battleHistory.length === 0 ? (
+              <div className="text-gray-600">バトル履歴はありません</div>
+            ) : (
+              <div className="divide-y">
+                {battleHistory.map(b => (
+                  <div key={b.id} className="py-3 flex items-center justify-between">
+                    <div>
+                      <div className="text-sm text-gray-700">対戦相手: <span className="font-medium text-gray-900">{b.opponentName}</span> <span className="ml-2 text-xs text-gray-500">({b.role === 'challenger' ? '挑戦者' : '対戦相手'})</span></div>
+                      <div className="text-xs text-gray-500">開始: {b.start_time ? new Date(b.start_time).toLocaleString('ja-JP') : '-' } / 終了: {b.end_time ? new Date(b.end_time).toLocaleString('ja-JP') : '-'}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`text-sm font-semibold ${b.result === 'win' ? 'text-green-600' : b.result === 'lose' ? 'text-red-600' : 'text-gray-600'}`}>
+                        {b.result === 'win' ? '勝利' : b.result === 'lose' ? '敗北' : '—'}
+                      </div>
+                      <button className="text-xs text-blue-600 hover:underline" onClick={() => import('@/utils/navigation').then(m => m.navigate('battle-search'))}>詳細を見る</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
           </div>
         </div>

@@ -28,6 +28,14 @@ serve(async (_req) => {
           .eq('id', r.id)
           .eq('status', 'scheduled')
         if (!updErr) expired++
+        // also mark invitation as expired (best effort)
+        try {
+          await supabase
+            .from('battle_invitations')
+            .update({ status: 'expired' })
+            .eq('battle_id', r.id)
+            .eq('status', 'pending')
+        } catch (_) {}
       }
     }
 
@@ -36,4 +44,3 @@ serve(async (_req) => {
     return new Response(JSON.stringify({ error: e?.message || 'internal error' }), { status: 500, headers: { 'content-type': 'application/json' } })
   }
 })
-

@@ -11,6 +11,7 @@ serve(async (req) => {
       .from('battles')
       .select('id')
       .eq('status', 'scheduled')
+      .eq('opponent_accepted', true)
       .lte('requested_start_at', nowIso)
       .limit(200)
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: { 'content-type': 'application/json' } })

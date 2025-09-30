@@ -487,3 +487,33 @@ Supabase Dashboard > Edge Functions で各関数の実行ログを確認
 6. Environment Secrets 設定
 
 次は Vercel 側の自動デプロイを実行します。
+### Battles scheduling (autostart/autoexpire)
+
+- Functions
+  - `battle-autostart`: `requested_start_at <= now` の `scheduled` を `live` に移行
+  - `battle-autoexpire`: 開始1時間前までに `opponent_accepted != true` の `scheduled` を `cancelled` に更新
+
+- 推奨スケジュール
+  - `battle-autostart`: 1〜5分毎
+  - `battle-autoexpire`: 5分毎
+
+Supabase Dashboard > Edge Functions > Schedules で登録するか、外部スケジューラで以下を実行:
+
+```bash
+# Autostart
+curl -s -X POST "$SUPABASE_URL/functions/v1/battle-autostart" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" -H "Content-Type: application/json"
+
+# Autoexpire
+curl -s -X POST "$SUPABASE_URL/functions/v1/battle-autoexpire" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" -H "Content-Type: application/json"
+```
+
+### DB 前提
+- `battles` に以下の列が存在すること:
+  - `requested_start_at timestamptz`, `opponent_accepted boolean`
+  - `winner_id uuid`, `cancelled_at timestamptz`, `cancel_reason text`
+- インデックス推奨: `status`, `requested_start_at`, `start_time`
+
+### battle_invitations テーブル（任意）
+- 招待UXのためのテーブル。RLSは招待者/相手のみ参照/更新可能。

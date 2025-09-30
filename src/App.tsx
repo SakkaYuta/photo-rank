@@ -328,13 +328,6 @@ function App() {
                   </Suspense>
                 </PartialErrorBoundary>
               )}
-              {view === 'admin-refunds' && isAdmin && (
-                <PartialErrorBoundary name="返金管理">
-                  <Suspense fallback={<SuspenseFallback />}>
-                    <AdminRefundRequests />
-                  </Suspense>
-                </PartialErrorBoundary>
-              )}
               {view === 'partner-dashboard' && canAccessPartnerPages && (
                 <PartialErrorBoundary name="パートナーダッシュボード">
                   <PartnerDashboard />

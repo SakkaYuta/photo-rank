@@ -20,6 +20,14 @@ serve(async (req) => {
     if (battle.status !== 'scheduled') return new Response(JSON.stringify({ error: 'invalid status' }), { status: 400, headers: { 'content-type': 'application/json' } })
     if (battle.opponent_id !== user.id) return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { 'content-type': 'application/json' } })
 
+    // Update invitation status (best effort)
+    try {
+      await supabase
+        .from('battle_invitations')
+        .update({ status: 'declined' })
+        .eq('battle_id', battleId)
+    } catch (_) {}
+
     // Delete the scheduled battle (non-approval removes the request)
     const { error: delErr } = await supabase
       .from('battles')

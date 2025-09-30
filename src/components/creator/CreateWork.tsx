@@ -1038,8 +1038,8 @@ export function CreateWork() {
           if (!(ipConfirmed && policyAccepted)) { showToast({ message: '法務確認のチェックは必須です。', variant: 'error' }); scrollTo(legalRef.current); ipCheckboxRef.current?.focus(); return }
           setStep(2)
           setTriedStep1Next(false)
-          }}>グッズ設定へ</Button>
-        </div>
+        }}>グッズ設定へ</Button>
+      </div>
       </>}
 
       {step === 2 && <>

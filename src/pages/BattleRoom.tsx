@@ -245,7 +245,15 @@ export const BattleRoom: React.FC = () => {
               <input type="checkbox" className="checkbox checkbox-sm" checked={agreeTerms} onChange={e => setAgreeTerms(e.target.checked)} />
               <span className="text-sm">バトル申請に関する <a className="underline" onClick={() => import('@/utils/navigation').then(m => m.navigate('terms'))}>利用規約</a> に同意します</span>
             </label>
-            <button className="btn bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 border-0 text-gray-900 font-black text-lg shadow-xl transform hover:scale-105 transition-transform h-auto py-3" onClick={onRequest}>
+            <button className="btn bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 border-0 text-gray-900 font-black text-lg shadow-xl transform hover:scale-105 transition-transform h-auto py-3" onClick={() => {
+              // client-side min-lead guard (15min)
+              const minLeadMin = 15
+              const t = requestedStartAt ? new Date(requestedStartAt).getTime() : 0
+              const minAllowed = Date.now() + minLeadMin * 60 * 1000
+              if (!t || isNaN(t)) { setError('開始予定日時の形式が正しくありません'); return }
+              if (t < minAllowed) { setError(`開始予定は現在時刻から${minLeadMin}分以上先を指定してください`); return }
+              onRequest()
+            }}>
               バトル申請
             </button>
           </div>
