@@ -41,10 +41,10 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'asset_id is required' }), { status: 400, headers: { 'content-type': 'application/json' } })
     }
 
-    // Load asset and verify ownership
+    // Load asset and verify ownership + policy
     const { data: asset, error: assetErr } = await supabase
       .from('online_assets')
-      .select('id, owner_user_id, source_url')
+      .select('id, owner_user_id, source_url, provider, policy, status')
       .eq('id', assetId)
       .single()
     if (assetErr) {
@@ -52,6 +52,60 @@ serve(async (req) => {
     }
     if (asset.owner_user_id !== user.id) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { 'content-type': 'application/json' } })
+    }
+
+    // Basic SSRF hardening
+    // 1) Require an approved policy for the provider
+    if (asset.policy !== 'allow' && asset.status !== 'approved') {
+      return new Response(JSON.stringify({ error: 'Asset not approved for fetching' }), { status: 403, headers: { 'content-type': 'application/json' } })
+    }
+
+    // 2) Parse URL and reject private/loopback/link-local IP literals and non-HTTPS
+    let u: URL
+    try {
+      u = new URL(asset.source_url)
+    } catch {
+      return new Response(JSON.stringify({ error: 'invalid source_url' }), { status: 400, headers: { 'content-type': 'application/json' } })
+    }
+    if (u.protocol !== 'https:') {
+      return new Response(JSON.stringify({ error: 'Only https sources are allowed' }), { status: 400, headers: { 'content-type': 'application/json' } })
+    }
+    const hostname = u.hostname || ''
+    const isIpv4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname)
+    const isIpv6 = hostname.includes(':')
+    const isPrivateV4 = isIpv4 && (
+      hostname.startsWith('10.') ||
+      hostname.startsWith('127.') ||
+      hostname.startsWith('169.254.') ||
+      hostname.startsWith('192.168.') ||
+      (() => {
+        // 172.16.0.0 – 172.31.255.255
+        const octets = hostname.split('.').map((n) => parseInt(n, 10))
+        return octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31
+      })()
+    )
+    const isPrivateV6 = isIpv6 && (
+      hostname === '::1' || hostname.startsWith('fc') || hostname.startsWith('fd')
+    )
+    const isLocalHost = hostname === 'localhost'
+    if (isPrivateV4 || isPrivateV6 || isLocalHost) {
+      return new Response(JSON.stringify({ error: 'Private or loopback hosts are not allowed' }), { status: 403, headers: { 'content-type': 'application/json' } })
+    }
+
+    // 3) Optional: verify provider is explicitly allow-listed in asset_policies
+    try {
+      const provider = (asset.provider || hostname).toLowerCase()
+      const { data: pol } = await supabase
+        .from('asset_policies')
+        .select('rule')
+        .eq('pattern', provider)
+        .single()
+      if (pol?.rule !== 'allow') {
+        return new Response(JSON.stringify({ error: 'Provider is not allow-listed' }), { status: 403, headers: { 'content-type': 'application/json' } })
+      }
+    } catch (_) {
+      // If policy table missing, fail closed
+      return new Response(JSON.stringify({ error: 'Policy verification failed' }), { status: 403, headers: { 'content-type': 'application/json' } })
     }
 
     // Fetch original image from source_url (best-effort)
@@ -91,4 +145,3 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: e?.message ?? 'unknown error' }), { status: 500, headers: { 'content-type': 'application/json' } })
   }
 })
-

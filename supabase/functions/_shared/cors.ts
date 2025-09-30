@@ -1,6 +1,13 @@
 // CORS設定の共通定義
-// Prefer explicit origins via env; fallback to '*'
-const DEFAULT_ORIGIN = Deno.env.get('FRONTEND_URL') || '*'
+// Prefer explicit origins via env; avoid wildcard fallbacks in production
+const allowed = (Deno.env.get('ALLOWED_ORIGINS') || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
+
+// 最低限のデフォルト（環境未設定時も'*'は避ける）
+const DEFAULT_ORIGIN = allowed[0] || Deno.env.get('FRONTEND_URL') || 'https://photo-rank.vercel.app'
+
 export const corsHeaders = {
   'Access-Control-Allow-Origin': DEFAULT_ORIGIN,
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',

@@ -27,6 +27,12 @@ const LiveBattle: React.FC = () => {
   const [error, setError] = useState<string>('')
   const [userId, setUserId] = useState<string>('')
   const [remainingSeconds, setRemainingSeconds] = useState<number>(3600)
+  // バトルの残り時間（サーバーの開始時刻+持ち時間から算出）
+  const [battleStatus, setBattleStatus] = useState<'idle'|'scheduled'|'live'|'finished'>('idle')
+  const [battleStartAt, setBattleStartAt] = useState<string | null>(null)
+  const [battleDurationMin, setBattleDurationMin] = useState<number>(0)
+  const [battleRemainSec, setBattleRemainSec] = useState<number>(0)
+  const [battleOvertimeCount, setBattleOvertimeCount] = useState<number>(0)
   const lastCheerTsRef = useRef<number>(0)
 
   // 無料応援システム
@@ -120,6 +126,10 @@ const LiveBattle: React.FC = () => {
       const b = SAMPLE_BATTLES.find(x => x.id === id) || SAMPLE_BATTLES[0]
       if (b) {
         setTitle(b.title)
+        setBattleStatus(b.status)
+        setBattleStartAt(b.start_time)
+        setBattleDurationMin(b.duration_minutes)
+        setBattleOvertimeCount(0)
         setChallenger({ id: b.challenger_id, name: SAMPLE_PARTICIPANTS[b.challenger_id]?.display_name || 'Challenger', avatar: SAMPLE_PARTICIPANTS[b.challenger_id]?.avatar_url || '' })
         setOpponent({ id: b.opponent_id, name: SAMPLE_PARTICIPANTS[b.opponent_id]?.display_name || 'Opponent', avatar: SAMPLE_PARTICIPANTS[b.opponent_id]?.avatar_url || '' })
         setScores({ challenger: 15600, opponent: 14800 })
@@ -160,6 +170,11 @@ const LiveBattle: React.FC = () => {
     const ch = res.battle.challenger_id
     const op = res.battle.opponent_id
     const p = res.participants || {}
+    // バトル時間・状態
+    setBattleStatus((res.battle.status as any) || 'idle')
+    setBattleStartAt(res.battle.start_time || null)
+    setBattleDurationMin(Number(res.battle.duration_minutes || 0))
+    setBattleOvertimeCount(Number((res.battle as any)?.overtime_count || 0))
     setChallenger({ id: ch, name: p[ch]?.display_name || ch.slice(0, 8), avatar: p[ch]?.avatar_url || '' })
     setOpponent({ id: op, name: p[op]?.display_name || op.slice(0, 8), avatar: p[op]?.avatar_url || '' })
     setScores({
@@ -167,6 +182,24 @@ const LiveBattle: React.FC = () => {
       opponent: res.scores?.[op] || 0,
     })
   }
+
+  // バトル残り時間のカウントダウン
+  useEffect(() => {
+    if (!battleStartAt || !battleDurationMin || battleStatus !== 'live') {
+      setBattleRemainSec(0)
+      return
+    }
+    const start = new Date(battleStartAt).getTime()
+    const end = start + (battleDurationMin + battleOvertimeCount * 3) * 60 * 1000
+    const tick = () => {
+      const now = Date.now()
+      const remain = Math.max(0, Math.floor((end - now) / 1000))
+      setBattleRemainSec(remain)
+    }
+    tick()
+    const t = window.setInterval(tick, 1000)
+    return () => window.clearInterval(t)
+  }, [battleStartAt, battleDurationMin, battleOvertimeCount, battleStatus])
 
   const total = useMemo(() => scores.challenger + scores.opponent, [scores])
   const pct = (side: Side) => total === 0 ? 50 : Math.round((scores[side] / total) * 100)
@@ -262,6 +295,17 @@ const LiveBattle: React.FC = () => {
           </div>
           <SideCard name={opponent.name} avatar={opponent.avatar} score={scores.opponent} crown={scores.opponent>=scores.challenger} active={effects.burst && effects.side==='opponent'} creatorId={opponent.id} />
         </div>
+
+        {/* バトル残り時間 */}
+        {battleStatus === 'live' && (
+          <div className="mt-4 flex items-center justify-center gap-2 text-white">
+            <Timer className="w-5 h-5 text-yellow-300" />
+            <span className="text-sm">バトル終了まで</span>
+            <span className="font-mono text-lg">
+              {String(Math.floor(battleRemainSec/60)).padStart(2,'0')}:{String(battleRemainSec%60).padStart(2,'0')}
+            </span>
+          </div>
+        )}
 
         {/* 無料応援回数表示 */}
         <div className="mt-6 bg-white/10 rounded-lg p-4 text-center">

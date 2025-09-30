@@ -116,10 +116,27 @@ serve(async (req) => {
     
     switch (event.type) {
       case 'payment_intent.succeeded':
-        processingResult = await handlePaymentIntentSucceeded(
-          supabase,
-          event.data.object as Stripe.PaymentIntent
-        );
+        {
+          const pi = event.data.object as Stripe.PaymentIntent
+          if (pi?.metadata?.type === 'live_offer' && pi.metadata.live_offer_id && pi.metadata.user_id) {
+            try {
+              // finalize live offer counts atomically
+              await supabase.rpc('complete_live_offer_purchase', {
+                p_live_offer_id: pi.metadata.live_offer_id,
+                p_user_id: pi.metadata.user_id,
+                p_payment_intent_id: pi.id,
+                p_amount: pi.amount,
+                p_currency: pi.currency
+              })
+            } catch (e) {
+              console.error('complete_live_offer_purchase failed:', e)
+            }
+          }
+          processingResult = await handlePaymentIntentSucceeded(
+            supabase,
+            pi
+          );
+        }
         break;
 
       case 'payment_intent.payment_failed':
@@ -143,6 +160,23 @@ serve(async (req) => {
         );
         break;
 
+      case 'payment_intent.processing': {
+        const pi = event.data.object as Stripe.PaymentIntent
+        // Optional: update purchases.payment_status to processing
+        try {
+          await supabase.from('purchases').update({ payment_status: 'processing' }).eq('stripe_payment_intent_id', pi.id)
+        } catch {}
+        processingResult = { processing: true }
+        break
+      }
+      case 'payment_intent.canceled': {
+        const pi = event.data.object as Stripe.PaymentIntent
+        try {
+          await supabase.from('purchases').update({ payment_status: 'canceled' }).eq('stripe_payment_intent_id', pi.id)
+        } catch {}
+        processingResult = { canceled: true }
+        break
+      }
       default:
         console.log(`Unhandled event type: ${event.type}`);
         processingResult = { unhandled: true };

@@ -152,109 +152,184 @@ export const BattleRoom: React.FC = () => {
   }, [battleId])
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">バトルルーム</h1>
-      {message && <div className="alert alert-success">{message}</div>}
-      {error && <div className="alert alert-error">{error}</div>}
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-pink-800 to-red-900 p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Hero Header */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500 p-1">
+          <div className="bg-gradient-to-br from-gray-900 to-purple-900 rounded-xl p-6 sm:p-8">
+            <h1 className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-purple-300 mb-2 animate-pulse">
+              ⚔️ BATTLE ROOM ⚔️
+            </h1>
+            <p className="text-gray-300 text-sm sm:text-base">リアルタイムクリエイター対決アリーナ</p>
+          </div>
+        </div>
 
-      <section className="space-y-3">
-        <h2 className="font-semibold">1. バトル作成（申請）</h2>
-        {useSamples && (
-          <div className="rounded bg-yellow-50 border border-yellow-200 p-2 text-xs text-yellow-800 inline-flex items-center gap-2">
-            デモ表示: `VITE_ENABLE_BATTLE_SAMPLE=true` でサンプルデータを表示しています。
-            <button className="btn btn-xs" onClick={() => setUseSamples(false)}>デモ無効化</button>
+        {message && (
+          <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl p-4 shadow-2xl border-2 border-green-300 animate-bounce">
+            <p className="text-white font-bold text-center">✨ {message}</p>
           </div>
         )}
-        <div className="flex flex-wrap gap-2 items-end">
-          <div>
-            <label className="block text-sm text-gray-600">対戦相手ユーザーID</label>
-            <input className="input input-bordered" value={opponentId} onChange={e => setOpponentId(e.target.value)} placeholder="uuid" />
+        {error && (
+          <div className="bg-gradient-to-r from-red-500 to-pink-500 rounded-xl p-4 shadow-2xl border-2 border-red-300 animate-shake">
+            <p className="text-white font-bold text-center">⚠️ {error}</p>
+          </div>
+        )}
+
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-900 to-purple-900 p-6 shadow-2xl border-2 border-blue-400">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500 rounded-full filter blur-3xl opacity-20 animate-pulse"></div>
+        <div className="relative z-10 space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">🎮</span>
+            <h2 className="text-2xl font-black text-white">バトル作成</h2>
+          </div>
+          {useSamples && (
+            <div className="rounded-lg bg-yellow-500 p-3 text-sm text-gray-900 font-semibold inline-flex items-center gap-2 shadow-lg">
+              <span className="text-xl">🎯</span>
+              デモモード有効
+              <button className="btn btn-xs bg-white hover:bg-gray-100" onClick={() => setUseSamples(false)}>無効化</button>
+            </div>
+          )}
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-[200px] max-w-xs">
+            <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">👤 対戦相手ID</label>
+            <input className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white font-semibold" value={opponentId} onChange={e => setOpponentId(e.target.value)} placeholder="相手のユーザーID" />
           </div>
           <div>
-            <label className="block text-sm text-gray-600">時間</label>
-            <select className="select select-bordered" value={duration} onChange={e => setDuration(Number(e.target.value) as any)}>
-              <option value={5}>5分</option>
-              <option value={30}>30分</option>
-              <option value={60}>60分</option>
+            <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">⏱️ バトル時間</label>
+            <select className="select select-bordered w-full sm:w-auto bg-white/90 backdrop-blur-sm font-bold" value={duration} onChange={e => setDuration(Number(e.target.value) as any)}>
+              <option value={5}>⚡ 5分</option>
+              <option value={30}>🔥 30分</option>
+              <option value={60}>💪 60分</option>
             </select>
           </div>
-          <button className="btn btn-primary" onClick={onRequest}>バトル申請</button>
+          <button className="btn bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 border-0 text-gray-900 font-black w-full sm:w-auto shadow-xl transform hover:scale-105 transition-transform" onClick={onRequest}>
+            ⚔️ バトル申請
+          </button>
+        </div>
         </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-semibold">2. バトル開始/終了</h2>
-        <div className="flex flex-wrap gap-2 items-end">
-          <div>
-            <label className="block text-sm text-gray-600">バトルID</label>
-            <input className="input input-bordered w-96" value={battleId} onChange={e => setBattleId(e.target.value)} placeholder="battle uuid" />
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-900 to-pink-900 p-6 shadow-2xl border-2 border-red-400">
+        <div className="absolute top-0 left-0 w-64 h-64 bg-red-500 rounded-full filter blur-3xl opacity-20 animate-pulse"></div>
+        <div className="relative z-10 space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">⚡</span>
+            <h2 className="text-2xl font-black text-white">バトル開始/終了</h2>
           </div>
-          <button className="btn" onClick={onStart}>開始</button>
-          <div>
-            <label className="block text-sm text-gray-600">勝者ユーザーID</label>
-            <input className="input input-bordered" value={cheerTarget} onChange={e => setCheerTarget(e.target.value)} placeholder="uuid（空なら自分）" />
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-[200px] max-w-md">
+            <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">🎯 バトルID</label>
+            <input className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white font-mono font-semibold" value={battleId} onChange={e => setBattleId(e.target.value)} placeholder="バトルID" />
           </div>
-          <button className="btn btn-outline" onClick={onFinish}>終了</button>
+          <button className="btn bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 border-0 text-white font-black shadow-xl transform hover:scale-105 transition-transform" onClick={onStart}>
+            🚀 開始
+          </button>
+          <div className="flex-1 min-w-[200px] max-w-xs">
+            <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">👑 勝者ID</label>
+            <input className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white font-semibold" value={cheerTarget} onChange={e => setCheerTarget(e.target.value)} placeholder="空なら自分" />
+          </div>
+          <button className="btn bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 border-0 text-white font-black shadow-xl transform hover:scale-105 transition-transform" onClick={onFinish}>
+            🏁 終了
+          </button>
         </div>
-        <div className="text-sm text-gray-600 space-x-4">
-          <span>状態: <span className="font-medium">{status}</span></span>
+
+        {/* Status Bar */}
+        <div className="flex flex-wrap gap-4 items-center bg-gradient-to-r from-purple-800 to-pink-800 p-5 rounded-xl border-2 border-pink-400 shadow-2xl">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🔴</span>
+            <span className="text-sm font-bold text-white drop-shadow-lg">状態:</span>
+            <span className={`font-black px-4 py-2 rounded-full text-base shadow-lg transform hover:scale-110 transition-transform ${
+              status === 'live' ? 'bg-gradient-to-r from-green-400 to-emerald-400 text-gray-900 animate-pulse' :
+              status === 'finished' ? 'bg-gradient-to-r from-gray-400 to-gray-500 text-white' :
+              'bg-gradient-to-r from-blue-400 to-cyan-400 text-gray-900'
+            }`}>{status.toUpperCase()}</span>
+          </div>
           {status === 'live' && (
-            <span>残り時間: <span className="font-mono">{remaining}</span></span>
+            <div className="flex items-center gap-3 animate-pulse">
+              <span className="text-2xl">⏰</span>
+              <span className="text-sm font-bold text-white drop-shadow-lg">残り時間:</span>
+              <span className="font-mono font-black text-3xl text-yellow-300 drop-shadow-[0_0_10px_rgba(253,224,71,0.5)]">{remaining}</span>
+            </div>
           )}
         </div>
         {status !== 'idle' && (
-          <div className="mt-2">
-            <h3 className="font-semibold mb-2">スコア</h3>
-            <div className="flex gap-6 text-lg items-center">
-              <div className="flex items-center gap-2">
-                <img src={resolveImageUrl(participants?.[Object.keys(participants)[0]]?.avatar_url, [defaultImages.avatar])} alt="" className="w-8 h-8 rounded-full border hidden" />
+          <div className="mt-4 relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-900 via-orange-900 to-red-900 p-8 shadow-2xl border-4 border-yellow-400">
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30"></div>
+            <div className="relative z-10">
+              <div className="text-center mb-6">
+                <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-orange-200 to-red-200 mb-2 drop-shadow-lg">
+                  🏆 SCOREBOARD 🏆
+                </h3>
+                <p className="text-yellow-200 text-sm font-semibold">リアルタイムバトルスコア</p>
               </div>
-              {(() => {
-                // Show both participants if known
-                const ids = Object.keys(participants || {})
-                return (
-                  <>
-                    {ids.map(pid => (
-                      <div key={pid} className="flex items-center gap-2">
-                        <img src={resolveImageUrl(participants?.[pid]?.avatar_url, [defaultImages.avatar])} alt="" className="w-8 h-8 rounded-full border" />
-                        <span className="text-sm text-gray-600">{participants?.[pid]?.display_name || pid.slice(0,8)}</span>
-                        <span className="font-bold">{scores?.[pid] ?? 0}</span>
-                      </div>
-                    ))}
-                  </>
-                )
-              })()}
-            </div>
+              <div className="flex flex-wrap gap-6 justify-center">
+                {(() => {
+                  // Show both participants if known
+                  const ids = Object.keys(participants || {})
+                  return (
+                    <>
+                      {ids.map((pid, idx) => (
+                        <div key={pid} className="relative group">
+                          <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl blur-lg opacity-75 group-hover:opacity-100 transition-opacity"></div>
+                          <div className="relative flex flex-col items-center gap-4 bg-gradient-to-br from-gray-900 to-purple-900 p-8 rounded-2xl shadow-2xl border-4 border-yellow-400 min-w-[220px] transform hover:scale-105 transition-transform">
+                            <div className="absolute -top-4 -right-4 w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center font-black text-gray-900 text-lg shadow-xl">
+                              #{idx + 1}
+                            </div>
+                            <img src={resolveImageUrl(participants?.[pid]?.avatar_url, [defaultImages.avatar])} alt="" className="w-20 h-20 rounded-full border-4 border-yellow-400 shadow-2xl ring-4 ring-yellow-500/50" />
+                            <span className="text-base font-black text-white drop-shadow-lg">{participants?.[pid]?.display_name || pid.slice(0,8)}</span>
+                            <div className="flex flex-col items-center bg-gradient-to-br from-yellow-400 to-orange-500 px-6 py-3 rounded-xl shadow-xl">
+                              <span className="text-5xl font-black text-gray-900 drop-shadow-lg">{scores?.[pid] ?? 0}</span>
+                              <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">POINTS</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )
+                })()}
+              </div>
             {recent?.length > 0 && (
-              <div className="mt-3 text-sm">
-                <div className="font-semibold mb-1">最近の応援</div>
-                <ul className="space-y-1">
+              <div className="mt-8 bg-gradient-to-br from-green-900 to-emerald-900 p-6 rounded-2xl border-2 border-green-400 shadow-2xl">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-3xl">🎉</span>
+                  <h4 className="text-xl font-black text-white">最近の応援</h4>
+                </div>
+                <ul className="space-y-3">
                   {recent.map((r, idx) => (
-                    <li key={idx} className="flex items-center gap-2 text-gray-700">
-                      <img src={resolveImageUrl(participants?.[r.creator_id]?.avatar_url, [defaultImages.avatar])} className="w-6 h-6 rounded-full border" />
-                      <span className="text-xs">{participants?.[r.creator_id]?.display_name || r.creator_id.slice(0,8)}</span>
-                      <span className="text-xs text-green-700">+¥{r.amount}</span>
-                      <span className="text-[10px] text-gray-500">{new Date(r.purchased_at).toLocaleTimeString()}</span>
+                    <li key={idx} className="flex items-center gap-3 bg-gradient-to-r from-green-400/20 to-emerald-400/20 backdrop-blur-sm p-4 rounded-xl border-2 border-green-400 shadow-lg hover:scale-105 transition-transform">
+                      <img src={resolveImageUrl(participants?.[r.creator_id]?.avatar_url, [defaultImages.avatar])} className="w-12 h-12 rounded-full border-3 border-green-300 shadow-lg" />
+                      <span className="text-base font-black text-white">{participants?.[r.creator_id]?.display_name || r.creator_id.slice(0,8)}</span>
+                      <span className="text-lg font-black text-green-300 px-3 py-1 bg-green-900/50 rounded-lg">+¥{r.amount}</span>
+                      <span className="text-xs font-semibold text-green-200 ml-auto">{new Date(r.purchased_at).toLocaleTimeString()}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
+            </div>
           </div>
         )}
+        </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-semibold">3. 応援チケット購入</h2>
-        <div className="flex flex-wrap gap-2 items-end">
-          <div>
-            <label className="block text-sm text-gray-600">応援するクリエイターID</label>
-            <input className="input input-bordered" value={cheerTarget} onChange={e => setCheerTarget(e.target.value)} placeholder="uuid" />
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-900 to-emerald-900 p-6 shadow-2xl border-2 border-green-400">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-green-500 rounded-full filter blur-3xl opacity-20 animate-pulse"></div>
+        <div className="relative z-10 space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">💰</span>
+            <h2 className="text-2xl font-black text-white">応援チケット購入</h2>
           </div>
-          <button className="btn btn-success" onClick={onCheer}>100円で応援する</button>
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-[200px] max-w-xs">
+            <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">🌟 応援するクリエイターID</label>
+            <input className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white font-semibold" value={cheerTarget} onChange={e => setCheerTarget(e.target.value)} placeholder="クリエイターID" />
+          </div>
+          <button className="btn bg-gradient-to-r from-yellow-400 via-green-400 to-emerald-400 hover:from-yellow-500 hover:via-green-500 hover:to-emerald-500 border-0 text-gray-900 font-black w-full sm:w-auto shadow-xl transform hover:scale-105 transition-transform text-lg" onClick={onCheer}>
+            💸 100円で応援する
+          </button>
         </div>
         {cheerClientSecret && (
-          <div className="max-w-md">
+          <div className="max-w-md bg-white/90 backdrop-blur-sm p-6 rounded-xl shadow-2xl">
             <StripeCheckout clientSecret={cheerClientSecret} workId={battleId}
               onSuccess={() => { setMessage('応援ありがとうございました！'); setCheerClientSecret(null) }}
               onError={(m) => setError(m)}
@@ -262,7 +337,9 @@ export const BattleRoom: React.FC = () => {
             />
           </div>
         )}
+        </div>
       </section>
+      </div>
     </div>
   )
 }

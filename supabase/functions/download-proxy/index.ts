@@ -8,7 +8,29 @@ function buildCorsHeaders(origin: string | null) {
     'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE'
   }
   if (origin && allowed.includes(origin)) hdr['Access-Control-Allow-Origin'] = origin
+  hdr['Vary'] = 'Origin'
   return hdr
+}
+
+// Very small content-type inference with whitelist enforcement
+const MIME_WHITELIST = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/avif',
+])
+
+function inferContentType(path: string): string | null {
+  const lower = path.toLowerCase()
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg'
+  if (lower.endsWith('.png')) return 'image/png'
+  if (lower.endsWith('.webp')) return 'image/webp'
+  if (lower.endsWith('.avif')) return 'image/avif'
+  return null
+}
+
+function sanitizeFilename(name: string): string {
+  return name.replace(/[\r\n\t\0"\\]/g, '_').slice(0, 200)
 }
 
 serve(async (req) => {
@@ -29,6 +51,11 @@ serve(async (req) => {
 
     if (!filePath) {
       return new Response('File path required', { status: 400, headers: buildCorsHeaders(origin) })
+    }
+
+    // Basic path validation – prevent traversal and only allow safe chars
+    if (filePath.includes('..') || filePath.includes('\\') || !/^[a-zA-Z0-9/_\.-]+$/.test(filePath)) {
+      return new Response('Invalid file path format', { status: 400, headers: buildCorsHeaders(origin) })
     }
 
     // Get authorization header
@@ -82,8 +109,8 @@ serve(async (req) => {
                    fileName.startsWith('avatars/') ||
                    fileName.startsWith(`users/${user.id}/`)
     } else if (bucket === 'photos-watermarked') {
-      // Public access to watermarked photos
-      authorized = true
+      // Only allow watermarked/ prefix (public previews)
+      authorized = fileName.startsWith('watermarked/')
     }
 
     if (!authorized) {
@@ -101,24 +128,26 @@ serve(async (req) => {
     }
 
     if (!data) {
-      return new Response('File not found', { status: 404, headers: corsHeaders })
+      return new Response('File not found', { status: 404, headers: buildCorsHeaders(origin) })
     }
 
-    // Get file info for proper headers
-    const { data: fileInfo } = await adminSupabase.storage
-      .from(bucket)
-      .list(fileName.split('/').slice(0, -1).join('/'), {
-        search: fileName.split('/').pop()
-      })
+    // Enforce MIME whitelist using extension inference
+    const inferred = inferContentType(fileName)
+    if (!inferred || !MIME_WHITELIST.has(inferred)) {
+      return new Response('Unsupported content type', { status: 415, headers: buildCorsHeaders(origin) })
+    }
 
-    const file = fileInfo?.find(f => f.name === fileName.split('/').pop())
-    const contentType = file?.metadata?.mimetype || 'application/octet-stream'
-
-    // Return file with appropriate headers
+    // Return file with strict security headers
     const hdr = buildCorsHeaders(origin)
-    hdr['Content-Type'] = contentType
-    hdr['Content-Disposition'] = `attachment; filename="${fileName.split('/').pop()}"`
+    const safeName = sanitizeFilename(fileName.split('/').pop() || 'file')
+    hdr['Content-Type'] = inferred
+    hdr['Content-Disposition'] = `attachment; filename="${safeName}"`
     hdr['Cache-Control'] = 'private, max-age=3600'
+    hdr['X-Content-Type-Options'] = 'nosniff'
+    hdr['X-Frame-Options'] = 'DENY'
+    hdr['Content-Security-Policy'] = "default-src 'none'; frame-ancestors 'none'; sandbox"
+    hdr['Referrer-Policy'] = 'no-referrer'
+    hdr['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
     return new Response(data, { headers: hdr })
 
   } catch (error) {

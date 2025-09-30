@@ -49,6 +49,7 @@ import { registerDevUtils } from './utils/devUtils'
 import { NAV_EVENT, viewToHash, parseHash } from '@/utils/navigation'
 import { allowedViews as ROUTES, isValidView, ROUTES_META, type RoleKey, defaultViewFor } from '@/routes'
 import LiveBattle from './pages/LiveBattle'
+import { BattleRoom } from './pages/BattleRoom'
 import AccountSettings from './pages/AccountSettings'
 import ProductsMarketplace from './pages/ProductsMarketplace'
 import AuthCallbackGate from './components/auth/AuthCallbackGate'
@@ -445,6 +446,11 @@ function App() {
               {view === 'live-battle' && (
                 <PartialErrorBoundary name="ライブ観戦">
                   <LiveBattle />
+                </PartialErrorBoundary>
+              )}
+              {view === 'battle-room' && (
+                <PartialErrorBoundary name="バトル申請">
+                  <BattleRoom />
                 </PartialErrorBoundary>
               )}
               {view === 'creator-profile' && (

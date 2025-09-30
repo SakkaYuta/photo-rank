@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Work } from '../../types'
 import { myWorks } from '../../services/work.service'
+import LiveOfferModal from './LiveOfferModal'
 import { supabase } from '../../services/supabaseClient'
 import { ProductCard } from '@/components/product/ProductCard'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
@@ -14,6 +15,7 @@ export function MyWorks() {
   const { LoginGate } = useRequireAuth()
   const { showToast } = useToast()
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [liveOfferFor, setLiveOfferFor] = useState<Work | null>(null)
 
   useEffect(() => {
     let active = true
@@ -93,10 +95,19 @@ export function MyWorks() {
             >
               {busyId === w.id ? '生成中...' : 'プレビュー再生成'}
             </button>
+            <button
+              className="text-xs px-2 py-1 rounded border hover:bg-gray-50"
+              onClick={() => setLiveOfferFor(w)}
+            >
+              ライブ限定
+            </button>
           </div>
         </div>
       ))}
       {items.length === 0 && <div className="p-4 text-gray-500">作品はまだありません。</div>}
+      {liveOfferFor && (
+        <LiveOfferModal isOpen={!!liveOfferFor} onClose={() => setLiveOfferFor(null)} work={liveOfferFor} />
+      )}
     </div>
   )
 }

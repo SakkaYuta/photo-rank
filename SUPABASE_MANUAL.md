@@ -279,6 +279,43 @@ CREATE TRIGGER update_user_privacy_settings_updated_at BEFORE UPDATE ON user_pri
 -- 既存の過度な公開ポリシー（factory_products_public_select）を置き換えます。
 ```
 
+### 2-Extra. コンビニ/銀行振込の導入（2025-09-30）
+```md
+1) DB拡張
+   - `supabase/migrations/20250930_payment_methods.sql` を適用
+     - purchases に `payment_method`, `payment_status`, `payment_due_at`, `payment_instructions`, `konbini_*` などを追加
+     - 返金用の `refund_status/amount/...` と `refund_requests` テーブルを追加
+
+2) Edge Functions
+   - `create-konbini-intent`: 金額/メタデータを受け取り、`payment_method_types=['konbini']` の PaymentIntent を作成
+   - `create-bank-transfer-intent`: `customer_balance + jp_bank_transfer` の PI を作成し、振込先情報の配布を待機
+   - Webhook: `stripe-webhook` は `processing/canceled` を補足（succeeded/failedは既存）
+
+3) フロント連携（推奨フロー）
+   - チェックアウトで決済手段を選択（カード/コンビニ/銀行振込）
+   - コンビニ: `create-konbini-intent` → client_secret で確認 → Stripeのバウチャー表示
+   - 銀行振込: `create-bank-transfer-intent` → 振込先情報（next_action）を表示
+   - Webhookで `purchases.payment_status` を更新し、確定後に注文を実行
+```
+### 2-Extra. ライブバトル自動終了（2025-09-30）
+```md
+1) Edge Function をデプロイ
+   - パス: `supabase/functions/battle-autofinish`
+   - 内容: ライブ中(`status='live'`)のバトルで、`start_time + duration_minutes` を超過したものを自動処理。
+     - 同点なら延長戦: `duration_minutes += 3`（ステータスは`live`のまま）
+     - 非同点なら終了: `status='finished'`, `end_time=now()`, `winner_id`を更新
+
+2) スケジュール設定（Supabase Dashboard → Scheduled Functions）
+   - 関数: `battle-autofinish`
+   - スケジュール: 毎分実行（`* * * * *`）
+
+3) 追加インデックス/OTカラム適用
+   - ファイル: `supabase/migrations/20250930_battle_indexes.sql`
+   - 目的: `battles(status, start_time)`, `cheer_tickets(battle_id)` の参照高速化
+   - ファイル: `supabase/migrations/20250930_battle_overtime.sql`
+   - 目的: `battles.overtime_count` を追加し、延長回数を追跡（最大2回）
+```
+
 ### 4. RLSポリシー設定
 ```sql
 -- 3. RLS Policies (20240119_add_rls_policies.sql)

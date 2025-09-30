@@ -1,6 +1,6 @@
 // Central route registry to ease Router migration
 export const allowedViews = [
-  'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','factory-catalog','factory-item-detail','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','organizer-revenue','organizer-support','organizer-leave','organizer-invoice','organizer-guidelines','battle-search','creator-profile','live-battle','account-settings','products-marketplace','goods-item-selector','creator-goods','payment-methods','receipt','faq'
+  'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','factory-catalog','factory-item-detail','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','organizer-revenue','organizer-support','organizer-leave','organizer-invoice','organizer-guidelines','battle-search','creator-profile','live-battle','battle-room','account-settings','products-marketplace','goods-item-selector','creator-goods','payment-methods','receipt','faq'
 ] as const
 
 export type ViewKey = typeof allowedViews[number]
@@ -32,6 +32,7 @@ export const ROUTES_META: Record<ViewKey, RouteMeta> = {
   'creator-goods': {},
   'battle-search': { title: 'バトル検索', showInNav: true, navOrder: 35, icon: 'Gamepad2' },
   'live-battle': {},
+  'battle-room': { requireAuth: true, roles: ['creator','admin'], title: 'バトル申請', showInNav: true, navOrder: 45, icon: 'Sword' },
   'terms': {},
   'privacy': {},
   'refunds': {},
