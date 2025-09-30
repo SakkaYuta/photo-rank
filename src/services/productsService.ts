@@ -64,29 +64,10 @@ export async function fetchProducts(
 
   try {
     // まずはワークテーブルから商品データを取得
+    // カラム未整備環境でもクエリが落ちないように * を使用
     let query = supabase
       .from('works')
-      .select(`
-        id,
-        title,
-        description,
-        price,
-        image_url,
-        image_urls,
-        creator_id,
-        category,
-        view_count,
-        like_count,
-        sales_count,
-        rating,
-        created_at,
-        sale_start_at,
-        sale_end_at,
-        is_active,
-        stock_quantity,
-        discount_percentage,
-        product_types
-      `, { count: 'exact' });
+      .select('*', { count: 'exact' });
 
     // フィルタリング
     if (filters) {
@@ -105,37 +86,65 @@ export async function fetchProducts(
       if (filters.searchTerm) {
         query = query.or(`title.ilike.%${filters.searchTerm}%,description.ilike.%${filters.searchTerm}%`);
       }
-      if (filters.isActive !== undefined) {
-        query = query.eq('is_active', filters.isActive);
-      }
+      // is_active カラムがない環境もあるため、サーバーフィルタは避け、後段でクライアントフィルタ
     }
 
-    // デフォルトで公開中の商品のみ取得（filtersで未指定のとき）
-    if (!filters || filters.isActive === undefined) {
-      query = query.eq('is_active', true);
-    }
+    // デフォルト公開フィルタは後段でクライアント側に適用
 
-    // ソート
+    // ソート（存在しない列でも動作するようフォールバック）
+    let orderColumn: string | null = null
+    let orderAsc = false
     if (sort) {
-      const column = sort.field === 'sales' ? 'sales_count' :
-                    sort.field === 'views' ? 'view_count' :
-                    sort.field === 'rating' ? 'rating' :
-                    sort.field === 'created_at' ? 'created_at' :
-                    'price';
-      query = query.order(column, { ascending: sort.direction === 'asc' });
+      orderColumn = sort.field === 'sales' ? 'sales_count'
+        : sort.field === 'views' ? 'view_count'
+        : sort.field === 'rating' ? 'rating'
+        : sort.field === 'created_at' ? 'created_at'
+        : 'price'
+      orderAsc = sort.direction === 'asc'
     } else {
-      // デフォルトは売上順
-      query = query.order('sales_count', { ascending: false });
+      // デフォルトは新着順（DBに確実に存在するカラムを使用）
+      orderColumn = 'created_at'
+      orderAsc = false
     }
+    if (orderColumn) query = query.order(orderColumn, { ascending: orderAsc })
 
     // ページネーション
     query = query.range(offset, offset + limit - 1);
 
-    const { data, error, count } = await query;
+    let { data, error, count } = await query;
+    // 売上やビューなどのカラムが存在しない環境では400が発生するため、created_at へフォールバック
+    if (error) {
+      try {
+        if (orderColumn && orderColumn !== 'created_at') {
+          let retry = supabase.from('works').select('*', { count: 'exact' })
+          // 既存のフィルタを再適用
+          if (filters) {
+            if (filters.category && filters.category !== 'all') retry = retry.eq('category', filters.category)
+            if (filters.minPrice !== undefined) retry = retry.gte('price', filters.minPrice)
+            if (filters.maxPrice !== undefined) retry = retry.lte('price', filters.maxPrice)
+            if (filters.creatorId) retry = retry.eq('creator_id', filters.creatorId)
+            if (filters.searchTerm) retry = retry.or(`title.ilike.%${filters.searchTerm}%,description.ilike.%${filters.searchTerm}%`)
+          }
+          retry = retry.order('created_at', { ascending: false }).range(offset, offset + limit - 1)
+          const r = await retry
+          data = r.data
+          error = r.error as any
+          count = r.count as any
+        }
+      } catch {}
+    }
+    if (error) throw error
 
-    if (error) throw error;
+    let works = (data || []) as any[]
 
-    const works = (data || []) as any[]
+    // クライアントフィルタ: is_active（または is_published）
+    const isActiveFlag = (row: any) => (row?.is_active ?? row?.is_published ?? true) === true
+    if (filters && filters.isActive !== undefined) {
+      works = works.filter(w => ((w?.is_active ?? w?.is_published ?? true) === Boolean(filters.isActive)))
+    } else {
+      // 未指定時は公開のものだけ
+      works = works.filter(isActiveFlag)
+    }
 
     // クリエイター公開プロフィールをまとめて取得
     const creatorIds = Array.from(new Set(works.map(w => w.creator_id).filter(Boolean)))
@@ -160,18 +169,18 @@ export async function fetchProducts(
       creator_name: profiles[work.creator_id]?.display_name || '匿名クリエイター',
       creator_avatar: profiles[work.creator_id]?.avatar_url,
       category: work.category || 'other',
-      views: work.view_count || 0,
-      likes: work.like_count || 0,
-      sales: work.sales_count || 0,
-      rating: work.rating || 0,
+      views: (work as any).view_count || 0,
+      likes: (work as any).like_count || 0,
+      sales: (work as any).sales_count || 0,
+      rating: (work as any).rating || 0,
       created_at: work.created_at,
       sale_start_at: (work as any).sale_start_at || null,
       sale_end_at: (work as any).sale_end_at || null,
-      is_active: work.is_active,
-      is_trending: work.sales_count > 50, // 50販売以上をトレンドとする
-      discount_percentage: work.discount_percentage,
-      stock_quantity: work.stock_quantity || 100,
-      product_types: work.product_types || ['standard']
+      is_active: (work as any).is_active ?? (work as any).is_published ?? true,
+      is_trending: ((work as any).sales_count || 0) > 50,
+      discount_percentage: (work as any).discount_percentage,
+      stock_quantity: (work as any).stock_quantity || 100,
+      product_types: (work as any).product_types || ['standard']
     }));
 
     const result = {
@@ -217,12 +226,7 @@ export async function fetchProductsByIds(productIds: string[]): Promise<Product[
     try {
       const { data, error } = await supabase
         .from('works')
-        .select(`
-          id, title, description, price, image_url, image_urls,
-          creator_id, category, view_count, like_count, sales_count,
-          rating, created_at, sale_start_at, sale_end_at, is_active,
-          stock_quantity, discount_percentage, product_types
-        `)
+        .select('*')
         .in('id', productIds);
 
       if (error) throw error;
@@ -250,23 +254,23 @@ export async function fetchProductsByIds(productIds: string[]): Promise<Product[
         description: work.description || '',
         price: work.price,
         image_url: work.image_url,
-        image_urls: work.image_urls,
+        image_urls: (work as any).image_urls,
         creator_id: work.creator_id,
         creator_name: profiles[work.creator_id]?.display_name || '匿名クリエイター',
         creator_avatar: profiles[work.creator_id]?.avatar_url,
         category: work.category || 'other',
-        views: work.view_count || 0,
-        likes: work.like_count || 0,
-        sales: work.sales_count || 0,
-        rating: work.rating || 0,
+        views: (work as any).view_count || 0,
+        likes: (work as any).like_count || 0,
+        sales: (work as any).sales_count || 0,
+        rating: (work as any).rating || 0,
         created_at: work.created_at,
-        sale_start_at: work.sale_start_at,
-        sale_end_at: work.sale_end_at,
-        is_active: work.is_active,
-        is_trending: work.sales_count > 50,
-        discount_percentage: work.discount_percentage,
-        stock_quantity: work.stock_quantity || 100,
-        product_types: work.product_types || ['standard']
+        sale_start_at: (work as any).sale_start_at,
+        sale_end_at: (work as any).sale_end_at,
+        is_active: (work as any).is_active ?? (work as any).is_published ?? true,
+        is_trending: ((work as any).sales_count || 0) > 50,
+        discount_percentage: (work as any).discount_percentage,
+        stock_quantity: (work as any).stock_quantity || 100,
+        product_types: (work as any).product_types || ['standard']
       })) as Product[];
 
       // キャッシュに保存
@@ -296,27 +300,7 @@ export async function fetchProductById(productId: string): Promise<Product | nul
   try {
     const { data, error } = await supabase
       .from('works')
-      .select(`
-        id,
-        title,
-        description,
-        price,
-        image_url,
-        image_urls,
-        creator_id,
-        category,
-        view_count,
-        like_count,
-        sales_count,
-        rating,
-        created_at,
-        sale_start_at,
-        sale_end_at,
-        is_active,
-        stock_quantity,
-        discount_percentage,
-        product_types
-      `)
+      .select('*')
       .eq('id', productId)
       .single();
 
@@ -341,8 +325,8 @@ export async function fetchProductById(productId: string): Promise<Product | nul
       created_at: (data as any).created_at,
       sale_start_at: (data as any).sale_start_at || null,
       sale_end_at: (data as any).sale_end_at || null,
-      is_active: (data as any).is_active,
-      is_trending: (data as any).sales_count > 50,
+      is_active: (data as any).is_active ?? (data as any).is_published ?? true,
+      is_trending: ((data as any).sales_count || 0) > 50,
       discount_percentage: (data as any).discount_percentage,
       stock_quantity: (data as any).stock_quantity || 100,
       product_types: (data as any).product_types || ['standard']

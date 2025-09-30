@@ -31,6 +31,46 @@ export class ProfileService {
     } as User
   }
 
+  // 工場デフォルト（カテゴリ別）取得
+  static async getFactoryPreferences(): Promise<Record<string, string>> {
+    // サンプル/デモは localStorage を優先
+    const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+    try {
+      if (isSample || (typeof window !== 'undefined' && !!localStorage.getItem('demoUser'))) {
+        const raw = localStorage.getItem('factory_prefs')
+        return raw ? JSON.parse(raw) : {}
+      }
+    } catch {}
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return {}
+      const { data } = await supabase.from('users').select('metadata').eq('id', user.id).maybeSingle()
+      const prefs = (data?.metadata as any)?.factory_preferences
+      return prefs && typeof prefs === 'object' ? prefs as Record<string, string> : {}
+    } catch { return {} }
+  }
+
+  // 工場デフォルト（カテゴリ別）保存
+  static async saveFactoryPreference(categoryKey: string, partnerId: string): Promise<void> {
+    // サンプル/デモ or 未ログイン時は localStorage に保存
+    const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || isSample || (typeof window !== 'undefined' && !!localStorage.getItem('demoUser'))) {
+        const raw = localStorage.getItem('factory_prefs')
+        const prefs = raw ? JSON.parse(raw) : {}
+        prefs[categoryKey] = partnerId
+        localStorage.setItem('factory_prefs', JSON.stringify(prefs))
+        return
+      }
+      // ログイン済みは安全なRPCで部分更新
+      const { error } = await supabase.rpc('set_factory_preference', { p_category: categoryKey, p_partner_id: partnerId })
+      if (error) throw error
+    } catch (e) {
+      console.warn('saveFactoryPreference failed', e)
+    }
+  }
+
   // プロフィール基本情報更新
   static async updateProfile(updates: UserProfileUpdate): Promise<User> {
     if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
