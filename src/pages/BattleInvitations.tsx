@@ -48,7 +48,7 @@ const BattleInvitations: React.FC = () => {
           // フォールバック: battle_invitations テーブル
           const { data } = await supabase
             .from('battle_invitations')
-            .select('*')
+            .select('id,battle_id,inviter_id,opponent_id,status,created_at')
             .order('created_at', { ascending: false })
             .limit(50)
           const rows = data || []
@@ -81,6 +81,7 @@ const BattleInvitations: React.FC = () => {
     load()
     // 即時反映: battles テーブルを購読（自分宛の招待）
     let ch: any
+    let rtTimer: any
     ;(async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser()
@@ -88,11 +89,15 @@ const BattleInvitations: React.FC = () => {
         if (!uid) return
         ch = supabase
           .channel(`rt-invites-${uid}`)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'battles', filter: `opponent_id=eq.${uid}` }, () => load())
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'battles', filter: `opponent_id=eq.${uid}` }, () => {
+            // debounce reload to reduce burst updates
+            if (rtTimer) clearTimeout(rtTimer)
+            rtTimer = setTimeout(() => load(), 500)
+          })
           .subscribe()
       } catch {}
     })()
-    return () => { try { ch && supabase.removeChannel(ch) } catch {} }
+    return () => { try { ch && supabase.removeChannel(ch); rtTimer && clearTimeout(rtTimer) } catch {} }
   }, [])
 
   const openDetail = async (it: Invitation) => {

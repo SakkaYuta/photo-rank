@@ -15,6 +15,12 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('', { status: 204 })
   // Optional: simple auth via header token if you want to restrict manual calls
   try {
+    if (req.method && req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 })
+    const cronKey = req.headers.get('x-cron-key') || ''
+    const expected = Deno.env.get('CRON_SECRET') || ''
+    if (expected && cronKey !== expected) {
+      return new Response('Forbidden', { status: 403, headers: { 'content-type': 'application/json' } })
+    }
     const supabase = getSupabaseAdmin()
 
     // Fetch live battles (limited batch)

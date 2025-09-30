@@ -360,7 +360,7 @@ const CheckoutForm: React.FC<{
           return
         }
         const { data, error } = await supabase.functions.invoke('create-konbini-intent', {
-          body: { amount: liveShippingCalc.grandTotal, currency: 'jpy', description: 'Konbini payment', metadata: { type: 'bulk_purchase', work_ids: workIds } }
+          body: { items: cartItems.map(ci => ({ work_id: ci.id, qty: ci.qty })), description: 'Konbini payment', metadata: { type: 'bulk_purchase' }, address_id: selectedAddressId || null }
         })
         if (error) { showToast({ message: error.message || 'コンビニ決済の作成に失敗しました', variant: 'error' }); return }
         const clientSecret = (data as any)?.clientSecret
@@ -381,7 +381,7 @@ const CheckoutForm: React.FC<{
           return
         }
         const { data, error } = await supabase.functions.invoke('create-bank-transfer-intent', {
-          body: { amount: liveShippingCalc.grandTotal, currency: 'jpy', description: 'Bank transfer payment', metadata: { type: 'bulk_purchase', work_ids: workIds } }
+          body: { items: cartItems.map(ci => ({ work_id: ci.id, qty: ci.qty })), description: 'Bank transfer payment', metadata: { type: 'bulk_purchase' }, address_id: selectedAddressId || null }
         })
         if (error) { showToast({ message: error.message || '銀行振込の作成に失敗しました', variant: 'error' }); return }
         const clientSecret = (data as any)?.clientSecret

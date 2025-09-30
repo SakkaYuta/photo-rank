@@ -3,6 +3,13 @@ import { getSupabaseAdmin } from '../_shared/client.ts'
 
 serve(async (req) => {
   try {
+    // Protect endpoint with simple secret header for scheduler
+    if (req.method && req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 })
+    const cronKey = req.headers.get('x-cron-key') || ''
+    const expected = Deno.env.get('CRON_SECRET') || ''
+    if (expected && cronKey !== expected) {
+      return new Response('Forbidden', { status: 403 })
+    }
     const supabase = getSupabaseAdmin()
     const nowIso = new Date().toISOString()
 

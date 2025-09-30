@@ -7,8 +7,8 @@ serve(async (req) => {
     // allow any authenticated user
     await authenticateUser(req)
     const supabase = getSupabaseAdmin()
-    const body = await req.json().catch(() => ({})) as { status?: 'scheduled'|'live'|'finished', limit?: number, offset?: number, duration?: 5|30|60, only_mine?: boolean }
-    const { status, limit = 20, offset = 0, duration, only_mine } = body
+    const body = await req.json().catch(() => ({})) as { status?: 'scheduled'|'live'|'finished', limit?: number, offset?: number, duration?: 5|30|60, only_mine?: boolean, include_participants?: boolean, include_aggregates?: boolean }
+    const { status, limit = 20, offset = 0, duration, only_mine, include_participants = true, include_aggregates = true } = body
 
     let query = supabase
       .from('battles')
@@ -31,7 +31,7 @@ serve(async (req) => {
     // Aggregate cheers per battle
     const ids = (rows || []).map(r => r.id)
     let aggregates: Record<string, { tickets: number; amount: number; by_user: Record<string, number> }> = {}
-    if (ids.length > 0) {
+    if (include_aggregates && ids.length > 0) {
       const { data: tickets } = await supabase
         .from('cheer_tickets')
         .select('battle_id, creator_id, amount')
@@ -47,7 +47,7 @@ serve(async (req) => {
     // Participants public profiles (for display)
     let participants: Record<string, { id: string; display_name?: string; avatar_url?: string }> = {}
     const userIds = Array.from(new Set((rows || []).flatMap(r => [r.challenger_id, r.opponent_id])))
-    if (userIds.length > 0) {
+    if (include_participants && userIds.length > 0) {
       const { data: profs } = await supabase
         .from('user_public_profiles')
         .select('id, display_name, avatar_url')
@@ -57,7 +57,16 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ items: rows || [], aggregates, participants }), { headers: { 'content-type': 'application/json' } })
+    // Caching policy: user-specific (only_mine) is private short cache; public lists can be more aggressive
+    const headers: Record<string,string> = { 'content-type': 'application/json' }
+    if (only_mine) {
+      headers['Cache-Control'] = 'private, max-age=30'
+    } else if (status === 'finished') {
+      headers['Cache-Control'] = 'public, max-age=60, s-maxage=120, stale-while-revalidate=300'
+    } else {
+      headers['Cache-Control'] = 'public, max-age=15'
+    }
+    return new Response(JSON.stringify({ items: rows || [], aggregates, participants }), { headers })
   } catch (e: any) {
     if (e?.message?.includes('Authorization')) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'content-type': 'application/json' } })
     return new Response(JSON.stringify({ error: e?.message ?? 'unknown error' }), { status: 500, headers: { 'content-type': 'application/json' } })

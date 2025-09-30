@@ -8,7 +8,8 @@ serve(async (req) => {
     const supabase = getSupabaseAdmin()
     const body = await req.json().catch(() => ({})) as { battle_id?: string; reason?: string }
     const battleId = body?.battle_id
-    const reason = (body?.reason || '').trim()
+    let reason = (body?.reason || '').trim()
+    if (reason.length > 1000) reason = reason.slice(0, 1000)
     if (!battleId) return new Response(JSON.stringify({ error: 'battle_id required' }), { status: 400, headers: { 'content-type': 'application/json' } })
 
     const { data: battle, error } = await supabase
@@ -29,6 +30,11 @@ serve(async (req) => {
     } catch (_) {}
 
     // Delete the scheduled battle (non-approval removes the request)
+    // Simple rate limit (20/min)
+    try {
+      await supabase.rpc('check_rate_limit', { p_user_id: user.id, p_action: 'battle_decline', p_limit: 20, p_window_minutes: 1 })
+    } catch (_) {}
+
     const { error: delErr } = await supabase
       .from('battles')
       .delete()
@@ -50,7 +56,8 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ ok: true }), { headers: { 'content-type': 'application/json' } })
   } catch (e: any) {
+    console.error('battle-decline error:', e)
     if (e?.message?.includes('Authorization')) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'content-type': 'application/json' } })
-    return new Response(JSON.stringify({ error: e?.message || 'internal error' }), { status: 500, headers: { 'content-type': 'application/json' } })
+    return new Response(JSON.stringify({ error: 'internal error' }), { status: 500, headers: { 'content-type': 'application/json' } })
   }
 })

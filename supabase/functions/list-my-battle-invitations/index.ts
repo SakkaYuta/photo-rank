@@ -26,10 +26,13 @@ serve(async (req) => {
       for (const p of profs || []) participants[p.id] = { id: p.id, display_name: p.display_name, avatar_url: p.avatar_url }
     }
 
-    return new Response(JSON.stringify({ items: rows || [], participants }), { headers: { 'content-type': 'application/json' } })
+    // Private short cache for invitations
+    return new Response(
+      JSON.stringify({ items: rows || [], participants }),
+      { headers: { 'content-type': 'application/json', 'Cache-Control': 'private, max-age=15' } }
+    )
   } catch (e: any) {
     if (e?.message?.includes('Authorization')) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'content-type': 'application/json' } })
     return new Response(JSON.stringify({ error: e?.message || 'internal error' }), { status: 500, headers: { 'content-type': 'application/json' } })
   }
 })
-
