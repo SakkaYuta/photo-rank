@@ -34,11 +34,11 @@ serve(async (req) => {
     if (!works || works.length === 0) return new Response(JSON.stringify({ error: 'works not found' }), { status: 400, headers: { ...corsHeaders, 'content-type': 'application/json' } })
     const priceMap = Object.fromEntries(works.map(w => [w.id, Math.max(0, Number(w.price||0))]))
     const subtotal = normalized.reduce((sum: number, it: any) => sum + (priceMap[it.work_id] || 0) * it.qty, 0)
-    const factoryMap: Record<string, number> = {}
+    const factoryItemCounts: Record<string, number> = {}
     for (const it of normalized) {
       const w = (works as any[]).find(x => x.id === it.work_id)
       const fid = w?.factory_id || 'no-factory'
-      factoryMap[fid] = 1
+      factoryItemCounts[fid] = (factoryItemCounts[fid] || 0) + it.qty
     }
     const shippingPerFactory = 300
     const shippingTotal = Math.max(0, (Object.keys(factoryMap).length || 0) * shippingPerFactory)
@@ -57,15 +57,29 @@ serve(async (req) => {
 
     const okinawa = (destPref || '').includes('沖縄')
     // recompute shipping with partner shipping_info
-    const factoryIds = Object.keys(factoryMap).filter(id => id !== 'no-factory')
+    const factoryIds = Object.keys(factoryItemCounts).filter(id => id !== 'no-factory')
     let shippingTotalAdj = 0
     if (factoryIds.length > 0) {
       const { data: partners } = await supa.from('manufacturing_partners').select('id, shipping_info').in('id', factoryIds)
       for (const fid of factoryIds) {
         const p = (partners || []).find((x: any) => x.id === fid)
         const s: any = (p as any)?.shipping_info || {}
-        const fee = okinawa ? Number(s.fee_okinawa_jpy || 0) : Number(s.fee_general_jpy || 0)
-        shippingTotalAdj += Number.isFinite(fee) && fee >= 0 ? fee : 300
+        const regions: Array<{ prefectures?: string[]; fee_jpy?: number }> = Array.isArray(s?.regions) ? s.regions : []
+        const perItemFee = Number(s?.per_item_fee_jpy || 0)
+        const splitRequired = Boolean(s?.split_require)
+        const splitUnit = Math.max(1, Number(s?.split_unit_count || 1))
+        let baseFee = 0
+        if (regions.length > 0 && destPref) {
+          const found = regions.find(r => Array.isArray(r.prefectures) && r.prefectures.includes(destPref))
+          if (found && Number.isFinite(found.fee_jpy)) baseFee = Number(found.fee_jpy)
+        }
+        if (!baseFee) {
+          baseFee = okinawa ? Number(s?.fee_okinawa_jpy || 0) : Number(s?.fee_general_jpy || 0)
+          if (!Number.isFinite(baseFee) || baseFee < 0) baseFee = 300
+        }
+        const itemCount = factoryItemCounts[fid] || 1
+        const splitMultiplier = splitRequired ? Math.max(1, Math.ceil(itemCount / splitUnit)) : 1
+        shippingTotalAdj += (baseFee * splitMultiplier) + (perItemFee > 0 ? perItemFee * itemCount : 0)
       }
     }
     const totalAdj = Math.max(0, Math.floor(subtotal + shippingTotalAdj))

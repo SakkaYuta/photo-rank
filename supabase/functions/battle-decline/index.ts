@@ -29,17 +29,17 @@ serve(async (req) => {
         .eq('battle_id', battleId)
     } catch (_) {}
 
-    // Delete the scheduled battle (non-approval removes the request)
-    // Simple rate limit (20/min)
+    // Simple rate limit (10/min)
     try {
-      await supabase.rpc('check_rate_limit', { p_user_id: user.id, p_action: 'battle_decline', p_limit: 20, p_window_minutes: 1 })
+      await supabase.rpc('check_rate_limit', { p_user_id: user.id, p_action: 'battle_decline', p_limit: 10, p_window_minutes: 1 })
     } catch (_) {}
 
-    const { error: delErr } = await supabase
+    // Audit-friendly: mark as cancelled instead of delete
+    const { error: updErr } = await supabase
       .from('battles')
-      .delete()
+      .update({ status: 'cancelled', opponent_response_reason: reason || null, opponent_response_at: new Date().toISOString() })
       .eq('id', battleId)
-    if (delErr) return new Response(JSON.stringify({ error: delErr.message }), { status: 400, headers: { 'content-type': 'application/json' } })
+    if (updErr) return new Response(JSON.stringify({ error: updErr.message }), { status: 400, headers: { 'content-type': 'application/json' } })
 
     // In-app notification to challenger (declined)
     try {

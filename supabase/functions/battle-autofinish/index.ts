@@ -22,6 +22,12 @@ serve(async (req) => {
       return new Response('Forbidden', { status: 403, headers: { 'content-type': 'application/json' } })
     }
     const supabase = getSupabaseAdmin()
+    try {
+      const { data: canProceed } = await supabase.rpc('check_rate_limit', {
+        p_user_id: 'system', p_action: 'battle_autofinish', p_limit: 5, p_window_minutes: 1
+      })
+      if (canProceed === false) return new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429, headers: { 'content-type': 'application/json' } })
+    } catch (_) {}
 
     // Fetch live battles (limited batch)
     const { data: battles, error } = await supabase

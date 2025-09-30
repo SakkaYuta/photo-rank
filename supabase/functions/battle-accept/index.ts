@@ -22,9 +22,9 @@ serve(async (req) => {
     if (battle.opponent_id !== user.id) return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { 'content-type': 'application/json' } })
     if (battle.opponent_accepted) return new Response(JSON.stringify({ ok: true, already: true }), { headers: { 'content-type': 'application/json' } })
 
-    // Simple rate limit (20/min)
+    // Simple rate limit (10/min)
     try {
-      await supabase.rpc('check_rate_limit', { p_user_id: user.id, p_action: 'battle_accept', p_limit: 20, p_window_minutes: 1 })
+      await supabase.rpc('check_rate_limit', { p_user_id: user.id, p_action: 'battle_accept', p_limit: 10, p_window_minutes: 1 })
     } catch (_) {}
 
     const { error: updErr } = await supabase

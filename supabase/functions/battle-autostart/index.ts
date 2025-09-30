@@ -11,6 +11,13 @@ serve(async (req) => {
       return new Response('Forbidden', { status: 403 })
     }
     const supabase = getSupabaseAdmin()
+    // Rate limit autostart to avoid rapid repeated runs
+    try {
+      const { data: canProceed } = await supabase.rpc('check_rate_limit', {
+        p_user_id: 'system', p_action: 'battle_autostart', p_limit: 5, p_window_minutes: 1
+      })
+      if (canProceed === false) return new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429, headers: { 'content-type': 'application/json' } })
+    } catch (_) {}
     const nowIso = new Date().toISOString()
 
     // Find scheduled battles whose requested_start_at <= now and not started

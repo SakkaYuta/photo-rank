@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import { cache } from '@/utils/cache'
 
 export async function requestBattle(
   opponentId: string,
@@ -62,21 +63,29 @@ export async function getBattleStatus(battleId: string): Promise<{
   return data as any
 }
 
-export async function listBattles(params?: { status?: 'scheduled'|'live'|'finished', duration?: 5|30|60, limit?: number, offset?: number }): Promise<{
+export async function listBattles(params?: { status?: 'scheduled'|'live'|'finished', duration?: 5|30|60, limit?: number, offset?: number, only_mine?: boolean, include_participants?: boolean, include_aggregates?: boolean }): Promise<{
   items: Array<{ id: string; challenger_id: string; opponent_id: string; duration_minutes: number; start_time?: string; end_time?: string; status: string; winner_id?: string }>,
   aggregates: Record<string, { tickets: number; amount: number; by_user: Record<string, number> }>,
   participants?: Record<string, { id: string; display_name?: string; avatar_url?: string }>
 }> {
+  const key = `list-battles:${JSON.stringify(params || {})}`
+  const cached = cache.get<any>(key)
+  if (cached) return cached
   const { data, error } = await supabase.functions.invoke('list-battles', {
     body: { ...(params || {}) }
   })
   if (error) throw error
+  cache.set(key, data, 30 * 1000) // 30秒キャッシュ
   return data as any
 }
 
 export async function listMyBattleInvitations(): Promise<{ items: any[]; participants: Record<string, any> }> {
+  const key = 'list-my-battle-invitations'
+  const cached = cache.get<any>(key)
+  if (cached) return cached
   const { data, error } = await supabase.functions.invoke('list-my-battle-invitations', { body: {} })
   if (error) throw error
+  cache.set(key, data, 15 * 1000) // 15秒キャッシュ
   return data as any
 }
 
