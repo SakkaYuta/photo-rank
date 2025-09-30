@@ -47,6 +47,7 @@ const LiveBattle: React.FC = () => {
   const [freeCheerCount, setFreeCheerCount] = useState<number>(30)
   const [lastResetTime, setLastResetTime] = useState<number>(Date.now())
   const [showPointPurchaseModal, setShowPointPurchaseModal] = useState<boolean>(false)
+  const [cheerClientSecret, setCheerClientSecret] = useState<string | null>(null)
   const [selectedCheerSide, setSelectedCheerSide] = useState<Side | null>(null)
   const { requireAuth, LoginGate } = useRequireAuth()
   const [showLoginPrompt, setShowLoginPrompt] = useState<boolean>(false)
@@ -288,15 +289,12 @@ const LiveBattle: React.FC = () => {
         setTimeout(() => setEffects({ burst: false }), 1200)
       } else {
         const target = selectedCheerSide === 'challenger' ? challenger.id : opponent.id
-        await purchaseCheerPoints(battleId, target, option.points)
-        await refreshFromBackend(battleId)
-        setEffects({ burst: true, side: selectedCheerSide })
-        setTimeout(() => setEffects({ burst: false }), 1200)
+        const res = await purchaseCheerPoints(battleId, target, option.points)
+        const cs = (res as any).clientSecret || (res as any).client_secret
+        if (!cs) throw new Error('決済初期化に失敗しました')
+        setCheerClientSecret(cs)
       }
 
-      setShowPointPurchaseModal(false)
-      setSelectedCheerSide(null)
-      alert(`${option.label}を購入しました！`)
     } catch (e) {
       alert('購入に失敗しました')
     }
@@ -759,6 +757,25 @@ const LiveBattle: React.FC = () => {
                   </div>
                 ))}
               </div>
+
+              {cheerClientSecret && (
+                <div className="mt-4 bg-white p-3 rounded-lg">
+                  <StripeCheckout clientSecret={cheerClientSecret} workId="cheer_points"
+                    onSuccess={async () => {
+                      setCheerClientSecret(null)
+                      setShowPointPurchaseModal(false)
+                      setSelectedCheerSide(null)
+                      await refreshFromBackend(battleId)
+                      if (selectedCheerSide) {
+                        setEffects({ burst: true, side: selectedCheerSide })
+                        setTimeout(() => setEffects({ burst: false }), 1200)
+                      }
+                    }}
+                    onError={(m) => { setError(m); setCheerClientSecret(null) }}
+                    onCancel={() => { setCheerClientSecret(null) }}
+                  />
+                </div>
+              )}
 
               <div className="mt-6 text-xs text-gray-400 bg-white/5 rounded-lg p-3">
                 💡 購入したポイントで即座に応援できます！大きなパッケージほどお得です。
