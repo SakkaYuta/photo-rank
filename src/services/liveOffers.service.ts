@@ -62,13 +62,11 @@ export async function listMyLiveOffers() {
 }
 
 export async function listLiveOffersForEvent(eventId?: string) {
-  const params = eventId ? `?event_id=${encodeURIComponent(eventId)}` : ''
-  const res = await fetch(`${(supabase as any).functionsUrl}/live-offers-list${params}`, {
-    headers: (supabase as any).functions._headers()
-  } as any)
-  if (!res.ok) throw new Error(`list failed: ${res.status}`)
-  const json = await res.json()
-  return json.items as any[]
+  const { data, error } = await supabase.functions.invoke('live-offers-list', {
+    body: eventId ? { event_id: eventId } : {}
+  })
+  if (error) throw error
+  return (data as any).items as any[]
 }
 
 export async function acquireLiveOfferLock(liveOfferId: string) {
@@ -94,4 +92,3 @@ export async function createLiveOfferIntent(liveOfferId: string) {
   if (error) throw error
   return { clientSecret: (data as any).clientSecret ?? (data as any).client_secret }
 }
-

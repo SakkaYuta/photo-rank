@@ -1,8 +1,12 @@
 import { supabase } from './supabaseClient'
 
-export async function requestBattle(opponentId: string, duration: 5|30|60 = 5): Promise<{ battle_id: string; status: string; duration: number }> {
+export async function requestBattle(
+  opponentId: string,
+  duration: 5|30|60 = 5,
+  options?: { title?: string; visibility?: 'public'|'private'; requested_start_at?: string; winner_bonus_amount?: number; description?: string }
+): Promise<{ battle_id: string; status: string; duration: number; title?: string; visibility?: string; requested_start_at?: string; winner_bonus_amount?: number }> {
   const { data, error } = await supabase.functions.invoke('battle-request', {
-    body: { opponent_id: opponentId, duration }
+    body: { opponent_id: opponentId, duration, ...(options || {}) }
   })
   if (error) throw error
   return data as any

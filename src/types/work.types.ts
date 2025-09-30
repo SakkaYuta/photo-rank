@@ -29,6 +29,7 @@ export type Purchase = {
   stripe_payment_intent_id?: string | null
   amount?: number
   created_at?: string
+  payment_instructions?: string | Record<string, any> | null
 }
 
 export type OrderStatus = {

@@ -94,6 +94,7 @@ SELECT public.generate_monthly_payouts_v50();
 
 ## Edge Functions（骨組み）
 - `supabase/functions/create-payment-intent/`
+- `supabase/functions/execute-refund/`
 - `supabase/functions/stripe-webhook/`
 - `supabase/functions/acquire-work-lock/`
 - `supabase/functions/add-watermark/`
@@ -101,6 +102,17 @@ SELECT public.generate_monthly_payouts_v50();
 - `supabase/functions/process-payouts/`
 
 開発プロジェクトのEdge Functionsとして導入し、Stripe秘密鍵やWebhook署名検証を実装してください。
+
+### execute-refund
+- 役割: `refund_requests` 行に対する返金実行。StripeのPaymentIntentがある場合はStripe Refund APIを呼び出し、結果に応じて`refund_requests`/`purchases`を更新。
+- 認証: Authorizationヘッダで管理者ユーザーを検証（サービスロールでの実行も許容）。
+- 必要環境変数: `STRIPE_SECRET_KEY`（任意: 未設定時はオフライン返金としてDBのみ更新）
+
+エンドポイント例:
+```
+POST /functions/v1/execute-refund
+{ "refundRequestId": "<uuid>" }
+```
 
 ## DR/運用
 - DR計画: `docs/DRP/disaster-recovery-plan.yaml`

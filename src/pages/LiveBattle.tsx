@@ -5,6 +5,7 @@ import { purchaseCheerTicket, purchaseBattleGoods, getBattleStatus, purchaseChee
 import { BATTLE_GOODS_TYPES } from '@/utils/constants'
 import { formatJPY } from '@/utils/helpers'
 import { supabase } from '@/services/supabaseClient'
+import { StripeCheckout } from '@/components/checkout/StripeCheckout'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 
 type Side = 'challenger' | 'opponent'
@@ -34,6 +35,11 @@ const LiveBattle: React.FC = () => {
   const [battleRemainSec, setBattleRemainSec] = useState<number>(0)
   const [battleOvertimeCount, setBattleOvertimeCount] = useState<number>(0)
   const lastCheerTsRef = useRef<number>(0)
+  // Live offers embed
+  const [liveOffers, setLiveOffers] = useState<any[]>([])
+  const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null)
+  const [offerClientSecret, setOfferClientSecret] = useState<string | null>(null)
+  const LIVE_OFFERS_MODE: 'replace' | 'side-by-side' = ((import.meta as any).env?.VITE_LIVE_OFFERS_MODE as any) || 'side-by-side'
 
   // 無料応援システム
   const [freeCheerCount, setFreeCheerCount] = useState<number>(30)
@@ -162,6 +168,31 @@ const LiveBattle: React.FC = () => {
       .subscribe()
 
     return () => { try { supabase.removeChannel(channel) } catch {} }
+  }, [battleId])
+
+  // Load live offers for event (best-effort)
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!battleId) return
+        const { listLiveOffersForEvent } = await import('@/services/liveOffers.service')
+        const list = await listLiveOffersForEvent(battleId)
+        setLiveOffers(list || [])
+      } catch {}
+    })()
+  }, [battleId, battleStatus])
+
+  // Realtime: reflect stock changes for battle live offers
+  useEffect(() => {
+    if (!battleId) return
+    const ch = supabase
+      .channel(`live-offers-${battleId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_offers', filter: `live_event_id=eq.${battleId}` }, payload => {
+        const row: any = (payload as any).new
+        setLiveOffers(prev => prev.map(o => o.id === row.id ? { ...o, ...row } : o))
+      })
+      .subscribe()
+    return () => { try { supabase.removeChannel(ch) } catch {} }
   }, [battleId])
 
   const refreshFromBackend = async (id: string) => {
@@ -367,6 +398,7 @@ const LiveBattle: React.FC = () => {
           </div>
         )}
 
+        {!(LIVE_OFFERS_MODE === 'replace' && liveOffers.length > 0) && (
         <div className="mt-10 bg-white/5 border border-white/10 rounded-xl p-6">
           <h3 className="font-semibold mb-6 flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> ライブ限定アイテム</h3>
 
@@ -446,6 +478,7 @@ const LiveBattle: React.FC = () => {
             💡 アイテム購入で応援するプレイヤーに50ポイントが加算されます！限定デザインで推しクリエイターを応援しよう
           </div>
         </div>
+        )}
 
         {/* Goods Purchase Modal */}
         {showGoodsModal && selectedGoods && selectedPlayer && (
@@ -597,6 +630,64 @@ const LiveBattle: React.FC = () => {
               })()}
             </div>
           </div>
+        )}
+
+        {/* Embedded live offers (new flow) */}
+        {liveOffers?.length > 0 && (
+          <section className="mt-8 relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-900 to-yellow-900 p-6 shadow-2xl border-2 border-amber-400">
+            <div className="absolute top-0 left-0 w-64 h-64 bg-amber-500 rounded-full filter blur-3xl opacity-20 animate-pulse"></div>
+            <div className="relative z-10 space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">🛍️</span>
+                <h2 className="text-2xl font-black text-white">ライブ限定アイテム（新）</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {liveOffers.map((o) => {
+                  const available = Math.max(0, (o.stock_total||0)-(o.stock_reserved||0)-(o.stock_sold||0))
+                  const price = o.price_override ?? o?.works?.price ?? 0
+                  const selected = selectedOfferId === o.id && offerClientSecret
+                  return (
+                    <div key={o.id} className="rounded-xl border-2 border-amber-300 bg-white/90 backdrop-blur-sm p-4">
+                      <div className="text-sm text-gray-700 font-semibold mb-1">{o.perks_type === 'signed' ? 'サイン入り' : '限定デザイン'}</div>
+                      <div className="text-lg font-black text-gray-900">¥{price.toLocaleString()}</div>
+                      <div className="text-xs text-gray-500">残り {available} / {o.stock_total}</div>
+                      <div className="mt-3 flex gap-2 items-center">
+                        {!selected ? (
+                          <button
+                            className="btn btn-sm btn-primary"
+                            disabled={available<=0}
+                            onClick={async () => {
+                              try {
+                                const { acquireLiveOfferLock, createLiveOfferIntent } = await import('@/services/liveOffers.service')
+                                const ok = await acquireLiveOfferLock(o.id)
+                                if (!ok) { setError('在庫が確保できませんでした'); return }
+                                const { clientSecret } = await createLiveOfferIntent(o.id)
+                                setSelectedOfferId(o.id)
+                                setOfferClientSecret(clientSecret)
+                              } catch (e: any) {
+                                setError(e?.message || '購入開始に失敗しました')
+                              }
+                            }}
+                          >購入</button>
+                        ) : (
+                          <button className="btn btn-sm" onClick={() => { setSelectedOfferId(null); setOfferClientSecret(null) }}>取消</button>
+                        )}
+                      </div>
+                      {selected && (
+                        <div className="mt-3 bg-white/90 p-3 rounded-lg">
+                          <StripeCheckout clientSecret={offerClientSecret!} workId={o.work_id}
+                            onSuccess={() => { setMessage('ご購入ありがとうございました！'); setSelectedOfferId(null); setOfferClientSecret(null) }}
+                            onError={(m) => setError(m)}
+                            onCancel={() => { setSelectedOfferId(null); setOfferClientSecret(null) }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </section>
         )}
 
         {/* Point Purchase Modal */}

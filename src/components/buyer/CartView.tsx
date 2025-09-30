@@ -152,6 +152,7 @@ const CartItemCard: React.FC<{
 )
 
 // 決済フォームコンポーネント
+type PaymentMethod = 'card' | 'konbini' | 'bank_transfer'
 const CheckoutForm: React.FC<{
   cartItems: CartItem[]
   shippingCalculation: ShippingCalculation
@@ -171,6 +172,9 @@ const CheckoutForm: React.FC<{
   const [missingShippingPartners, setMissingShippingPartners] = useState<Array<{ partnerId: string; partnerName: string }>>([])
   const [shippingInfoVersion, setShippingInfoVersion] = useState(0)
   const [liveShippingCalc, setLiveShippingCalc] = useState<ShippingCalculation>(shippingCalculation)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card')
+  const [billingName, setBillingName] = useState('')
+  const [billingEmail, setBillingEmail] = useState('')
 
   const [newAddr, setNewAddr] = useState({
     name: '', postal_code: '', prefecture: '', city: '', address1: '', address2: '', phone: '', is_default: true,
@@ -271,6 +275,7 @@ const CheckoutForm: React.FC<{
       showToast({ message: '利用規約等への同意が必要です', variant: 'warning' })
       return
     }
+    // Stripe.js は全方式で使用（confirm 用）。公開鍵未設定ならブロック
     if (!stripe || !elements) {
       showToast({ message: '決済システムの準備ができていません', variant: 'error' })
       return
@@ -281,66 +286,112 @@ const CheckoutForm: React.FC<{
     try {
       // 一括決済を開始
       const workIds = cartItems.map(item => item.id)
-      const result = await purchaseService.initiateBulkPurchase(workIds, selectedAddressId)
 
-      if (result.status === 'failed') {
-        showToast({ message: result.error || '決済の開始に失敗しました', variant: 'error' })
-        return
-      }
+      // クレジットカード
+      if (paymentMethod === 'card') {
+        const result = await purchaseService.initiateBulkPurchase(workIds, selectedAddressId)
 
-      if (result.status !== 'requires_payment' || !result.clientSecret) {
-        showToast({ message: '決済の準備に失敗しました', variant: 'error' })
-        return
-      }
-
-      // 失敗した商品がある場合は警告表示
-      if (result.failedItems && result.failedItems.length > 0) {
-        const failedTitles = result.failedItems
-          .map(f => cartItems.find(c => c.id === f.workId)?.title || f.workId)
-          .join(', ')
-        showToast({ message: `一部の商品が購入できません: ${failedTitles}`, variant: 'warning' })
-      }
-
-      const cardElement = elements.getElement(CardElement)
-      if (!cardElement) {
-        showToast({ message: 'カード情報の取得に失敗しました', variant: 'error' })
-        return
-      }
-
-      // Stripe決済を確認
-      const { error, paymentIntent } = await stripe.confirmCardPayment(result.clientSecret, {
-        payment_method: {
-          card: cardElement,
+        if (result.status === 'failed') {
+          showToast({ message: result.error || '決済の開始に失敗しました', variant: 'error' })
+          return
         }
-      })
 
-      if (error) {
-        showToast({ message: error.message || '決済に失敗しました', variant: 'error' })
+        if (result.status !== 'requires_payment' || !result.clientSecret) {
+          showToast({ message: '決済の準備に失敗しました', variant: 'error' })
+          return
+        }
+
+        // 失敗した商品がある場合は警告表示
+        if (result.failedItems && result.failedItems.length > 0) {
+          const failedTitles = result.failedItems
+            .map(f => cartItems.find(c => c.id === f.workId)?.title || f.workId)
+            .join(', ')
+          showToast({ message: `一部の商品が購入できません: ${failedTitles}`, variant: 'warning' })
+        }
+
+        const cardElement = elements.getElement(CardElement)
+        if (!cardElement) {
+          showToast({ message: 'カード情報の取得に失敗しました', variant: 'error' })
+          return
+        }
+
+        // Stripe決済を確認
+        const { error, paymentIntent } = await stripe.confirmCardPayment(result.clientSecret, {
+          payment_method: {
+            card: cardElement,
+          }
+        })
+
+        if (error) {
+          showToast({ message: error.message || '決済に失敗しました', variant: 'error' })
+          return
+        }
+
+        if (paymentIntent?.status === 'succeeded') {
+          // 購入完了確認
+          const completionResult = await purchaseService.checkBulkPurchaseCompletion(paymentIntent.id)
+
+          if (completionResult.status === 'completed') {
+            clearCart()
+            showToast({ message: 'ご購入ありがとうございます！', variant: 'success' })
+            onSuccess()
+          } else {
+            showToast({ message: '購入処理を確認中です...', variant: 'default' })
+            setTimeout(() => {
+              purchaseService.checkBulkPurchaseCompletion(paymentIntent.id, 5, 3000)
+                .then(result => {
+                  if (result.status === 'completed') {
+                    clearCart()
+                    showToast({ message: 'ご購入ありがとうございます！', variant: 'success' })
+                    onSuccess()
+                  }
+                })
+            }, 1000)
+          }
+        }
         return
       }
 
-      if (paymentIntent?.status === 'succeeded') {
-        // 購入完了確認
-        const completionResult = await purchaseService.checkBulkPurchaseCompletion(paymentIntent.id)
-
-        if (completionResult.status === 'completed') {
-          clearCart()
-          showToast({ message: 'ご購入ありがとうございます！', variant: 'success' })
-          onSuccess()
-        } else {
-          showToast({ message: '購入処理を確認中です...', variant: 'default' })
-          // バックグラウンドで確認を続行
-          setTimeout(() => {
-            purchaseService.checkBulkPurchaseCompletion(paymentIntent.id, 5, 3000)
-              .then(result => {
-                if (result.status === 'completed') {
-                  clearCart()
-                  showToast({ message: 'ご購入ありがとうございます！', variant: 'success' })
-                  onSuccess()
-                }
-              })
-          }, 1000)
+      // コンビニ
+      if (paymentMethod === 'konbini') {
+        if (!billingName || !billingEmail) {
+          showToast({ message: '名前とメールアドレスを入力してください（コンビニ決済）', variant: 'warning' })
+          return
         }
+        const { data, error } = await supabase.functions.invoke('create-konbini-intent', {
+          body: { amount: liveShippingCalc.grandTotal, currency: 'jpy', description: 'Konbini payment', metadata: { type: 'bulk_purchase', work_ids: workIds } }
+        })
+        if (error) { showToast({ message: error.message || 'コンビニ決済の作成に失敗しました', variant: 'error' }); return }
+        const clientSecret = (data as any)?.clientSecret
+        // @ts-ignore
+        const res = await (stripe as any).confirmKonbiniPayment(clientSecret, {
+          payment_method: { billing_details: { name: billingName, email: billingEmail } },
+          return_url: window.location.origin + '/#/receipt'
+        })
+        if (res?.error) { showToast({ message: res.error.message || 'コンビニ決済の確定に失敗しました', variant: 'error' }); return }
+        showToast({ message: 'お支払い手順をメールで送信しました。期日内にお支払いください。', variant: 'success' })
+        onSuccess(); return
+      }
+
+      // 銀行振込
+      if (paymentMethod === 'bank_transfer') {
+        if (!billingEmail) {
+          showToast({ message: 'メールアドレスを入力してください（銀行振込情報の送付）', variant: 'warning' })
+          return
+        }
+        const { data, error } = await supabase.functions.invoke('create-bank-transfer-intent', {
+          body: { amount: liveShippingCalc.grandTotal, currency: 'jpy', description: 'Bank transfer payment', metadata: { type: 'bulk_purchase', work_ids: workIds } }
+        })
+        if (error) { showToast({ message: error.message || '銀行振込の作成に失敗しました', variant: 'error' }); return }
+        const clientSecret = (data as any)?.clientSecret
+        // @ts-ignore
+        const res = await (stripe as any).confirmCustomerBalancePayment(clientSecret, {
+          payment_method: { billing_details: { email: billingEmail, name: billingName || undefined } },
+          return_url: window.location.origin + '/#/receipt'
+        })
+        if (res?.error) { showToast({ message: res.error.message || '銀行振込の確定に失敗しました', variant: 'error' }); return }
+        showToast({ message: '振込先情報をメールで送信しました。期日内にお振込ください。', variant: 'success' })
+        onSuccess(); return
       }
     } catch (error) {
       console.error('Checkout error:', error)
@@ -364,6 +415,21 @@ const CheckoutForm: React.FC<{
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* 支払い方法 */}
+      <div className="p-4 border rounded-lg bg-white dark:bg-gray-800">
+        <h3 className="text-lg font-semibold mb-2">お支払い方法</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+          <label className="flex items-center gap-2"><input type="radio" name="pm" checked={paymentMethod==='card'} onChange={()=>setPaymentMethod('card')} />クレジットカード</label>
+          <label className="flex items-center gap-2"><input type="radio" name="pm" checked={paymentMethod==='konbini'} onChange={()=>setPaymentMethod('konbini')} />コンビニ払い</label>
+          <label className="flex items-center gap-2"><input type="radio" name="pm" checked={paymentMethod==='bank_transfer'} onChange={()=>setPaymentMethod('bank_transfer')} />銀行振込</label>
+        </div>
+        {(paymentMethod === 'konbini' || paymentMethod === 'bank_transfer') && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+            <label className="block"><span className="block text-xs text-gray-600">お名前</span><input className="input input-bordered w-full" value={billingName} onChange={e=>setBillingName(e.target.value)} placeholder="山田 太郎" /></label>
+            <label className="block"><span className="block text-xs text-gray-600">メールアドレス</span><input type="email" className="input input-bordered w-full" value={billingEmail} onChange={e=>setBillingEmail(e.target.value)} placeholder="taro@example.com" /></label>
+          </div>
+        )}
+      </div>
       {/* 送料未設定の工場がある場合の注意 */}
       {missingShippingPartners.length > 0 && (
         <div className="p-4 border border-yellow-200 bg-yellow-50 text-yellow-800 rounded-lg">
@@ -494,14 +560,14 @@ const CheckoutForm: React.FC<{
           </div>
         )}
       </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          カード情報
-        </label>
-        <div className="p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800">
-          <CardElement options={cardElementOptions} />
+      {paymentMethod === 'card' && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">カード情報</label>
+          <div className="p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800">
+            <CardElement options={cardElementOptions} />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 規約同意 */}
       <div className="text-sm text-gray-600 dark:text-gray-400">

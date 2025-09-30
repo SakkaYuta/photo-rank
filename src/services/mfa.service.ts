@@ -24,6 +24,10 @@ export const MfaService = {
   async get(): Promise<{ enabled: boolean } | null> {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
+    // Basic rate limit: 60/min per user for status checks
+    try {
+      await (supabase as any).rpc('enforce_rate_limit', { p_key: `user:${user.id}:mfa:get`, p_limit: 60, p_window_seconds: 60, p_cost: 1 })
+    } catch {}
     const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mfa`, {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}` }
@@ -36,6 +40,7 @@ export const MfaService = {
   async provision() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.access_token) throw new Error('Not authenticated')
+    try { await (supabase as any).rpc('enforce_rate_limit', { p_key: `user:${session.user?.id || 'unknown'}:mfa:provision`, p_limit: 10, p_window_seconds: 60, p_cost: 1 }) } catch {}
     const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mfa`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${session.access_token}` },
@@ -49,6 +54,7 @@ export const MfaService = {
   async enable() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.access_token) throw new Error('Not authenticated')
+    try { await (supabase as any).rpc('enforce_rate_limit', { p_key: `user:${session.user?.id || 'unknown'}:mfa:enable`, p_limit: 10, p_window_seconds: 60, p_cost: 1 }) } catch {}
     const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mfa`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${session.access_token}` },
@@ -60,6 +66,7 @@ export const MfaService = {
   async disable() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.access_token) throw new Error('Not authenticated')
+    try { await (supabase as any).rpc('enforce_rate_limit', { p_key: `user:${session.user?.id || 'unknown'}:mfa:disable`, p_limit: 10, p_window_seconds: 60, p_cost: 1 }) } catch {}
     const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mfa`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${session.access_token}` },

@@ -32,9 +32,18 @@ BEGIN
     JOIN pg_namespace n ON p.pronamespace = n.oid
     WHERE n.nspname='public' AND p.proname='set_updated_at'
   ) THEN
-    CREATE TRIGGER trigger_live_offers_updated_at
-      BEFORE UPDATE ON public.live_offers
-      FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+    -- Create trigger only if it does not exist yet
+    IF NOT EXISTS (
+      SELECT 1
+      FROM pg_trigger t
+      JOIN pg_class c ON t.tgrelid = c.oid
+      JOIN pg_namespace ns ON c.relnamespace = ns.oid
+      WHERE ns.nspname = 'public' AND c.relname = 'live_offers' AND t.tgname = 'trigger_live_offers_updated_at'
+    ) THEN
+      CREATE TRIGGER trigger_live_offers_updated_at
+        BEFORE UPDATE ON public.live_offers
+        FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+    END IF;
   END IF;
 END $$;
 
@@ -188,4 +197,3 @@ BEGIN
   RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-

@@ -8,12 +8,13 @@ import { supabase } from '@/services/supabaseClient'
 type Props = {
   isOpen: boolean
   onClose: () => void
-  work: Work
+  work?: Work // createモード時に使用
+  offer?: any // editモード時に使用（既存オファー）
 }
 
 type PerksType = 'signed' | 'limited_design'
 
-export const LiveOfferModal: React.FC<Props> = ({ isOpen, onClose, work }) => {
+export const LiveOfferModal: React.FC<Props> = ({ isOpen, onClose, work, offer }) => {
   const { showToast } = useToast()
   const originalPath = useMemo(() => (work as any)?.metadata?.image_original_storage_paths?.[0] as string | undefined, [work])
   const [eventId, setEventId] = useState('')
@@ -37,6 +38,29 @@ export const LiveOfferModal: React.FC<Props> = ({ isOpen, onClose, work }) => {
   const [variantPreviewPath, setVariantPreviewPath] = useState('')
   const [genBusy, setGenBusy] = useState(false)
   const [saveBusy, setSaveBusy] = useState(false)
+
+  // initialize when editing
+  React.useEffect(() => {
+    if (!offer || !isOpen) return
+    try {
+      setEventId(offer.live_event_id || '')
+      setStartAt(offer.start_at ? new Date(offer.start_at).toISOString().slice(0,16) : '')
+      setEndAt(offer.end_at ? new Date(offer.end_at).toISOString().slice(0,16) : '')
+      setStockTotal(Number(offer.stock_total) || 10)
+      setPerUserLimit(Number(offer.per_user_limit) || 1)
+      setPriceOverride(Number.isInteger(offer.price_override) ? offer.price_override : '')
+      setPerksType((offer.perks_type || 'signed') as PerksType)
+      setVariantOriginalPath(offer.variant_original_path || '')
+      setVariantPreviewPath(offer.variant_preview_path || '')
+      const ov = offer?.perks?.overlay
+      if (ov) {
+        if (ov.text) setOverlayText(ov.text)
+        if (ov.position) setOverlayPos(ov.position)
+        if (ov.color) setOverlayColor(ov.color)
+        if (typeof ov.opacity === 'number') setOverlayOpacity(ov.opacity)
+      }
+    } catch {}
+  }, [offer, isOpen])
 
   const reset = () => {
     setEventId(''); setStartAt(''); setEndAt(''); setStockTotal(10); setPerUserLimit(1); setPriceOverride('')
@@ -68,7 +92,7 @@ export const LiveOfferModal: React.FC<Props> = ({ isOpen, onClose, work }) => {
 
   const buildPayload = () => {
     const payload: any = {
-      work_id: work.id,
+      work_id: work?.id || offer?.work_id,
       live_event_id: eventId || undefined,
       start_at: new Date(startAt).toISOString(),
       end_at: new Date(endAt).toISOString(),
@@ -92,16 +116,25 @@ export const LiveOfferModal: React.FC<Props> = ({ isOpen, onClose, work }) => {
       if (!startAt || !endAt || !stockTotal || Number(stockTotal) < 1) {
         showToast({ variant: 'error', message: '期間と在庫を入力してください' }); return
       }
-      if (perksType === 'signed' && (!variantOriginalPath || !variantPreviewPath)) {
+      if (!offer && perksType === 'signed' && (!variantOriginalPath || !variantPreviewPath)) {
         showToast({ variant: 'warning', message: 'サイン入りはバリアント生成を先に行ってください' }); return
       }
       setSaveBusy(true)
-      const created = await createLiveOffer(buildPayload())
-      if (publish) {
-        await publishLiveOffer(created.id)
-        showToast({ variant: 'success', message: 'ライブ限定オファーを公開しました' })
+      if (offer) {
+        const { updateLiveOffer } = await import('@/services/liveOffers.service')
+        await updateLiveOffer(offer.id, buildPayload())
+        if (publish && offer.status !== 'published') {
+          await publishLiveOffer(offer.id)
+        }
+        showToast({ variant: 'success', message: publish ? 'ライブ限定オファーを公開しました' : '更新しました' })
       } else {
-        showToast({ variant: 'success', message: '下書きとして保存しました' })
+        const created = await createLiveOffer(buildPayload())
+        if (publish) {
+          await publishLiveOffer(created.id)
+          showToast({ variant: 'success', message: 'ライブ限定オファーを公開しました' })
+        } else {
+          showToast({ variant: 'success', message: '下書きとして保存しました' })
+        }
       }
       reset(); onClose()
     } catch (e: any) {
@@ -112,7 +145,7 @@ export const LiveOfferModal: React.FC<Props> = ({ isOpen, onClose, work }) => {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={() => { reset(); onClose() }} title={`ライブ限定オプション - ${work.title}`} size="xl">
+    <Modal isOpen={isOpen} onClose={() => { reset(); onClose() }} title={`ライブ限定オプション - ${offer ? (offer.title || offer.work_id?.slice(0,8)) : work?.title}`} size="xl">
       <div className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -156,7 +189,7 @@ export const LiveOfferModal: React.FC<Props> = ({ isOpen, onClose, work }) => {
 
         {perksType === 'signed' && (
           <div className="rounded-lg border p-4 space-y-3">
-            <div className="text-sm text-gray-600">原本: {originalPath || '未検出（作品の原本が必要）'}</div>
+          <div className="text-sm text-gray-600">原本: {originalPath || '未検出（作品の原本が必要）'}</div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-sm font-semibold mb-1">テキスト</label>
@@ -214,4 +247,3 @@ export const LiveOfferModal: React.FC<Props> = ({ isOpen, onClose, work }) => {
 }
 
 export default LiveOfferModal
-

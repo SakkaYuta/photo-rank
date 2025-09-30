@@ -49,6 +49,7 @@ import { registerDevUtils } from './utils/devUtils'
 import { NAV_EVENT, viewToHash, parseHash } from '@/utils/navigation'
 import { allowedViews as ROUTES, isValidView, ROUTES_META, type RoleKey, defaultViewFor } from '@/routes'
 import LiveBattle from './pages/LiveBattle'
+import LiveEventOffers from './pages/LiveEventOffers'
 import { BattleRoom } from './pages/BattleRoom'
 import AccountSettings from './pages/AccountSettings'
 import ProductsMarketplace from './pages/ProductsMarketplace'
@@ -319,6 +320,20 @@ function App() {
                   </Suspense>
                 </PartialErrorBoundary>
               )}
+              {view === 'admin-refunds' && isAdmin && (
+                <PartialErrorBoundary name="返金管理">
+                  <Suspense fallback={<SuspenseFallback />}>
+                    <AdminRefundRequests />
+                  </Suspense>
+                </PartialErrorBoundary>
+              )}
+              {view === 'admin-refunds' && isAdmin && (
+                <PartialErrorBoundary name="返金管理">
+                  <Suspense fallback={<SuspenseFallback />}>
+                    <AdminRefundRequests />
+                  </Suspense>
+                </PartialErrorBoundary>
+              )}
               {view === 'partner-dashboard' && canAccessPartnerPages && (
                 <PartialErrorBoundary name="パートナーダッシュボード">
                   <PartnerDashboard />
@@ -443,6 +458,11 @@ function App() {
                   <BattleSearch />
                 </PartialErrorBoundary>
               )}
+              {view === 'live-offers' && (
+                <PartialErrorBoundary name="ライブ限定アイテム">
+                  <LiveEventOffers />
+                </PartialErrorBoundary>
+              )}
               {view === 'live-battle' && (
                 <PartialErrorBoundary name="ライブ観戦">
                   <LiveBattle />
@@ -506,6 +526,7 @@ function App() {
 // Admin pages (lazy import could be added later)
 const AdminAssetPolicies = React.lazy(() => import('./pages/admin/AssetPolicies'))
 const AdminApprovalQueue = React.lazy(() => import('./pages/admin/AssetApprovalQueue'))
+const AdminRefundRequests = React.lazy(() => import('./pages/admin/RefundRequests'))
 const FactorySettings = React.lazy(() => import('./pages/partner/FactorySettings'))
 
 export default App

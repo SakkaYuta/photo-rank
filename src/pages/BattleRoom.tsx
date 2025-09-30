@@ -189,25 +189,52 @@ export const BattleRoom: React.FC = () => {
               <button className="btn btn-xs bg-white hover:bg-gray-100" onClick={() => setUseSamples(false)}>無効化</button>
             </div>
           )}
-        <div className="flex flex-wrap gap-3 items-end">
-          <div className="flex-1 min-w-[200px] max-w-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="sm:col-span-2">
             <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">👤 対戦相手ID</label>
-            <input className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white font-semibold" value={opponentId} onChange={e => setOpponentId(e.target.value)} placeholder="相手のユーザーID" />
+            <input className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white focus:ring-2 focus:ring-yellow-400 font-semibold text-base" value={opponentId} onChange={e => setOpponentId(e.target.value)} placeholder="相手のユーザーID" />
           </div>
           <div>
             <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">⏱️ バトル時間</label>
-            <select className="select select-bordered w-full sm:w-auto bg-white/90 backdrop-blur-sm font-bold" value={duration} onChange={e => setDuration(Number(e.target.value) as any)}>
+            <select className="select select-bordered w-full bg-white/90 backdrop-blur-sm focus:ring-2 focus:ring-yellow-400 font-bold text-base" value={duration} onChange={e => setDuration(Number(e.target.value) as any)}>
               <option value={5}>⚡ 5分</option>
               <option value={30}>🔥 30分</option>
               <option value={60}>💪 60分</option>
             </select>
           </div>
-          <button className="btn bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 border-0 text-gray-900 font-black w-full sm:w-auto shadow-xl transform hover:scale-105 transition-transform" onClick={onRequest}>
+          <button className="btn bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 border-0 text-gray-900 font-black text-lg shadow-xl transform hover:scale-105 transition-transform h-auto py-3 sm:mt-6" onClick={onRequest}>
             ⚔️ バトル申請
           </button>
         </div>
         </div>
       </section>
+
+      {/* Offers link - Enhanced visibility */}
+      {battleId && (
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 p-1 shadow-2xl animate-pulse">
+          <div className="bg-gradient-to-br from-gray-900 to-purple-900 rounded-xl p-6 text-center">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-4xl">🎁</span>
+                <div className="text-left">
+                  <h3 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-pink-300">
+                    限定アイテム販売中！
+                  </h3>
+                  <p className="text-sm text-gray-300">このバトル限定のレアアイテム</p>
+                </div>
+              </div>
+              <button
+                className="btn bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-400 hover:from-yellow-500 hover:via-pink-500 hover:to-purple-500 border-0 text-gray-900 font-black px-8 shadow-xl transform hover:scale-110 transition-transform"
+                onClick={() => {
+                  import('@/utils/navigation').then(m => m.navigate('live-offers', { event: battleId }))
+                }}
+              >
+                🛍️ 今すぐチェック
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-900 to-pink-900 p-6 shadow-2xl border-2 border-red-400">
         <div className="absolute top-0 left-0 w-64 h-64 bg-red-500 rounded-full filter blur-3xl opacity-20 animate-pulse"></div>
@@ -216,21 +243,28 @@ export const BattleRoom: React.FC = () => {
             <span className="text-3xl">⚡</span>
             <h2 className="text-2xl font-black text-white">バトル開始/終了</h2>
           </div>
-        <div className="flex flex-wrap gap-3 items-end">
-          <div className="flex-1 min-w-[200px] max-w-md">
-            <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">🎯 バトルID</label>
-            <input className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white font-mono font-semibold" value={battleId} onChange={e => setBattleId(e.target.value)} placeholder="バトルID" />
+        <div className="space-y-4">
+          {/* Battle ID and Start */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">🎯 バトルID</label>
+              <input className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white focus:ring-2 focus:ring-green-400 font-mono font-semibold text-base" value={battleId} onChange={e => setBattleId(e.target.value)} placeholder="バトルID（作成後に自動入力）" />
+            </div>
+            <button className="btn bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 border-0 text-white font-black text-lg shadow-xl transform hover:scale-105 transition-transform h-auto py-3 sm:mt-6" onClick={onStart}>
+              🚀 バトル開始
+            </button>
           </div>
-          <button className="btn bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 border-0 text-white font-black shadow-xl transform hover:scale-105 transition-transform" onClick={onStart}>
-            🚀 開始
-          </button>
-          <div className="flex-1 min-w-[200px] max-w-xs">
-            <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">👑 勝者ID</label>
-            <input className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white font-semibold" value={cheerTarget} onChange={e => setCheerTarget(e.target.value)} placeholder="空なら自分" />
+
+          {/* Winner ID and Finish */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">👑 勝者ID（終了時）</label>
+              <input className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white focus:ring-2 focus:ring-red-400 font-semibold text-base" value={cheerTarget} onChange={e => setCheerTarget(e.target.value)} placeholder="空欄の場合は自動判定" />
+            </div>
+            <button className="btn bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 border-0 text-white font-black text-lg shadow-xl transform hover:scale-105 transition-transform h-auto py-3 sm:mt-6" onClick={onFinish}>
+              🏁 バトル終了
+            </button>
           </div>
-          <button className="btn bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 border-0 text-white font-black shadow-xl transform hover:scale-105 transition-transform" onClick={onFinish}>
-            🏁 終了
-          </button>
         </div>
 
         {/* Status Bar */}
@@ -319,13 +353,13 @@ export const BattleRoom: React.FC = () => {
             <span className="text-3xl">💰</span>
             <h2 className="text-2xl font-black text-white">応援チケット購入</h2>
           </div>
-        <div className="flex flex-wrap gap-3 items-end">
-          <div className="flex-1 min-w-[200px] max-w-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="sm:col-span-2">
             <label className="block text-sm font-bold text-white mb-2 drop-shadow-lg">🌟 応援するクリエイターID</label>
-            <input className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white font-semibold" value={cheerTarget} onChange={e => setCheerTarget(e.target.value)} placeholder="クリエイターID" />
+            <input className="input input-bordered w-full bg-white/90 backdrop-blur-sm focus:bg-white focus:ring-2 focus:ring-green-400 font-semibold text-base" value={cheerTarget} onChange={e => setCheerTarget(e.target.value)} placeholder="応援したいクリエイターのID" />
           </div>
-          <button className="btn bg-gradient-to-r from-yellow-400 via-green-400 to-emerald-400 hover:from-yellow-500 hover:via-green-500 hover:to-emerald-500 border-0 text-gray-900 font-black w-full sm:w-auto shadow-xl transform hover:scale-105 transition-transform text-lg" onClick={onCheer}>
-            💸 100円で応援する
+          <button className="btn bg-gradient-to-r from-yellow-400 via-green-400 to-emerald-400 hover:from-yellow-500 hover:via-green-500 hover:to-emerald-500 border-0 text-gray-900 font-black shadow-xl transform hover:scale-105 transition-transform text-lg h-auto py-3 sm:mt-6" onClick={onCheer}>
+            💸 100円で応援
           </button>
         </div>
         {cheerClientSecret && (

@@ -120,22 +120,25 @@ serve(async (req) => {
           const pi = event.data.object as Stripe.PaymentIntent
           if (pi?.metadata?.type === 'live_offer' && pi.metadata.live_offer_id && pi.metadata.user_id) {
             try {
-              // finalize live offer counts atomically
-              await supabase.rpc('complete_live_offer_purchase', {
+              // finalize + purchases insert atomically
+              const { error: txErr } = await supabase.rpc('finalize_live_offer_transaction', {
                 p_live_offer_id: pi.metadata.live_offer_id,
                 p_user_id: pi.metadata.user_id,
                 p_payment_intent_id: pi.id,
                 p_amount: pi.amount,
                 p_currency: pi.currency
               })
+              if (txErr) throw txErr
             } catch (e) {
-              console.error('complete_live_offer_purchase failed:', e)
+              console.error('finalize_live_offer_transaction failed:', e)
             }
           }
           processingResult = await handlePaymentIntentSucceeded(
             supabase,
             pi
           );
+          // Link purchase to live_offer if applicable
+          // tagging handled by finalize RPC insert; no-op here
         }
         break;
 
@@ -365,6 +368,51 @@ async function handlePaymentIntentSucceeded(
           created_at: new Date().toISOString(),
         });
     }
+  }
+
+  // 支払い手順（可能なら保存）
+  try {
+    const instructions: Record<string, any> = {}
+    // 支払い方式（保存用）
+    const pmType = Array.isArray(paymentIntent.payment_method_types) && paymentIntent.payment_method_types.length > 0
+      ? paymentIntent.payment_method_types[0]
+      : undefined
+    // Konbini voucher info
+    // @ts-ignore: Stripe types on deno
+    const konbiniNext = (paymentIntent as any)?.next_action?.konbini_display_details
+    if (konbiniNext) {
+      instructions.konbini = {
+        confirmation_number: konbiniNext.confirmation_number,
+        expires_at: konbiniNext.expires_at,
+        hosted_voucher_url: konbiniNext.hosted_voucher_url,
+        stores: konbiniNext.stores || undefined,
+      }
+    }
+    // Bank transfer instructions
+    // @ts-ignore
+    const bankNext = (paymentIntent as any)?.next_action?.display_bank_transfer_instructions
+    if (bankNext) {
+      instructions.bank_transfer = {
+        amount_remaining: bankNext.amount_remaining,
+        currency: bankNext.currency,
+        hosted_instructions_url: bankNext.hosted_instructions_url,
+        financial_addresses: bankNext.financial_addresses || [],
+        reference: bankNext.reference || undefined,
+      }
+    }
+    const updates: Record<string, any> = {}
+    if (pmType) updates.payment_method = pmType
+    if (Object.keys(instructions).length > 0) {
+      updates.payment_instructions = instructions
+    }
+    if (Object.keys(updates).length > 0) {
+      await supabase
+        .from('purchases')
+        .update(updates)
+        .eq('stripe_payment_intent_id', paymentIntent.id)
+    }
+  } catch (e) {
+    console.warn('payment_instructions save skipped:', e)
   }
 
   // 購入完了メール（ベストエフォート）

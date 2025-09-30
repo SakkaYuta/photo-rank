@@ -4,6 +4,8 @@ import { OrderService } from '../../services/order.service'
 import { PurchaseService } from '../../services/purchase.service'
 import type { Purchase, OrderStatus } from '../../types/work.types'
 import Modal from '@/components/ui/Modal'
+import { RefundService } from '@/services/refund.service'
+import { useToast } from '@/contexts/ToastContext'
 import { useUserRole } from '@/hooks/useUserRole'
 import { ArrowLeft } from 'lucide-react'
 
@@ -16,6 +18,11 @@ export function OrderHistory() {
   const [statusHistory, setStatusHistory] = useState<OrderStatus[]>([])
   const [loadingDetail, setLoadingDetail] = useState(false)
   const { userType } = useUserRole()
+  const { showToast } = useToast()
+  const [refundOpen, setRefundOpen] = useState(false)
+  const [refundAmount, setRefundAmount] = useState<number>(0)
+  const [refundReason, setRefundReason] = useState<string>('')
+  const [submittingRefund, setSubmittingRefund] = useState(false)
 
   useEffect(() => {
     loadOrders()
@@ -46,6 +53,8 @@ export function OrderHistory() {
     try {
       const history = await OrderService.getStatusHistory(order.id)
       setStatusHistory(history)
+      setRefundAmount(Number(order.amount || order.price || 0))
+      setRefundReason('')
     } catch (error) {
       console.error('Failed to load status history:', error)
       setStatusHistory([])
@@ -282,6 +291,18 @@ export function OrderHistory() {
               )}
             </div>
 
+            {/* 支払い手順（オフライン決済など） */}
+            {selectedOrder.payment_instructions && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="font-medium mb-1">支払い手順</div>
+                <pre className="whitespace-pre-wrap text-sm text-gray-800">
+                  {typeof selectedOrder.payment_instructions === 'string'
+                    ? selectedOrder.payment_instructions
+                    : JSON.stringify(selectedOrder.payment_instructions, null, 2)}
+                </pre>
+              </div>
+            )}
+
             {/* アクション */}
             <div className="pt-4 border-t">
               <div className="flex gap-2 justify-end">
@@ -302,7 +323,53 @@ export function OrderHistory() {
                     注文をキャンセル
                   </button>
                 )}
+                {/* 返金申請（簡易版: 配達済みなど一定条件で表示） */}
+                {(['delivered','shipped','processing'] as string[]).includes(selectedOrder.status as any) && (
+                  <button className="btn btn-primary btn-sm" onClick={() => setRefundOpen(true)}>返金を申請</button>
+                )}
               </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* 返金リクエストモーダル */}
+      {refundOpen && selectedOrder && (
+        <Modal isOpen={refundOpen} onClose={() => setRefundOpen(false)} title="返金を申請">
+          <div className="space-y-4">
+            <div className="text-sm text-gray-700">
+              注文ID: <span className="font-mono">{selectedOrder.id.slice(0,8)}...</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label className="block">
+                <span className="block text-xs text-gray-600">返金金額（円）</span>
+                <input type="number" min={0} className="input input-bordered w-full" value={refundAmount}
+                  onChange={e => setRefundAmount(Math.max(0, Number(e.target.value||0)))} />
+              </label>
+              <label className="block md:col-span-2">
+                <span className="block text-xs text-gray-600">理由（任意）</span>
+                <input className="input input-bordered w-full" value={refundReason} onChange={e => setRefundReason(e.target.value)} placeholder="不良・誤配送・重複決済 など" />
+              </label>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button className="btn btn-outline btn-sm" onClick={() => setRefundOpen(false)}>閉じる</button>
+              <button className={`btn btn-primary btn-sm ${submittingRefund?'btn-disabled':''}`} disabled={submittingRefund}
+                onClick={async () => {
+                  try {
+                    setSubmittingRefund(true)
+                    await RefundService.requestRefund(selectedOrder.id, Math.floor(refundAmount||0), refundReason || undefined)
+                    showToast({ message: '返金リクエストを送信しました', variant: 'success' })
+                    setRefundOpen(false)
+                  } catch (e: any) {
+                    showToast({ message: e?.message || '返金リクエストの送信に失敗しました', variant: 'error' })
+                  } finally {
+                    setSubmittingRefund(false)
+                  }
+                }}
+              >{submittingRefund ? '送信中...' : '送信'}</button>
+            </div>
+            <div className="text-xs text-gray-500">
+              返金方法は決済手段により異なります。カード決済はカード会社経由、コンビニ/銀行振込は銀行振込での返金となります。
             </div>
           </div>
         </Modal>
