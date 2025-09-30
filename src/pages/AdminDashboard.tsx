@@ -27,9 +27,21 @@ export const AdminDashboard: React.FC = () => {
         })))
         return
       }
-      const res = await fetch('/functions/v1/admin-metrics')
-      const data = await res.json()
-      setMetrics(data.metrics)
+      // まずは相対パス（Vercel等のリライト前提）。失敗時は functions.invoke にフォールバック
+      let data: any | null = null
+      try {
+        const res = await fetch('/functions/v1/admin-metrics')
+        if (res.ok) {
+          data = await res.json()
+        }
+      } catch {}
+      if (!data) {
+        try {
+          const inv = await supabase.functions.invoke('admin-metrics', { body: {} })
+          if (!inv.error) data = inv.data
+        } catch {}
+      }
+      if (data?.metrics) setMetrics(data.metrics)
 
       const { data: dailyData } = await supabase
         .from('daily_summary')

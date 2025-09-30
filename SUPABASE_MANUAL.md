@@ -253,6 +253,32 @@ CREATE TRIGGER update_user_notification_settings_updated_at BEFORE UPDATE ON use
 CREATE TRIGGER update_user_privacy_settings_updated_at BEFORE UPDATE ON user_privacy_settings FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 ```
 
+### 2-Extra. 商品登録の配送情報必須化（2025-09-30）
+```sql
+-- ファイル: supabase/migrations/20250930_require_shipping_info_for_products.sql
+-- 概要: factory_products の INSERT/UPDATE 時に、対応パートナーの shipping_info（method_title, carrier_name, fee_general_jpy）
+-- が未設定/不正な場合はエラーにします。
+
+-- Supabase SQL Editor で実行する場合は、上記ファイルの内容を貼り付けてください。
+-- Supabase CLI を使う場合は通常の migrate フローに追加してください。
+```
+
+### 2-Extra. Stripe購入の冪等性（2025-09-30）
+```sql
+-- ファイル: supabase/migrations/20250930_unique_pi_on_purchases.sql
+-- 概要: purchases.stripe_payment_intent_id にユニークインデックスを追加し、
+-- 同一PaymentIntentでの重複書込みをDBレベルで防止します。
+```
+
+### 2-Extra. RLS強化（2025-09-30）
+```sql
+-- ファイル: supabase/migrations/20250930_rls_hardening.sql
+-- 概要: 
+-- 1) manufacturing_partners: 公開閲覧は approved のみ、所有者は全権限
+-- 2) factory_products: 公開閲覧は partnerがapproved かつ productがactive のみ
+-- 既存の過度な公開ポリシー（factory_products_public_select）を置き換えます。
+```
+
 ### 4. RLSポリシー設定
 ```sql
 -- 3. RLS Policies (20240119_add_rls_policies.sql)

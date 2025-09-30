@@ -15,7 +15,7 @@ export function UserMenu() {
   const { navigate } = useNav()
   const [open, setOpen] = useState(false)
   const [showProfileSettings, setShowProfileSettings] = useState(false)
-  const SAMPLE_BUCKET = (import.meta as any).env?.VITE_SAMPLE_BUCKET || 'user-content'
+  const SAMPLE_BUCKET = (import.meta as any).env?.VITE_SAMPLE_BUCKET || 'public-assets'
   const DEFAULT_AVATAR_PATH = (import.meta as any).env?.VITE_DEFAULT_AVATAR_IMAGE_PATH || 'defaults/avatar.jpg'
   const defaultAvatarUrl = supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(DEFAULT_AVATAR_PATH).data.publicUrl
 

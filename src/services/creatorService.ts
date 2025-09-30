@@ -66,17 +66,11 @@ export const fetchCreatorDashboard = async (creatorId: string): Promise<CreatorD
       }
       return { stats, recentWorks: works.slice(0, 5), topPerformingWorks: [...works].sort((a,b)=>b.revenue-a.revenue).slice(0,5) }
     }
-    // 作品一覧と売上情報を取得
+    // 作品一覧と売上情報を取得（カラム未整備でも壊れないよう select('*')）
     const { data: worksData, error: worksError } = await supabase
       .from('works')
       .select(`
-        id,
-        title,
-        description,
-        image_url,
-        price,
-        is_published,
-        created_at,
+        *,
         purchases(
           id,
           price,
@@ -84,7 +78,6 @@ export const fetchCreatorDashboard = async (creatorId: string): Promise<CreatorD
         )
       `)
       .eq('creator_id', creatorId)
-      .eq('is_published', true)
       .order('created_at', { ascending: false });
 
     if (worksError) throw worksError;
@@ -111,7 +104,11 @@ export const fetchCreatorDashboard = async (creatorId: string): Promise<CreatorD
     let monthlySales = 0;
     let monthlyWorks = 0;
 
-    const works: CreatorWork[] = worksData.map((work: any) => {
+    // 公開フラグの互換: is_published / is_active のどちらかが true を優先
+    const visible = (w: any) => (w?.is_published ?? w?.is_active ?? true) === true
+    const filtered = (worksData || []).filter(visible)
+
+    const works: CreatorWork[] = filtered.map((work: any) => {
       const workSales = work.purchases?.length || 0;
       const workRevenue = work.purchases?.reduce((sum: number, purchase: any) => sum + purchase.price, 0) || 0;
 
@@ -135,7 +132,7 @@ export const fetchCreatorDashboard = async (creatorId: string): Promise<CreatorD
         price: work.price,
         category: '未設定',
         tags: [],
-        is_active: Boolean(work.is_published),
+        is_active: Boolean(work.is_published ?? work.is_active ?? true),
         created_at: work.created_at,
         updated_at: work.updated_at || work.created_at,
         views: Math.floor(Math.random() * 500) + 50, // TODO: 実際のビュー数を追加
@@ -202,13 +199,7 @@ export const fetchCreatorWorks = async (creatorId: string): Promise<CreatorWork[
     const { data: worksData, error: worksError } = await supabase
       .from('works')
       .select(`
-        id,
-        title,
-        description,
-        image_url,
-        price,
-        is_published,
-        created_at,
+        *,
         purchases(
           id,
           price,
@@ -229,7 +220,7 @@ export const fetchCreatorWorks = async (creatorId: string): Promise<CreatorWork[
           .in('work_id', workIds)
       : { data: [] as any[] } as any
 
-    return worksData.map((work: any) => ({
+    return (worksData || []).map((work: any) => ({
       id: work.id,
       title: work.title,
       description: work.description || '',
@@ -237,7 +228,7 @@ export const fetchCreatorWorks = async (creatorId: string): Promise<CreatorWork[
       price: work.price,
       category: '未設定',
       tags: [],
-      is_active: Boolean(work.is_published),
+      is_active: Boolean(work.is_published ?? work.is_active ?? true),
       created_at: work.created_at,
       updated_at: work.updated_at || work.created_at,
       views: Math.floor(Math.random() * 500) + 50,
@@ -254,9 +245,10 @@ export const fetchCreatorWorks = async (creatorId: string): Promise<CreatorWork[
 
 export const updateWorkStatus = async (workId: string, isActive: boolean): Promise<void> => {
   try {
+    // 両カラム互換更新（存在しない場合もエラーにならないよう包括的に）
     const { error } = await supabase
       .from('works')
-      .update({ is_published: isActive, updated_at: new Date().toISOString() })
+      .update({ is_published: isActive as any, is_active: isActive as any, updated_at: new Date().toISOString() })
       .eq('id', workId);
 
     if (error) throw error;

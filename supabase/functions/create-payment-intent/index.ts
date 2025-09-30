@@ -3,6 +3,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getSupabaseAdmin, authenticateUser } from '../_shared/client.ts'
 import { corsHeaders, corsPreflightResponse } from '../_shared/cors.ts'
+import { logAuditEvent, getClientIP, getUserAgent } from '../_shared/rateLimit.ts'
 // deno-lint-ignore no-explicit-any
 type Stripe = any
 
@@ -15,7 +16,11 @@ serve(async (req) => {
     // Origin allowlist
     const allowed = (Deno.env.get('ALLOWED_ORIGINS') || '').split(',').map(s => s.trim()).filter(Boolean)
     const origin = req.headers.get('Origin') || ''
-    if (allowed.length > 0 && origin && !allowed.includes(origin)) {
+    if (allowed.length === 0) {
+      // Strict by default: deny if allowlist not configured
+      return new Response('Forbidden origin (allowlist not configured)', { status: 403, headers: corsHeaders })
+    }
+    if (!origin || !allowed.includes(origin)) {
       return new Response('Forbidden origin', { status: 403, headers: corsHeaders })
     }
     // Authenticate user from request headers
@@ -30,12 +35,17 @@ serve(async (req) => {
     const supabase = getSupabaseAdmin()
     
     // Rate limit payment intents (20/hour)
-    const { data: canProceed } = await supabase.rpc('check_rate_limit', {
+    let canProceed: any = true
+    const { data: rlData, error: rlError } = await supabase.rpc('check_rate_limit', {
       p_user_id: user.id,
       p_action: 'create_payment_intent',
       p_limit: 20,
       p_window_minutes: 60
     })
+    if (rlError) {
+      return new Response(JSON.stringify({ error: 'Rate limit check failed' }), { status: 429, headers: { 'content-type': 'application/json' } })
+    }
+    canProceed = rlData
     if (canProceed === false) {
       return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), { status: 429, headers: { 'content-type': 'application/json' } })
     }
@@ -73,9 +83,34 @@ serve(async (req) => {
       automatic_payment_methods: { enabled: true },
     })
 
+    // Audit log (success)
+    await logAuditEvent(supabase, {
+      user_id: user.id,
+      action: 'create_payment_intent',
+      resource: work.id,
+      details: { amount: work.price },
+      ip_address: getClientIP(req),
+      user_agent: getUserAgent(req),
+      success: true
+    })
+
     return new Response(JSON.stringify({ clientSecret: intent.client_secret, client_secret: intent.client_secret }), { headers: { ...corsHeaders, 'content-type': 'application/json' } })
   } catch (e) {
     console.error('create-payment-intent error:', e)
+    try {
+      const url = Deno.env.get('SUPABASE_URL')!
+      const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      const supabase = getSupabaseAdmin()
+      // Attempt to log failure
+      await logAuditEvent(supabase, {
+        action: 'create_payment_intent',
+        resource: 'works',
+        details: { error: String(e) },
+        ip_address: getClientIP(req),
+        user_agent: getUserAgent(req),
+        success: false
+      })
+    } catch {}
     if (e.message.includes('Missing or invalid Authorization') || e.message.includes('Invalid or expired token')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'content-type': 'application/json' } })
     }

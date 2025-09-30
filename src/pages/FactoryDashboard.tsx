@@ -9,7 +9,6 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  Settings,
   BarChart3,
   Truck,
   Calendar,
@@ -54,7 +53,7 @@ const FactoryDashboard: React.FC = () => {
 
   // ドロップダウンを閉じるためのイベントリスナー
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = () => {
       setStatusDropdown(null);
     };
 
@@ -63,6 +62,8 @@ const FactoryDashboard: React.FC = () => {
       return () => document.removeEventListener('click', handleClickOutside);
     }
   }, [statusDropdown])
+
+  //
 
   const productKeys = useMemo(() => {
     const keys = new Set<string>()
@@ -322,13 +323,7 @@ const FactoryDashboard: React.FC = () => {
                   </button>
                 </div>
               )}
-              <button
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-                onClick={() => import('@/utils/navigation').then(m => m.navigate('partner-settings'))}
-              >
-                <Settings className="w-5 h-5" />
-                <span>設定</span>
-              </button>
+              {/* 設定ボタンとページ内ハンバーガーメニューを削除 */}
             </div>
           </div>
         </div>

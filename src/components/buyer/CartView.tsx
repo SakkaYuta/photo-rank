@@ -681,10 +681,10 @@ export const CartView: React.FC = () => {
     return (
       <div className="max-w-2xl mx-auto">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+          <h2 className="text-2xl font-bold text-black mb-2">
             お支払い
           </h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-gray-600">
             カード情報を入力して購入を完了してください
           </p>
         </div>

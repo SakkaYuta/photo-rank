@@ -109,14 +109,7 @@ export async function createWork(payload: Partial<Work>): Promise<Work> {
     ip_confirmed,
     // @ts-ignore
     policy_accepted,
-    // @ts-ignore
-    product_model_id,
-    // @ts-ignore
-    variants,
-    // @ts-ignore
-    product_specs,
-    // @ts-ignore
-    shipping_profile,
+    // product_model_id / variants / product_specs / shipping_profile は UI仕様変更により送信しない
     // @ts-ignore
     print_surfaces,
     // @ts-ignore
@@ -150,10 +143,7 @@ export async function createWork(payload: Partial<Work>): Promise<Work> {
       creator_margin: creator_margin || null,
       ip_confirmed: Boolean(ip_confirmed),
       policy_accepted: Boolean(policy_accepted),
-      product_model_id: product_model_id || null,
-      variants: variants || null,
-      product_specs: product_specs || null,
-      shipping_profile: shipping_profile || null,
+      // モデル/バリエーション/商品仕様/配送プロファイルは非推奨につき未保存
       print_surfaces: print_surfaces || null,
       price_breakdown_preview: price_breakdown_preview || null,
     },

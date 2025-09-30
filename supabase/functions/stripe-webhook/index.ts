@@ -243,6 +243,18 @@ async function handlePaymentIntentSucceeded(
     throw new Error('Missing required metadata in payment intent');
   }
 
+  // すでに同じPIで購入確定済みなら冪等的にスキップ
+  try {
+    const { data: existing } = await supabase
+      .from('purchases')
+      .select('id')
+      .eq('stripe_payment_intent_id', paymentIntent.id)
+      .maybeSingle()
+    if (existing?.id) {
+      return { success: true, idempotent: true }
+    }
+  } catch (_) {}
+
   // トランザクション的な処理（RPC関数を使用）
   const { data, error } = await supabase.rpc('complete_purchase_transaction', {
     p_payment_intent_id: paymentIntent.id,

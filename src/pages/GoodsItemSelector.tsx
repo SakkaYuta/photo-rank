@@ -6,6 +6,8 @@ import { defaultImages } from '@/utils/defaultImages'
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useUserRole } from '@/hooks/useUserRole'
+import { navigate as navTo } from '@/utils/navigation'
+import { Button } from '@/components/ui/button'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { GoodsPreviewCarousel } from '@/components/goods/GoodsPreviewCarousel'
 import type { PreviewSlide } from '@/components/goods/GoodsPreviewCarousel'
@@ -59,7 +61,13 @@ const GoodsItemSelector: React.FC = () => {
   const { user } = useUserRole();
   const { requireAuth, LoginGate } = useRequireAuth();
 
+  // 工場選択モード（工場カタログから遷移時）
+  const [selectFactoryMode, setSelectFactoryMode] = useState<boolean>(false)
+  const [returnView, setReturnView] = useState<string>('create')
+
   // URLパラメータから商品IDを取得
+  const [initialFactoryProductId, setInitialFactoryProductId] = useState<string | null>(null)
+
   useEffect(() => {
     // ハッシュ (#goods-item-selector?data=...) からクエリを取得（フォールバックでsearchも見る）
     let qs = ''
@@ -71,6 +79,10 @@ const GoodsItemSelector: React.FC = () => {
     const productId = params.get('productId')
     const factoryProductId = params.get('factoryProductId') || undefined
     const productData = params.get('data')
+    const selectFactory = params.get('selectFactory') === 'true'
+    const rv = params.get('return') || 'create'
+    setSelectFactoryMode(selectFactory)
+    setReturnView(rv)
 
     if (productData) {
       try {
@@ -84,6 +96,7 @@ const GoodsItemSelector: React.FC = () => {
     // グッズアイテムデータをロード
     loadGoodsItems();
     if (factoryProductId) {
+      setInitialFactoryProductId(factoryProductId)
       // 先に取得して state などに乗せる（スライド生成時に使用）
       ;(async () => {
         try {
@@ -512,10 +525,21 @@ const GoodsItemSelector: React.FC = () => {
           } as any
         })
         setFactoryGoods(mapped)
+        // URLで指定された工場アイテムがあれば自動で選択表示
+        const initial = initialFactoryProductId
+        if (initial) {
+          const hit = mapped.find((g: any) => g.__factoryProductId === initial)
+          if (hit) {
+            setSelectedItem(hit as any)
+            setQuantity(Math.max((hit as any).minOrder || 1, 1))
+            setSelectedSize('')
+            setSelectedColor('')
+          }
+        }
       })
       .catch((e) => { console.warn('getPartnerProducts failed', e); if (active) { setFactoryProducts([]); setFactoryGoods([]) } })
     return () => { active = false }
-  }, [factoryPartnerId, selectedProduct])
+  }, [factoryPartnerId, selectedProduct, initialFactoryProductId])
 
   // 製作期間またはリードタイムからお届け目安を推定
   const getEstimatedDelivery = (productionTime?: string, leadDays?: number) => {
@@ -673,6 +697,15 @@ const GoodsItemSelector: React.FC = () => {
 
   return (
     <div className={`min-h-screen bg-gray-50 ${selectedItem ? 'pb-28' : ''}`}>
+      {selectFactoryMode && factoryPartnerId && (
+        <div className="fixed bottom-4 left-0 right-0 z-40 flex justify-center px-4">
+          <div className="max-w-3xl w-full">
+            <Button className="w-full" onClick={() => navTo(returnView || 'create', { factoryId: factoryPartnerId! })}>
+              この工場にする
+            </Button>
+          </div>
+        </div>
+      )}
       {/* ヘッダー */}
       <div className="bg-white shadow-sm border-b sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
@@ -1213,7 +1246,7 @@ const GoodsItemSelector: React.FC = () => {
       )}
 
       {/* 下部固定の合計バー */}
-      {selectedItem && (
+      {selectedItem && !selectFactoryMode && (
         <div className="fixed bottom-0 inset-x-0 bg-white border-t shadow-lg z-40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
             <div className="flex items-center justify-between gap-4">

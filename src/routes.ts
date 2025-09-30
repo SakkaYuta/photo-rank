@@ -1,6 +1,6 @@
 // Central route registry to ease Router migration
 export const allowedViews = [
-  'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','organizer-revenue','organizer-support','organizer-leave','organizer-invoice','organizer-guidelines','battle-search','creator-profile','live-battle','account-settings','products-marketplace','goods-item-selector','creator-goods','payment-methods','receipt','faq'
+  'trending','merch','search','collection','favorites','cart','create','myworks','orders','profile','admin','admin-asset-policies','admin-approvals','partner-dashboard','partner-products','partner-orders','partner-settings','factory','factory-order','factory-catalog','factory-item-detail','events','contests','terms','privacy','refunds','commerce','general-dashboard','creator-dashboard','factory-dashboard','organizer-dashboard','organizer-revenue','organizer-support','organizer-leave','organizer-invoice','organizer-guidelines','battle-search','creator-profile','live-battle','account-settings','products-marketplace','goods-item-selector','creator-goods','payment-methods','receipt','faq'
 ] as const
 
 export type ViewKey = typeof allowedViews[number]
@@ -49,7 +49,7 @@ export const ROUTES_META: Record<ViewKey, RouteMeta> = {
   // Creator
   'create': { requireAuth: true, roles: ['creator','admin'], title: '作品作成', showInNav: true, navOrder: 40, icon: 'PlusSquare' },
   'myworks': { requireAuth: true, roles: ['creator','admin'], title: 'マイ作品', showInNav: true, navOrder: 50, icon: 'Images' },
-  'creator-dashboard': { requireAuth: true, roles: ['creator','admin'], title: 'クリエイター', showInNav: true, navOrder: 10, icon: 'Users' },
+  'creator-dashboard': { requireAuth: true, roles: ['creator','admin'], title: 'クリエイター', showInNav: false, navOrder: 10, icon: 'Users' },
 
   // Factory/Partner
   'factory-dashboard': { requireAuth: true, roles: ['factory','admin'], title: 'パートナー', showInNav: true, navOrder: 10, icon: 'Building2' },
@@ -59,6 +59,8 @@ export const ROUTES_META: Record<ViewKey, RouteMeta> = {
   'partner-settings': { requireAuth: true, roles: ['factory','admin'] },
   'factory': { requireAuth: true, roles: ['factory','admin'] },
   'factory-order': { requireAuth: true, roles: ['factory','admin'], title: '製造発注', showInNav: true, navOrder: 60, icon: 'Package' },
+  'factory-catalog': { requireAuth: true, roles: ['creator','admin','factory'] },
+  'factory-item-detail': { requireAuth: true, roles: ['creator','admin','factory'] },
 
   // Organizer
   'organizer-dashboard': { requireAuth: true, roles: ['organizer','admin'], title: 'オーガナイザー', showInNav: true, navOrder: 10, icon: 'Calendar' },

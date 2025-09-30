@@ -127,26 +127,48 @@ export const FactoryCompare: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">製造パートナーを選択</h2>
-          <p className="text-gray-600 mt-1">
-            {product.type} × {product.quantity}枚の見積もり比較
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant={sortBy === 'score' ? 'primary' : 'secondary'} size="sm" onClick={() => setSortBy('score')}>
-            おすすめ順
-          </Button>
-          <Button variant={sortBy === 'price' ? 'primary' : 'secondary'} size="sm" onClick={() => setSortBy('price')}>
-            価格順
-          </Button>
-          <Button variant={sortBy === 'leadTime' ? 'primary' : 'secondary'} size="sm" onClick={() => setSortBy('leadTime')}>
-            納期順
-          </Button>
-          <Button variant={sortBy === 'rating' ? 'primary' : 'secondary'} size="sm" onClick={() => setSortBy('rating')}>
-            評価順
-          </Button>
+      <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900">製造パートナーを選択</h2>
+            <p className="text-lg text-gray-600 mt-2">
+              {product.type} × {product.quantity}枚の見積もり比較
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={sortBy === 'score' ? 'primary' : 'secondary'}
+              size="md"
+              onClick={() => setSortBy('score')}
+              className="font-semibold"
+            >
+              ⭐ おすすめ順
+            </Button>
+            <Button
+              variant={sortBy === 'price' ? 'primary' : 'secondary'}
+              size="md"
+              onClick={() => setSortBy('price')}
+              className="font-semibold"
+            >
+              💰 価格順
+            </Button>
+            <Button
+              variant={sortBy === 'leadTime' ? 'primary' : 'secondary'}
+              size="md"
+              onClick={() => setSortBy('leadTime')}
+              className="font-semibold"
+            >
+              ⚡ 納期順
+            </Button>
+            <Button
+              variant={sortBy === 'rating' ? 'primary' : 'secondary'}
+              size="md"
+              onClick={() => setSortBy('rating')}
+              className="font-semibold"
+            >
+              ⭐ 評価順
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -199,18 +221,18 @@ export const FactoryCompare: React.FC = () => {
                 </div>
 
                 <div className="md:col-span-3">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">単価</span>
-                      <span className="text-2xl font-bold text-primary-600">¥{factory.price.toLocaleString()}</span>
+                  <div className="space-y-4 bg-gradient-to-br from-green-50 to-blue-50 rounded-lg p-4 border-2 border-green-200">
+                    <div>
+                      <span className="text-sm text-gray-600 block mb-1">単価</span>
+                      <span className="text-3xl font-bold text-green-600">¥{factory.price.toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">合計金額</span>
-                      <span className="font-semibold">¥{(factory.price * product.quantity).toLocaleString()}</span>
+                    <div className="border-t border-gray-200 pt-2">
+                      <span className="text-sm text-gray-600 block mb-1">合計金額</span>
+                      <span className="text-xl font-bold text-gray-900">¥{(factory.price * product.quantity).toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600"><Clock className="inline w-4 h-4 mr-1" />納期</span>
-                      <span className="font-semibold">{factory.leadTime}営業日</span>
+                    <div className="border-t border-gray-200 pt-2">
+                      <span className="text-sm text-gray-600 block mb-1"><Clock className="inline w-4 h-4 mr-1" />納期</span>
+                      <span className="text-xl font-bold text-blue-600">{factory.leadTime}営業日</span>
                     </div>
                   </div>
                 </div>
@@ -229,30 +251,35 @@ export const FactoryCompare: React.FC = () => {
                 </div>
 
                 <div className="md:col-span-3 flex flex-col justify-between">
-                  <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-600">総合スコア</span>
-                      <span className="text-2xl font-bold text-primary-600">{factory.score}</span>
+                  <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-4 mb-3 border-2 border-purple-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-base font-semibold text-gray-700">総合スコア</span>
+                      <span className="text-3xl font-bold text-purple-600">{factory.score}</span>
                     </div>
-                    <div className="text-xs space-y-1 text-gray-500">
-                      <div className="flex justify-between">
-                        <span>価格</span>
-                        <div className="w-20 bg-gray-200 rounded-full h-1.5 ml-2 mt-1">
-                          <div className="bg-primary-500 h-1.5 rounded-full" style={{ width: `${scoreBreakdown.price}%` }} />
+                    <div className="text-sm space-y-2 text-gray-600">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">価格</span>
+                        <div className="flex-1 bg-gray-200 rounded-full h-2 ml-3">
+                          <div className="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full" style={{ width: `${scoreBreakdown.price}%` }} />
                         </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span>納期</span>
-                        <div className="w-20 bg-gray-200 rounded-full h-1.5 ml-2 mt-1">
-                          <div className="bg-primary-500 h-1.5 rounded-full" style={{ width: `${scoreBreakdown.speed}%` }} />
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">納期</span>
+                        <div className="flex-1 bg-gray-200 rounded-full h-2 ml-3">
+                          <div className="bg-gradient-to-r from-blue-400 to-blue-600 h-2 rounded-full" style={{ width: `${scoreBreakdown.speed}%` }} />
                         </div>
                       </div>
                     </div>
                   </div>
-                  <Button variant={isSelected ? 'primary' : 'secondary'} onClick={() => setSelectedFactoryId(factory.id)}>
+                  <Button
+                    variant={isSelected ? 'primary' : 'secondary'}
+                    onClick={() => setSelectedFactoryId(factory.id)}
+                    size="lg"
+                    className="h-12 text-base font-bold"
+                  >
                     {isSelected ? (
                       <>
-                        <CheckCircle className="w-4 h-4 mr-2" />選択中
+                        <CheckCircle className="w-5 h-5 mr-2" />✓ 選択中
                       </>
                     ) : (
                       'この工場を選択'

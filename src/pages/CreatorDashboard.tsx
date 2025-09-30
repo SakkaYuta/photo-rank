@@ -3,18 +3,13 @@ import { useUserRole } from '../hooks/useUserRole';
 import { useNav } from '@/contexts/NavContext';
 import { fetchCreatorDashboard, CreatorDashboardData, updateWorkStatus } from '../services/creatorService';
 import {
-  Upload,
   Eye,
   Heart,
   ShoppingCart,
   DollarSign,
   Camera,
   TrendingUp,
-  ChevronDown,
-  Menu,
-  X,
-  Home,
-  Search
+  ChevronDown
 } from 'lucide-react';
 
 const CreatorDashboard: React.FC = () => {
@@ -27,7 +22,6 @@ const CreatorDashboard: React.FC = () => {
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [pendingStatusChanges, setPendingStatusChanges] = useState<Map<string, boolean>>(new Map());
   const [hasChanges, setHasChanges] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -43,7 +37,7 @@ const CreatorDashboard: React.FC = () => {
         setError(null);
       } catch (err) {
         console.error('Failed to fetch creator dashboard data:', err);
-        setError('データの取得に失敗しました');
+        setError('データを読み込めませんでした。再度お試しください');
       } finally {
         setLoading(false);
       }
@@ -62,20 +56,14 @@ const CreatorDashboard: React.FC = () => {
         const within = target.closest(`[data-dropdown-work="${statusDropdown}"]`);
         if (!within) setStatusDropdown(null);
       }
-      // メニューは外側クリックで閉じる（メニューコンテナ内のクリックは除外）
-      if (isMenuOpen) {
-        const withinMenu = target.closest('[data-menu-container]');
-        if (!withinMenu) setIsMenuOpen(false);
-      }
     };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         if (statusDropdown) setStatusDropdown(null);
-        if (isMenuOpen) setIsMenuOpen(false);
       }
     };
 
-    if (statusDropdown || isMenuOpen) {
+    if (statusDropdown) {
       document.addEventListener('click', handleClickOutside);
       document.addEventListener('keydown', handleKeyDown);
       return () => {
@@ -83,21 +71,8 @@ const CreatorDashboard: React.FC = () => {
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [statusDropdown, isMenuOpen]);
+  }, [statusDropdown]);
 
-  const goToCreate = () => {
-    import('@/utils/navigation').then(m => m.navigate('create'))
-  }
-
-  const goToDashboard = () => {
-    import('@/utils/navigation').then(m => m.navigate('dashboard'))
-    setIsMenuOpen(false)
-  }
-
-  const goToBattle = () => {
-    import('@/utils/navigation').then(m => m.navigate('battle'))
-    setIsMenuOpen(false)
-  }
 
   const handleStatusChange = (workId: string, newStatus: boolean) => {
     const newChanges = new Map(pendingStatusChanges);
@@ -137,10 +112,10 @@ const CreatorDashboard: React.FC = () => {
       // 変更をクリア
       setPendingStatusChanges(new Map());
       setHasChanges(false);
-      alert('ステータスを更新しました');
+      alert('変更を保存しました');
     } catch (err) {
       console.error('Failed to update work statuses:', err);
-      alert('ステータスの更新に失敗しました');
+      alert('変更を保存できませんでした。もう一度お試しください');
     } finally {
       setUpdatingStatus(null);
     }
@@ -166,7 +141,7 @@ const CreatorDashboard: React.FC = () => {
                 クリエイターダッシュボード
               </h1>
               <p className="text-sm lg:text-base text-gray-600">
-                こんにちは、{userProfile?.display_name}さん
+                {userProfile?.display_name}さん、おかえりなさい
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -187,58 +162,6 @@ const CreatorDashboard: React.FC = () => {
                   </button>
                 </div>
               )}
-
-
-              {/* ハンバーガーメニューボタン */}
-              <div className="relative" data-menu-container>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsMenuOpen(!isMenuOpen);
-                  }}
-                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200 ease-in-out"
-                  aria-label="メニュー"
-                >
-                  {isMenuOpen ? (
-                    <X className="w-5 h-5" />
-                  ) : (
-                    <Menu className="w-5 h-5" />
-                  )}
-                </button>
-
-                {/* ドロップダウンメニュー */}
-                {isMenuOpen && (
-                  <div
-                    className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      onClick={goToDashboard}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                    >
-                      <Home className="w-4 h-4" />
-                      ダッシュボード
-                    </button>
-                    <button
-                      onClick={() => {
-                        goToCreate();
-                        setIsMenuOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                    >
-                      <Upload className="w-4 h-4" />
-                      新しい作品をアップロード
-                    </button>
-                    <button
-                      onClick={goToBattle}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                    >
-                      <Search className="w-4 h-4" />
-                      バトルを探す
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
@@ -267,38 +190,50 @@ const CreatorDashboard: React.FC = () => {
             <>
               <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-gray-600">総作品数</h3>
+                  <h3 className="text-sm font-medium text-gray-600">あなたの作品</h3>
                   <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                 </div>
                 <p className="text-2xl sm:text-3xl font-bold text-gray-900">{dashboardData?.stats.totalWorks || 0}</p>
-                <p className="text-sm text-green-600">+{dashboardData?.stats.monthlyGrowth.works || 0} 今月</p>
+                <p className="text-sm text-green-600 flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3" />
+                  +{dashboardData?.stats.monthlyGrowth.works || 0} 今月
+                </p>
               </div>
 
               <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-gray-600">総売上</h3>
+                  <h3 className="text-sm font-medium text-gray-600">累計売上</h3>
                   <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                 </div>
                 <p className="text-2xl sm:text-3xl font-bold text-gray-900">¥{dashboardData?.stats.totalRevenue.toLocaleString() || 0}</p>
-                <p className="text-sm text-green-600">+¥{dashboardData?.stats.monthlyGrowth.revenue.toLocaleString() || 0} 今月</p>
+                <p className="text-sm text-green-600 flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3" />
+                  +¥{dashboardData?.stats.monthlyGrowth.revenue.toLocaleString() || 0} 今月
+                </p>
               </div>
 
               <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-gray-600">合計ビュー</h3>
+                  <h3 className="text-sm font-medium text-gray-600">閲覧数</h3>
                   <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
                 </div>
                 <p className="text-2xl sm:text-3xl font-bold text-gray-900">{dashboardData?.stats.totalViews.toLocaleString() || 0}</p>
-                <p className="text-sm text-green-600">+{dashboardData?.stats.monthlyGrowth.views.toLocaleString() || 0} 今月</p>
+                <p className="text-sm text-green-600 flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3" />
+                  +{dashboardData?.stats.monthlyGrowth.views.toLocaleString() || 0} 今月
+                </p>
               </div>
 
               <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-gray-600">総販売数</h3>
+                  <h3 className="text-sm font-medium text-gray-600">販売実績</h3>
                   <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
                 </div>
                 <p className="text-2xl sm:text-3xl font-bold text-gray-900">{dashboardData?.stats.totalSales.toLocaleString() || 0}</p>
-                <p className="text-sm text-green-600">+{dashboardData?.stats.monthlyGrowth.sales.toLocaleString() || 0} 今月</p>
+                <p className="text-sm text-green-600 flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3" />
+                  +{dashboardData?.stats.monthlyGrowth.sales.toLocaleString() || 0} 今月
+                </p>
               </div>
             </>
           )}
@@ -402,10 +337,10 @@ const CreatorDashboard: React.FC = () => {
                               } ${updatingStatus === 'all' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                             >
                               {updatingStatus === 'all' ? (
-                                <span>更新中...</span>
+                                <span>💾 保存しています</span>
                               ) : (
                                 <>
-                                  <span>{currentStatus ? '公開中' : '非公開'}</span>
+                                  <span>{currentStatus ? '✓ 公開中' : '⊘ 非公開'}</span>
                                   {hasChange && <span className="text-xs">(未保存)</span>}
                                   <ChevronDown className="w-3 h-3" />
                                 </>
@@ -428,7 +363,7 @@ const CreatorDashboard: React.FC = () => {
                                   }`}
                                   disabled={currentStatus}
                                 >
-                                  公開中
+                                  ✓ 公開中
                                 </button>
                                 <button
                                   role="menuitem"
@@ -438,7 +373,7 @@ const CreatorDashboard: React.FC = () => {
                                   }`}
                                   disabled={!currentStatus}
                                 >
-                                  非公開
+                                  ⊘ 非公開
                                 </button>
                               </div>
                             )}
@@ -450,8 +385,8 @@ const CreatorDashboard: React.FC = () => {
                   ) : (
                     <div className="text-center py-8 text-gray-500">
                       <Camera className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                      <p>まだ作品がありません</p>
-                      <p className="text-sm mt-1">新しい作品をアップロードしてみましょう</p>
+                      <p className="font-medium">最初の一枚をアップロードしましょう！</p>
+                      <p className="text-sm mt-1">あなたの作品を世界に届けましょう</p>
                     </div>
                   )}
                 </div>
@@ -459,18 +394,24 @@ const CreatorDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Performance Chart & Quick Actions */}
+          {/* Quick Stats Summary */}
           <div className="space-y-6">
-            {/* Performance Chart */}
+            {/* Top Performing Work */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="p-4 sm:p-6 border-b">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">パフォーマンス</h2>
-              </div>
               <div className="p-4 sm:p-6">
-                <div className="h-48 flex items-center justify-center bg-gray-50 rounded-lg">
-                  <div className="text-center text-gray-500">
-                    <TrendingUp className="w-8 h-8 mx-auto mb-2" />
-                    <p>売上グラフ</p>
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">今月のハイライト</h2>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between py-2 border-b">
+                    <span className="text-sm text-gray-600">新規作品</span>
+                    <span className="font-semibold text-blue-600">+{dashboardData?.stats.monthlyGrowth.works || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2 border-b">
+                    <span className="text-sm text-gray-600">新規閲覧</span>
+                    <span className="font-semibold text-purple-600">+{dashboardData?.stats.monthlyGrowth.views.toLocaleString() || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-sm text-gray-600">今月の売上</span>
+                    <span className="font-semibold text-green-600">¥{dashboardData?.stats.monthlyGrowth.revenue.toLocaleString() || 0}</span>
                   </div>
                 </div>
               </div>

@@ -35,8 +35,16 @@ export const FactoryCompare: React.FC<FactoryCompareProps> = ({
 
   // 商品タイプの選択肢（実際のDBデータに合わせて調整）
   const productTypes = [
-    'tshirt', 'hoodie', 'cap', 'mug', 'sticker', 'poster', 
-    'tote_bag', 'phone_case', 'keychain', 'badge'
+    { value: 'tshirt', label: 'Tシャツ' },
+    { value: 'hoodie', label: 'パーカー' },
+    { value: 'cap', label: 'キャップ' },
+    { value: 'mug', label: 'マグカップ' },
+    { value: 'sticker', label: 'ステッカー' },
+    { value: 'poster', label: 'ポスター' },
+    { value: 'tote_bag', label: 'トートバッグ' },
+    { value: 'phone_case', label: 'スマホケース' },
+    { value: 'keychain', label: 'キーホルダー' },
+    { value: 'badge', label: 'バッジ' }
   ];
 
   const handleSearch = async () => {
@@ -102,67 +110,74 @@ export const FactoryCompare: React.FC<FactoryCompareProps> = ({
             工場比較・選択
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label>商品タイプ</Label>
+              <Label className="text-base font-semibold">商品タイプ *</Label>
               <select
                 value={request.product_type}
                 onChange={(e) => setRequest(prev => ({ ...prev, product_type: e.target.value }))}
-                className="flex h-10 w-full items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-950 focus:ring-offset-2 dark:border-gray-800 dark:bg-gray-950 dark:ring-offset-gray-950 dark:placeholder:text-gray-400 dark:focus:ring-blue-300"
+                className="flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:ring-offset-2"
               >
                 <option value="" disabled>
                   商品を選択
                 </option>
                 {productTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  <option key={type.value} value={type.value}>
+                    {type.label}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="space-y-2">
-              <Label>数量</Label>
+              <Label className="text-base font-semibold">数量 *</Label>
               <Input
                 type="number"
                 min="1"
                 value={request.quantity}
-                onChange={(e) => setRequest(prev => ({ 
-                  ...prev, 
-                  quantity: parseInt(e.target.value) || 1 
+                onChange={(e) => setRequest(prev => ({
+                  ...prev,
+                  quantity: parseInt(e.target.value) || 1
                 }))}
-                placeholder="数量"
+                placeholder="数量を入力"
+                className="h-10 text-base"
               />
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label>希望利益（円）</Label>
+              <Label className="text-base font-semibold">希望利益（円）</Label>
               <Input
                 type="number"
                 min="0"
                 step="100"
                 value={request.creator_profit}
-                onChange={(e) => setRequest(prev => ({ 
-                  ...prev, 
-                  creator_profit: parseInt(e.target.value) || 0 
+                onChange={(e) => setRequest(prev => ({
+                  ...prev,
+                  creator_profit: parseInt(e.target.value) || 0
                 }))}
-                placeholder="1000"
+                placeholder="例: 1000"
+                className="h-10 text-base"
               />
+              <p className="text-xs text-gray-500">1個あたりの利益目標</p>
             </div>
 
             <div className="space-y-2">
-              <Label>最大納期（日）</Label>
+              <Label className="text-base font-semibold">最大納期（日）</Label>
               <Input
                 type="number"
                 min="1"
                 value={request.max_delivery_days || ''}
-                onChange={(e) => setRequest(prev => ({ 
-                  ...prev, 
+                onChange={(e) => setRequest(prev => ({
+                  ...prev,
                   max_delivery_days: e.target.value ? parseInt(e.target.value) : undefined
                 }))}
                 placeholder="制限なし"
+                className="h-10 text-base"
               />
+              <p className="text-xs text-gray-500">指定しない場合は全て表示</p>
             </div>
           </div>
 
@@ -180,12 +195,15 @@ export const FactoryCompare: React.FC<FactoryCompareProps> = ({
             />
           </div>
 
-          <div className="flex gap-2">
-            <Button onClick={handleSearch} disabled={loading} className="flex-1">
-              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              工場を検索
-            </Button>
-          </div>
+          <Button
+            onClick={handleSearch}
+            disabled={loading}
+            className="w-full h-12 text-base font-semibold bg-primary-600 hover:bg-primary-700"
+            size="lg"
+          >
+            {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+            製造パートナーを検索
+          </Button>
 
           {error && (
             <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
@@ -207,82 +225,85 @@ export const FactoryCompare: React.FC<FactoryCompareProps> = ({
             </div>
           </div>
 
-          <div className="grid gap-4">
+          <div className="grid gap-6">
             {results.map((factory) => (
-              <Card key={factory.id} className="hover:shadow-md transition-shadow">
+              <Card key={factory.id} className="hover:shadow-lg transition-all border-2 hover:border-primary-300">
                 <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
+                  {/* ヘッダー部分 */}
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h4 className="text-lg font-semibold">{factory.name}</h4>
-                        <Badge className={`${getScoreColor(factory.match_score)} border-0`}>
-                          スコア {factory.match_score}
+                      <div className="flex flex-wrap items-center gap-3 mb-3">
+                        <h4 className="text-xl font-bold text-gray-900">{factory.name}</h4>
+                        <Badge className={`${getScoreColor(factory.match_score)} border-0 px-3 py-1 text-sm font-semibold`}>
+                          マッチ度 {factory.match_score}
                         </Badge>
                         {factory.is_featured && (
-                          <Badge variant="primary">おすすめ</Badge>
+                          <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 px-3 py-1">
+                            ⭐ おすすめ
+                          </Badge>
                         )}
                       </div>
-                      
-                      <div className="flex items-center gap-2 mb-2">
+
+                      <div className="flex items-center gap-3 mb-3">
                         <div className="flex">
                           {getRatingStars(Math.round(factory.average_rating || 0))}
                         </div>
-                        <span className="text-sm text-gray-600">
-                          ({factory.average_rating?.toFixed(1) || 'N/A'})
+                        <span className="text-base font-semibold text-gray-700">
+                          {factory.average_rating?.toFixed(1) || 'N/A'}
                         </span>
                         <span className="text-sm text-gray-500">
-                          • {factory.total_orders || 0}件の実績
+                          | {factory.total_orders || 0}件の実績
                         </span>
                       </div>
 
-                      <p className="text-sm text-gray-600 mb-3 jp-text">
-                        {factory.description || '製造パートナーです'}
+                      <p className="text-base text-gray-700 mb-4">
+                        {factory.description || '高品質な製品を提供する製造パートナーです'}
                       </p>
 
                       <TrustBadges />
                     </div>
 
-                    <div className="text-right">
-                      <Button
-                        onClick={() => onFactorySelected?.(factory)}
-                        className="ml-4"
-                      >
-                        選択
-                      </Button>
-                    </div>
+                    <Button
+                      onClick={() => onFactorySelected?.(factory)}
+                      className="h-12 px-8 text-base font-bold bg-primary-600 hover:bg-primary-700 whitespace-nowrap"
+                      size="lg"
+                    >
+                      このパートナーを選択
+                    </Button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="w-4 h-4 text-green-600" />
-                      <div>
-                        <div className="text-sm font-medium">販売価格</div>
-                        <div className="text-lg font-bold text-green-600">
-                          {formatCurrency(factory.calculated_price)}
-                        </div>
+                  {/* 価格・納期情報 */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-6 border-t-2 border-gray-100">
+                    <div className="bg-green-50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <DollarSign className="w-5 h-5 text-green-600" />
+                        <div className="text-sm font-medium text-gray-600">販売価格</div>
+                      </div>
+                      <div className="text-2xl font-bold text-green-600">
+                        {formatCurrency(factory.calculated_price)}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-blue-600" />
-                      <div>
-                        <div className="text-sm font-medium">納期</div>
-                        <div className="text-lg font-bold text-blue-600">
-                          {factory.total_delivery_days}日
-                        </div>
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className="w-5 h-5 text-blue-600" />
+                        <div className="text-sm font-medium text-gray-600">納期</div>
+                      </div>
+                      <div className="text-2xl font-bold text-blue-600">
+                        {factory.total_delivery_days}日
                       </div>
                     </div>
 
-                    <div>
-                      <div className="text-sm font-medium text-gray-600">手数料</div>
-                      <div className="text-sm text-gray-700">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="text-sm font-medium text-gray-600 mb-2">手数料</div>
+                      <div className="text-lg font-bold text-gray-700">
                         {formatCurrency(factory.platform_fee)}
                       </div>
                     </div>
 
-                    <div>
-                      <div className="text-sm font-medium text-gray-600">あなたの利益</div>
-                      <div className="text-sm font-bold text-green-700">
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border-2 border-green-200">
+                      <div className="text-sm font-medium text-gray-600 mb-2">あなたの利益</div>
+                      <div className="text-2xl font-bold text-green-700">
                         {formatCurrency(factory.creator_profit)}
                       </div>
                     </div>

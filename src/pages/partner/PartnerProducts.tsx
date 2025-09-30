@@ -62,6 +62,18 @@ export function PartnerProducts() {
   const [submitting, setSubmitting] = useState(false)
   const [mockupEditorFor, setMockupEditorFor] = useState<string | null>(null)
 
+  // shipping_info が未設定の場合は商品登録を禁止する
+  const shippingInfo: any = (partner as any)?.shipping_info || null
+  const missingShippingFields: string[] = (() => {
+    if (!shippingInfo) return ['配送方法の見出し', '配送会社', '送料（一般）']
+    const miss: string[] = []
+    if (!shippingInfo.method_title) miss.push('配送方法の見出し')
+    if (!shippingInfo.carrier_name) miss.push('配送会社')
+    if (typeof shippingInfo.fee_general_jpy !== 'number') miss.push('送料（一般・税込）')
+    return miss
+  })()
+  const shippingReady = missingShippingFields.length === 0
+
   useEffect(() => {
     if (!partner) return
     
@@ -82,6 +94,11 @@ export function PartnerProducts() {
   }
 
   function handleAddProduct() {
+    if (!shippingReady) {
+      alert(`商品を登録する前に配送情報の設定が必要です。\n未設定項目: ${missingShippingFields.join(', ')}\n設定画面に移動します。`)
+      navigate('partner-settings')
+      return
+    }
     setEditingProduct(null)
     setFormData(initialFormData)
     setShowForm(true)
@@ -116,6 +133,13 @@ export function PartnerProducts() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!partner || submitting) return
+
+    // 送信直前チェック（設定未完了ならブロック）
+    if (!shippingReady) {
+      alert(`配送情報（shipping_info）が未設定です。\n未設定項目: ${missingShippingFields.join(', ')}\n「設定」から必要項目を入力してください。`)
+      navigate('partner-settings')
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -211,6 +235,27 @@ export function PartnerProducts() {
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
       <h1 className="text-xl sm:text-3xl font-bold text-gray-900">商品管理</h1>
 
+      {/* Shipping info warning */}
+      {!shippingReady && (
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-900">
+          <div className="font-semibold mb-1">配送情報の設定が必要です</div>
+          <div className="text-sm">商品を登録・更新する前に、以下の項目を設定してください。</div>
+          <ul className="list-disc list-inside mt-2 text-sm">
+            {missingShippingFields.map((f) => (
+              <li key={f}>{f}</li>
+            ))}
+          </ul>
+          <div className="mt-3">
+            <button
+              onClick={() => navigate('partner-settings')}
+              className="btn btn-primary"
+            >
+              設定を開く
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tab Navigation */}
       <div className="mb-6 border-b">
         <nav className="-mb-px flex space-x-8">
@@ -238,7 +283,9 @@ export function PartnerProducts() {
         <h2 className="text-lg font-semibold text-gray-900">登録済み商品</h2>
         <button
           onClick={handleAddProduct}
-          className="btn btn-primary flex items-center gap-2 transition-base hover-lift"
+          disabled={!shippingReady}
+          className={`btn btn-primary flex items-center gap-2 transition-base hover-lift ${!shippingReady ? 'opacity-60 cursor-not-allowed' : ''}`}
+          title={shippingReady ? '新しい商品を追加' : '配送情報の設定が必要です'}
         >
           <Plus className="w-4 h-4" />
           新しい商品を追加

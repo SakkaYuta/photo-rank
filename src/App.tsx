@@ -53,6 +53,8 @@ import AccountSettings from './pages/AccountSettings'
 import ProductsMarketplace from './pages/ProductsMarketplace'
 import AuthCallbackGate from './components/auth/AuthCallbackGate'
 import GoodsItemSelector from './pages/GoodsItemSelector'
+import FactoryCatalog from './pages/FactoryCatalog'
+import FactoryItemDetail from './pages/FactoryItemDetail'
 import OrganizerSupport from './pages/organizer/OrganizerSupport'
 import LeaveRequest from './pages/organizer/LeaveRequest'
 import InvoiceSettings from './pages/organizer/InvoiceSettings'
@@ -470,6 +472,16 @@ function App() {
               {view === 'goods-item-selector' && (
                 <PartialErrorBoundary name="グッズアイテム選択">
                   <GoodsItemSelector />
+                </PartialErrorBoundary>
+              )}
+              {view === 'factory-catalog' && (
+                <PartialErrorBoundary name="工場カタログ">
+                  <FactoryCatalog />
+                </PartialErrorBoundary>
+              )}
+              {view === 'factory-item-detail' && (
+                <PartialErrorBoundary name="工場アイテム詳細">
+                  <FactoryItemDetail />
                 </PartialErrorBoundary>
               )}
             </main>

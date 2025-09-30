@@ -11,7 +11,7 @@ const cva: any = cvaReal || ((base: string, opts: any) => (args: any) => {
 import { cn } from '../../lib/cn'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:focus-visible:ring-primary-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800 disabled:pointer-events-none disabled:opacity-50 active:scale-95',
+  'inline-flex items-center justify-center rounded-lg transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:focus-visible:ring-primary-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800 disabled:pointer-events-none disabled:opacity-50 active:scale-95 leading-none',
   {
     variants: {
       variant: {
@@ -30,9 +30,9 @@ const buttonVariants = cva(
           'text-primary-600 dark:text-primary-400 underline-offset-4 hover:underline',
       },
       size: {
-        sm: 'h-9 px-4 text-sm',
-        md: 'h-11 px-6',
-        lg: 'h-13 px-8 text-lg',
+        sm: 'h-10 px-4 text-sm font-semibold',
+        md: 'h-12 px-6 text-base font-semibold',
+        lg: 'h-14 px-8 text-lg font-bold',
         icon: 'h-10 w-10',
       },
     },
