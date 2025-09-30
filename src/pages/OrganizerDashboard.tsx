@@ -221,53 +221,13 @@ const OrganizerDashboard: React.FC = () => {
                   変更を保存
                 </button>
               )}
-              <button
-                onClick={handleGenerateCode}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2">
-                <Plus className="w-5 h-5" />
-                招待コード生成
-              </button>
-              <button
-                onClick={() => setShowInviteModal(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
-                <UserPlus className="w-5 h-5" />
-                直接招待
-              </button>
             </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
-          {[
-            {
-              title: 'イベント管理', icon: Calendar, onClick: () => import('@/utils/navigation').then(m => m.navigate('events'))
-            },{
-              title: '売上管理', icon: DollarSign, onClick: () => import('@/utils/navigation').then(m => m.navigate('organizer-revenue'))
-            },{
-              title: '銀行口座設定', icon: DollarSign, onClick: () => import('@/utils/navigation').then(m => m.navigate('account-settings'))
-          },{
-            title: '規約・ガイドライン', icon: AlertCircle, onClick: () => import('@/utils/navigation').then(m => m.navigate('organizer-guidelines'))
-          },{
-              title: 'アカウント設定', icon: Users, onClick: () => import('@/utils/navigation').then(m => m.navigate('account-settings'))
-            },{
-              title: 'オーガナイザー窓口', icon: MessageSquare, onClick: () => import('@/utils/navigation').then(m => m.navigate('organizer-support'))
-            },{
-              title: '所属解除申請', icon: XCircle, onClick: () => import('@/utils/navigation').then(m => m.navigate('organizer-leave'))
-            },{
-              title: 'インボイス設定', icon: Award, onClick: () => import('@/utils/navigation').then(m => m.navigate('organizer-invoice'))
-            }
-          ].map((a, i) => (
-            <button key={i} onClick={a.onClick} className="bg-white p-4 rounded-lg shadow-sm border text-left hover:shadow transition">
-              <div className="flex items-center gap-3">
-                <a.icon className="w-5 h-5 text-blue-600" />
-                <div className="font-bold text-black">{a.title}</div>
-              </div>
-            </button>
-          ))}
-        </div>
+        {/* Quick Actions 削除 */}
         {/* Stats Overview */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -311,31 +271,29 @@ const OrganizerDashboard: React.FC = () => {
           {/* Creator Management */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-sm">
-              <div className="p-6 border-b">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">クリエイター管理</h2>
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="クリエイターを検索..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value as any)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="all">全ステータス</option>
-                      <option value="active">アクティブ</option>
-                      <option value="inactive">非アクティブ</option>
-                      <option value="pending">承認待ち</option>
-                    </select>
+              <div className="p-4 sm:p-6 border-b">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">クリエイター管理</h2>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="クリエイターを検索..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
                   </div>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as any)}
+                    className="w-full sm:w-auto max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">全ステータス</option>
+                    <option value="active">アクティブ</option>
+                    <option value="inactive">非アクティブ</option>
+                    <option value="pending">承認待ち</option>
+                  </select>
                 </div>
               </div>
               <div className="p-6">
@@ -346,8 +304,8 @@ const OrganizerDashboard: React.FC = () => {
                     const hasUnsavedChanges = pendingStatus && pendingStatus !== creator.status;
 
                     return (
-                      <div key={creator.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                        <div className="flex items-center gap-4">
+                      <div key={creator.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 flex-wrap">
+                        <div className="flex items-center gap-4 min-w-0">
                           <img
                             src={creator.avatar_url || '/default-avatar.png'}
                             alt={creator.name}
@@ -355,7 +313,7 @@ const OrganizerDashboard: React.FC = () => {
                           />
                           <div>
                             <div className="flex items-center gap-2">
-                              <h3 className="font-medium text-gray-900">{creator.name}</h3>
+                              <h3 className="font-medium text-gray-900 truncate max-w-[50vw] sm:max-w-none">{creator.name}</h3>
                               {hasUnsavedChanges && (
                                 <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
                                   未保存
@@ -370,11 +328,11 @@ const OrganizerDashboard: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap min-w-0">
                           <select
                             value={displayStatus}
                             onChange={(e) => handleStatusChange(creator.id, e.target.value as OrganizerCreator['status'])}
-                            className={`px-3 py-1 text-sm rounded-full border ${
+                            className={`px-3 py-1 text-sm rounded-full border max-w-full sm:max-w-none ${
                               displayStatus === 'active' ? 'bg-green-100 text-green-800 border-green-200' :
                               displayStatus === 'inactive' ? 'bg-gray-100 text-gray-800 border-gray-200' :
                               'bg-yellow-100 text-yellow-800 border-yellow-200'

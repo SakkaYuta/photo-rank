@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { AlertCircle, CheckCircle2, XCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle2, XCircle, Star, Building2 } from 'lucide-react'
 import { useToast } from '@/contexts/ToastContext'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -14,6 +14,7 @@ import { processUploadedWorkImage } from '@/services/uploadPipeline.service'
 import type { ManufacturingPartner, FactoryProduct } from '@/types/partner.types'
 import { supabase } from '../../services/supabaseClient'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
+import { useUserRole } from '@/hooks/useUserRole'
 
 export function CreateWork() {
   const [step, setStep] = useState<1 | 2 | 3>(1)
@@ -110,13 +111,151 @@ export function CreateWork() {
   const [partnerCategoryMap, setPartnerCategoryMap] = useState<Record<string, string[]>>({})
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [confirmChecks, setConfirmChecks] = useState({ infoAccurate: false, agreeRules: false })
+  // おすすめ設定（Step2: 工場・仕様）
+  const [useRecommended, setUseRecommended] = useState(true)
+
+  const applyRecommendedSettings = async () => {
+    try {
+      if (!Array.isArray(partners) || partners.length === 0) return
+      // 1) おすすめ工場: 承認済み + 評価/実績が高そうなもの、なければ先頭
+      const sorted = [...partners].sort((a: any, b: any) => {
+        const ar = (a?.average_rating ?? 0)
+        const br = (b?.average_rating ?? 0)
+        const ao = (a?.total_orders ?? 0)
+        const bo = (b?.total_orders ?? 0)
+        return (br - ar) || (bo - ao)
+      })
+      const recFactory = sorted[0]
+      if (!recFactory) return
+      setFactoryId(recFactory.id)
+
+      // 2) おすすめモデル: その工場の最初のモデル（display_name優先）
+      let prods = partnerProducts
+      if (!prods || prods.length === 0) {
+        try { prods = await getPartnerProducts(recFactory.id) } catch {}
+      }
+      if (prods && prods.length > 0) {
+        const preferred = [...prods].sort((a: any, b: any) => {
+          const an = a?.options?.display_name ? 1 : 0
+          const bn = b?.options?.display_name ? 1 : 0
+          return (bn - an)
+        })[0]
+        if (preferred) {
+          setProductModelId(preferred.id)
+          // 原価などの関連フィールド反映
+          setEstimatedCost(preferred.base_cost)
+          // カテゴリ/詳細の提案
+          const cat = productTypeToCategory(preferred.product_type)
+          const keyMap: Record<string,string> = { 'アパレル':'apparel','アクセサリー':'accessory','ディスプレイ':'display','日用品':'daily','デジタル':'digital','印刷物':'print' }
+          const familyKey = keyMap[cat] || null
+          if (familyKey) {
+            setEnabledFamilies(prev => Array.from(new Set([...(prev||[]), familyKey])))
+          }
+        }
+      }
+
+      // 3) 送料プロフィールの推奨
+      const s: any = (recFactory as any)?.shipping_info || null
+      if (s) {
+        setShippingProfile('factory-default')
+        if (typeof s.fee_general_jpy === 'number') setEstimatedShippingCost(Number(s.fee_general_jpy))
+      }
+
+      // 4) バリエーション・在庫は受注生産で簡易設定
+      setVariantStockMode('made_to_order')
+      if (!sizeOptions) setSizeOptions('M,L,XL')
+      if (!colorOptions) setColorOptions('Black,White')
+    } catch (e) {
+      console.warn('おすすめ設定の適用に失敗しました', e)
+    }
+  }
 
   useEffect(() => {
-    // 工場一覧を取得（approved想定）
+    if (useRecommended) {
+      applyRecommendedSettings()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [useRecommended])
+
+  useEffect(() => {
+    // 入力の一時保存（再描画や一時的なアンマウント時に消えないように）
+    try {
+      const raw = localStorage.getItem('cw_state_v1')
+      if (raw) {
+        const s = JSON.parse(raw)
+        if (Array.isArray(s.images)) setImages(s.images)
+        if (Array.isArray(s.previewPaths)) setImagePreviewStoragePaths(s.previewPaths)
+        if (Array.isArray(s.originalPaths)) setImageOriginalStoragePaths(s.originalPaths)
+        if (typeof s.ipConfirmed === 'boolean') setIpConfirmed(s.ipConfirmed)
+        if (typeof s.policyAccepted === 'boolean') setPolicyAccepted(s.policyAccepted)
+      }
+    } catch {}
+  }, [])
+
+  // 状態の自動保存
+  useEffect(() => {
+    try {
+      const payload = {
+        images,
+        previewPaths: imagePreviewStoragePaths,
+        originalPaths: imageOriginalStoragePaths,
+        ipConfirmed,
+        policyAccepted,
+      }
+      localStorage.setItem('cw_state_v1', JSON.stringify(payload))
+    } catch {}
+  }, [images, imagePreviewStoragePaths, imageOriginalStoragePaths, ipConfirmed, policyAccepted])
+
+  const clearPersistedState = () => {
+    try { localStorage.removeItem('cw_state_v1') } catch {}
+  }
+
+  // 工場一覧を取得（approved想定）
+  useEffect(() => {
     getManufacturingPartners('approved')
       .then(setPartners)
       .catch((e) => console.warn('工場一覧の取得に失敗しました', e))
   }, [])
+
+  // 既定（カテゴリ別）から工場を自動適用
+  useEffect(() => {
+    (async () => {
+      if (factoryId) return
+      try {
+        const { ProfileService } = await import('@/services/profile.service')
+        const prefs = await ProfileService.getFactoryPreferences()
+        for (const key of enabledFamilies) {
+          const pid = (prefs as any)?.[key]
+          if (pid) {
+            setFactoryId(pid)
+            setProductModelId('')
+            break
+          }
+        }
+      } catch {}
+    })()
+  }, [enabledFamilies, factoryId])
+
+  // 工場選択ページから戻った時の factoryId 反映
+  useEffect(() => {
+    const applyFromHash = () => {
+      try {
+        const raw = window.location.hash.replace(/^#/, '')
+        const qs = raw.includes('?') ? raw.split('?')[1] : ''
+        const sp = new URLSearchParams(qs)
+        const fid = sp.get('factoryId')
+        if (fid && fid !== factoryId) {
+          setFactoryId(fid)
+          setProductModelId('')
+          setStep(2)
+        }
+      } catch {}
+    }
+    applyFromHash()
+    const onHash = () => applyFromHash()
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [factoryId])
 
   // 全工場のモデルをプリフェッチし、対応カテゴリを事前算出（並列数を制限）
   useEffect(() => {
@@ -203,6 +342,7 @@ export function CreateWork() {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const { LoginGate, requireAuth } = useRequireAuth()
+  const { userProfile } = useUserRole()
 
   const titleLimit = 30
   const descLimit = 200
@@ -213,6 +353,27 @@ export function CreateWork() {
   }
   const now = new Date()
   const oneYearLater = new Date(now.getTime() + 365*24*60*60*1000)
+
+  // 販売期間レンジピッカー用の状態とハンドラ
+  const [rangeOpen, setRangeOpen] = useState(false)
+  const [tmpStart, setTmpStart] = useState<string>('')
+  const [tmpEnd, setTmpEnd] = useState<string>('')
+  const openRangePicker = () => {
+    try {
+      const defaultEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      setTmpStart(saleStart || toDateInputValue(now))
+      setTmpEnd(saleEnd || toDateInputValue(defaultEnd))
+    } catch {
+      setTmpStart(saleStart || '')
+      setTmpEnd(saleEnd || '')
+    }
+    setRangeOpen(true)
+  }
+  const applyRangePicker = () => {
+    if (tmpStart) setSaleStart(tmpStart)
+    if (tmpEnd) setSaleEnd(tmpEnd)
+    setRangeOpen(false)
+  }
 
   // ファイルアップロード機能はクリーンアップで削除
 
@@ -264,7 +425,11 @@ export function CreateWork() {
     setBusy(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user || !requireAuth()) throw new Error('ログインが必要です')
+      const isDemo = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+      const creatorUid = user?.id || (isDemo ? ((userProfile as any)?.id || 'demo-user-1') : '')
+      if (!creatorUid && !isDemo) {
+        if (!requireAuth()) throw new Error('ログインが必要です')
+      }
       // 販売期間の自動補完（未入力時は現在〜30日後）＋終了は最大1年後まで
       const startAt = saleStart ? new Date(saleStart) : new Date()
       const defaultEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -278,7 +443,7 @@ export function CreateWork() {
       }
       if (targetImages.length === 0) throw new Error('画像を1枚以上アップロードしてください')
       await Promise.all(targetImages.map((imgUrl) => createWork({
-        creator_id: user.id,
+        creator_id: creatorUid,
         title,
         image_url: imgUrl,
         thumbnail_url: imgUrl,
@@ -331,6 +496,7 @@ export function CreateWork() {
       setPolicyAccepted(false)
       setImagePreviewStoragePaths([])
       setImageOriginalStoragePaths([])
+      clearPersistedState()
       setFactoryId('')
       setProductModelId('')
       setSizeOptions('')
@@ -427,6 +593,27 @@ export function CreateWork() {
         </label>
       </section>
 
+      {/* おすすめ工場 自動選択 */}
+      <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-800">最適な工場を自動で選びます（見積スコア基準）</div>
+          <Button type="button" variant="secondary" size="sm" onClick={async () => {
+            try {
+              const fam = enabledFamilies[0] || 'apparel'
+              const famToType: Record<string,string> = { apparel: 'tshirt', accessory: 'sticker', display: 'poster', daily: 'mug', digital: 'phonecase', print: 'a3' }
+              const pt = famToType[fam] || 'tshirt'
+              const { getFactoryQuotes } = await import('@/services/factory.service')
+              const quotes = await getFactoryQuotes(pt, 10)
+              const best = quotes[0]
+              if (best?.partner?.id) {
+                setFactoryId(best.partner.id)
+                setProductModelId('')
+              }
+            } catch (e) { console.warn('auto-select factory failed', e) }
+          }}>おすすめで選ぶ</Button>
+        </div>
+      </div>
+
       {/* カテゴリは固定（UI非表示） */}
 
       {/* 説明 */}
@@ -452,24 +639,61 @@ export function CreateWork() {
 
       {/* 販売期間（必須・未入力時は自動補完、終了は最大1年後まで） */}
       <section className="bg-white rounded-lg shadow-sm border space-y-3 p-6">
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="block text-sm font-bold text-black">販売期間
+        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
+          <span className="text-sm font-bold text-black">販売期間
             <span title="この項目は必須です" className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-red-700 bg-red-50 border border-red-200 text-[10px]">必須</span>
           </span>
-          <span className="text-xs text-gray-500 shrink-0 whitespace-nowrap">終了日は最大1年後まで。終了後は非表示になります</span>
+          <span className="text-xs text-gray-500">終了日は最大1年後まで。終了後は非表示になります</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="block">
             <span className="mb-1 block text-xs text-gray-600">販売開始日時</span>
-            <Input type="datetime-local" min={toDateInputValue(now)} value={saleStart} onChange={(e) => setSaleStart(e.target.value)} />
+            <Input
+              type="datetime-local"
+              readOnly
+              onClick={(e) => { e.preventDefault(); openRangePicker() }}
+              min={toDateInputValue(now)}
+              value={saleStart}
+              onChange={(e) => setSaleStart(e.target.value)}
+            />
           </label>
           <label className="block">
             <span className="mb-1 block text-xs text-gray-600">販売終了日時</span>
-            <Input type="datetime-local" max={toDateInputValue(oneYearLater)} value={saleEnd} onChange={(e) => setSaleEnd(e.target.value)} />
+            <Input
+              type="datetime-local"
+              readOnly
+              onClick={(e) => { e.preventDefault(); openRangePicker() }}
+              max={toDateInputValue(oneYearLater)}
+              value={saleEnd}
+              onChange={(e) => setSaleEnd(e.target.value)}
+            />
           </label>
         </div>
         <p className="text-xs text-gray-900 dark:text-gray-400">未入力の場合は自動で開始=現在、終了=30日後が設定されます。</p>
       </section>
+
+      {/* 販売期間レンジピッカー（モーダル） */}
+      {rangeOpen && (
+        <Modal isOpen={true} onClose={() => setRangeOpen(false)}>
+          <ModalHeader>販売期間の選択</ModalHeader>
+          <ModalBody>
+            <div className="space-y-4">
+              <label className="block">
+                <span className="mb-1 block text-xs text-gray-600">開始日時</span>
+                <Input type="datetime-local" min={toDateInputValue(now)} value={tmpStart} onChange={(e)=> setTmpStart(e.target.value)} />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs text-gray-600">終了日時</span>
+                <Input type="datetime-local" max={toDateInputValue(oneYearLater)} value={tmpEnd} onChange={(e)=> setTmpEnd(e.target.value)} />
+              </label>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="secondary" onClick={() => setRangeOpen(false)}>キャンセル</Button>
+            <Button onClick={applyRangePicker}>適用する</Button>
+          </ModalFooter>
+        </Modal>
+      )}
 
       {/* タグ（折りたたみ） */}
       <section className="bg-white rounded-lg shadow-sm border space-y-3 p-6">
@@ -577,34 +801,46 @@ export function CreateWork() {
               setBusy(true)
               try {
                 const { data: { user } } = await supabase.auth.getUser()
-                if (!user || !requireAuth()) throw new Error('ログインが必要です')
+                const isDemo = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+                const uid = user?.id || (isDemo ? ((userProfile as any)?.id || 'demo-user-1') : '')
                 const secureUploads: string[] = []
                 const previewPaths: string[] = []
                 const originalPaths: string[] = []
-                for (const file of pick) {
-                  // Step 1: Upload to temporary location
-                  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
-                  const tempPath = `uploads/works/${user.id}/${crypto.getRandomValues(new Uint32Array(4)).join('')}.${ext}`
-                  const { error: upErr } = await supabase.storage.from(UPLOAD_BUCKET).upload(tempPath, file, { upsert: false, cacheControl: '3600' })
-                  if (upErr) throw upErr
 
-                  // Step 2: Process through secure pipeline (sanitize + watermark)
-                  const result = await processUploadedWorkImage(tempPath, UPLOAD_BUCKET)
-                  if (!result.ok || !result.preview?.signedUrl) {
-                    throw new Error(result.error || 'セキュア処理に失敗しました')
+                if (isDemo && !user) {
+                  // デモ環境: アップロードは擬似的にローカルプレビューを採用
+                  secureUploads.push(...newPreviews)
+                } else {
+                  if (!uid) {
+                    if (!requireAuth()) throw new Error('ログインが必要です')
                   }
+                  for (const file of pick) {
+                    // Step 1: Upload to temporary location
+                    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+                    const tempPath = `uploads/works/${uid}/${crypto.getRandomValues(new Uint32Array(4)).join('')}.${ext}`
+                    const { error: upErr } = await supabase.storage.from(UPLOAD_BUCKET).upload(tempPath, file, { upsert: false, cacheControl: '3600' })
+                    if (upErr) throw upErr
 
-                  // Step 3: Use signed preview URL directly from Edge Function
-                  secureUploads.push(result.preview.signedUrl)
-                  previewPaths.push(`${result.preview.bucket}/${result.preview.path}`)
-                  if (result.original?.bucket && result.original.path) {
-                    originalPaths.push(`${result.original.bucket}/${result.original.path}`)
+                    // Step 2: Process through secure pipeline (sanitize + watermark)
+                    const result = await processUploadedWorkImage(tempPath, UPLOAD_BUCKET)
+                    if (!result.ok || !result.preview?.signedUrl) {
+                      throw new Error(result.error || 'セキュア処理に失敗しました')
+                    }
+
+                    // Step 3: Use signed preview URL directly from Edge Function
+                    secureUploads.push(result.preview.signedUrl)
+                    previewPaths.push(`${result.preview.bucket}/${result.preview.path}`)
+                    if (result.original?.bucket && result.original.path) {
+                      originalPaths.push(`${result.original.bucket}/${result.original.path}`)
+                    }
                   }
+                  // ストレージ内パスも保持（作品メタデータ用）
+                  setImagePreviewStoragePaths(prev => [...prev, ...previewPaths])
+                  setImageOriginalStoragePaths(prev => [...prev, ...originalPaths])
                 }
                 setImages(prev => [...prev, ...secureUploads])
-                // ストレージ内パスも保持（作品メタデータ用）
-                setImagePreviewStoragePaths(prev => [...prev, ...previewPaths])
-                setImageOriginalStoragePaths(prev => [...prev, ...originalPaths])
+                // アップロード完了後、対応するローカルプレビューを非表示にする
+                setLocalPreviews(prev => prev.filter(u => !secureUploads.includes(u)))
               } catch (err: any) {
                 setMessage(err?.message || '画像のアップロードに失敗しました')
                 showToast({ message: err?.message || '画像のアップロードに失敗しました', variant: 'error' })
@@ -612,12 +848,15 @@ export function CreateWork() {
                 setBusy(false)
                 // ローカルプレビューURLを解放してクリア
                 try {
-                  setLocalPreviews((prev) => {
-                    // 今回追加した分だけ削除・解放（他の未完了プレビューは保持）
-                    newPreviews.forEach((u) => { try { URL.revokeObjectURL(u) } catch {} })
-                    const removeSet = new Set(newPreviews)
-                    return prev.filter(u => !removeSet.has(u))
-                  })
+                  const isDemo = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+                  if (!isDemo) {
+                    setLocalPreviews((prev) => {
+                      // 今回追加した分だけ削除・解放（他の未完了プレビューは保持）
+                      newPreviews.forEach((u) => { try { URL.revokeObjectURL(u) } catch {} })
+                      const removeSet = new Set(newPreviews)
+                      return prev.filter(u => !removeSet.has(u))
+                    })
+                  }
                 } catch {}
                 if (e.target) e.target.value = ''
               }
@@ -646,6 +885,9 @@ export function CreateWork() {
                   setImages(images.filter((_, i) => i !== idx))
                   setImagePreviewStoragePaths(imagePreviewStoragePaths.filter((_, i) => i !== idx))
                   setImageOriginalStoragePaths(imageOriginalStoragePaths.filter((_, i) => i !== idx))
+                  // 画像と同一URLのローカルプレビューが残っていれば除去
+                  setLocalPreviews(prev => prev.filter(u => u !== url))
+                  try { if (url.startsWith('blob:')) URL.revokeObjectURL(url) } catch {}
                 }}
               >
                 ×
@@ -755,24 +997,31 @@ export function CreateWork() {
       </section>
 
       {/* 次へ/保存 */}
-      <div className="flex justify-between gap-2">
-        <Button variant="secondary" disabled>ステップ1</Button>
-        <div className="flex gap-2">
-          <Button onClick={onSubmit} variant="secondary">下書き保存</Button>
-          <Button onClick={() => {
-            setTriedStep1Next(true)
-            const scrollTo = (el: HTMLElement | null) => el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            if (title.trim().length === 0) { showToast({ message: 'タイトルは必須です。', variant: 'error' }); scrollTo(titleRef.current); titleInputRef.current?.focus(); return }
-            if (images.length === 0) { showToast({ message: '画像は最低1枚必要です。', variant: 'error' }); scrollTo(imagesRef.current); fileInputRef.current?.focus(); return }
-            if (!(ipConfirmed && policyAccepted)) { showToast({ message: '法務確認のチェックは必須です。', variant: 'error' }); scrollTo(legalRef.current); ipCheckboxRef.current?.focus(); return }
-            setStep(2)
-            setTriedStep1Next(false)
+      <div className="flex justify-center gap-2">
+        <Button onClick={onSubmit} variant="secondary">下書き保存</Button>
+        <Button onClick={() => {
+          setTriedStep1Next(true)
+          const scrollTo = (el: HTMLElement | null) => el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          if (title.trim().length === 0) { showToast({ message: 'タイトルは必須です。', variant: 'error' }); scrollTo(titleRef.current); titleInputRef.current?.focus(); return }
+          if (images.length === 0) { showToast({ message: '画像は最低1枚必要です。', variant: 'error' }); scrollTo(imagesRef.current); fileInputRef.current?.focus(); return }
+          if (!(ipConfirmed && policyAccepted)) { showToast({ message: '法務確認のチェックは必須です。', variant: 'error' }); scrollTo(legalRef.current); ipCheckboxRef.current?.focus(); return }
+          setStep(2)
+          setTriedStep1Next(false)
           }}>グッズ設定へ</Button>
         </div>
-      </div>
       </>}
 
       {step === 2 && <>
+      {/* おすすめ設定 */}
+      <section className="bg-white rounded-lg shadow-sm border space-y-3 p-6">
+        <label className="flex items-start gap-2 text-sm text-black">
+          <input type="checkbox" checked={useRecommended} onChange={(e)=> setUseRecommended(e.target.checked)} />
+          <span>
+            <span className="font-bold">おすすめの設定で進める</span>
+            <span className="block text-xs text-gray-600">公式推奨の工場・モデル・配送/在庫設定を自動で反映します（後から変更可能）。</span>
+          </span>
+        </label>
+      </section>
       {/* エラー要約（Step2） */}
       {(triedStep2Next && (!validations.factoryOk || !validations.modelOk)) && (
         <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded mb-4">
@@ -783,46 +1032,76 @@ export function CreateWork() {
           </ul>
         </div>
       )}
-      {/* 工場選択（カードUI） */}
+      {/* 工場選択（マーケットプレイス風カードUI） */}
       <section ref={factoryRef} className={`bg-white rounded-lg shadow-sm border space-y-3 p-6 ${factoryError ? 'border-red-300 ring-2 ring-red-100' : ''}`}>
         <span className="block text-sm font-bold text-black">工場選択
           <span title="この項目は必須です" className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-red-700 bg-red-50 border border-red-200 text-[10px]">必須</span>
           {!factoryId && <AlertCircle className="inline ml-2 text-red-600 h-4 w-4 align-middle" />}
         </span>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {partners.map(p => {
             const selected = p.id === factoryId
+            const title = p.name || p.company_name || 'Factory'
+            const desc = p.description || p.website_url || '—'
+            const rating = typeof p.average_rating === 'number' ? p.average_rating.toFixed(1) : null
+            const orders = typeof p.total_orders === 'number' ? p.total_orders : null
+            const cats = Array.isArray(partnerCategoryMap[p.id]) ? partnerCategoryMap[p.id] : []
             return (
-              <button
+              <div
                 key={p.id}
-                type="button"
-                onClick={() => { setFactoryId(p.id); setProductModelId('') }}
-                className={`text-left rounded-lg border p-4 hover:shadow transition ${selected ? 'border-blue-600 ring-2 ring-blue-200' : 'border-gray-200'}`}
+                className={`group rounded-xl border bg-white overflow-hidden transition hover:shadow ${selected ? 'border-blue-600 ring-2 ring-blue-200' : 'border-gray-200'}`}
               >
-                <div className="flex items-center justify-between">
-                  <div className="font-medium text-black">{p.name || p.company_name || 'Factory'}</div>
-                  {selected && <span className="text-xs text-blue-600">選択中</span>}
+                <div className="h-28 bg-gray-100">
+                  <img src={defaultImages.product} alt="factory" className="w-full h-full object-cover" />
                 </div>
-                <div className="mt-1 text-xs text-gray-600">{p.website_url || p.description || '—'}</div>
-                <div className="mt-2 flex items-center gap-2 text-xs">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full border ${p.status==='approved' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
-                    {p.status==='approved' ? '稼働中' : '停止/準備中'}
-                  </span>
-                  {typeof p.average_rating === 'number' && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full border bg-yellow-50 text-yellow-800 border-yellow-200">評価 {p.average_rating.toFixed(1)}</span>
-                  )}
-                  {typeof p.total_orders === 'number' && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full border bg-gray-50 text-gray-700">実績 {p.total_orders}</span>
-                  )}
-                </div>
-                {Array.isArray(partnerCategoryMap[p.id]) && partnerCategoryMap[p.id].length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {partnerCategoryMap[p.id].map(cat => (
-                      <span key={p.id + ':' + cat} className="inline-flex items-center px-2 py-0.5 text-[10px] rounded-full bg-blue-50 text-blue-700 border border-blue-200">{cat}</span>
-                    ))}
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-gray-500" />
+                        <h3 className="font-semibold text-black truncate" title={title}>{title}</h3>
+                      </div>
+                      <p className="mt-1 text-xs text-gray-600 line-clamp-2" title={desc}>{desc}</p>
+                    </div>
+                    {selected && <span className="text-xs text-blue-600 whitespace-nowrap">選択中</span>}
                   </div>
-                )}
-              </button>
+                  <div className="mt-3 flex items-center gap-2 text-xs">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full border ${p.status==='approved' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                      {p.status==='approved' ? '稼働中' : '停止/準備中'}
+                    </span>
+                    {rating && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border bg-yellow-50 text-yellow-800 border-yellow-200">
+                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" /> {rating}
+                      </span>
+                    )}
+                    {orders !== null && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full border bg-gray-50 text-gray-700">
+                        実績 {orders}
+                      </span>
+                    )}
+                  </div>
+                  {cats.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {cats.slice(0, 6).map((cat) => (
+                        <span key={p.id + ':' + cat} className="inline-flex items-center px-2 py-0.5 text-[10px] rounded-full bg-blue-50 text-blue-700 border border-blue-200">{cat}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-3">
+                    <Button
+                      type="button"
+                      variant={selected ? 'secondary' : 'primary'}
+                      size="sm"
+                      onClick={() => {
+                        import('@/utils/navigation').then(m => m.navigate('factory-catalog', { partnerId: p.id }))
+                      }}
+                      className="w-full"
+                    >
+                      {selected ? '選択中' : '詳細を見る'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             )
           })}
         </div>
@@ -887,119 +1166,13 @@ export function CreateWork() {
 
       {/* 商品タイプ・在庫設定は受注生産を基本とするためUI削除 */}
 
-      {/* バリエーション（工場選択後に表示） */}
-      {factoryId && (
-      <section className="bg-white rounded-lg shadow-sm border space-y-3 p-6">
-        <span className="block text-sm font-bold text-black">バリエーション（サイズ×カラー）</span>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <label className="block">
-            <span className="mb-1 block text-xs text-gray-600">サイズ（例: S,M,L）</span>
-            <Input value={sizeOptions} onChange={(e)=> setSizeOptions(e.target.value)} />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-xs text-gray-600">カラー（例: Black,White）</span>
-            <Input value={colorOptions} onChange={(e)=> setColorOptions(e.target.value)} />
-          </label>
-        </div>
-        {/* 在庫モードは上のセクションに移動済み */}
-      </section>
-      )}
+      {/* バリエーション（削除） */}
 
-      {/* 商品仕様 */}
-      <section className="bg-white rounded-lg shadow-sm border space-y-3 p-6">
-        <span className="block text-sm font-bold text-black">商品仕様</span>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <label className="block">
-            <span className="mb-1 block text-xs text-gray-600">素材</span>
-            <Input value={material} onChange={(e)=> setMaterial(e.target.value)} />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-xs text-gray-600">許容差/注意事項</span>
-            <Input value={tolerance} onChange={(e)=> setTolerance(e.target.value)} />
-          </label>
-        </div>
-        <label className="block">
-          <span className="mb-1 block text-xs text-gray-600">サイズ表</span>
-          <Textarea rows={3} value={sizeChart} onChange={(e)=> setSizeChart(e.target.value)} />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-xs text-gray-600">取扱表示</span>
-          <Textarea rows={3} value={careLabels} onChange={(e)=> setCareLabels(e.target.value)} />
-        </label>
-      </section>
+      {/* 商品仕様（削除） */}
 
-      {/* 配送プロファイル（簡易表示に変更） - 工場選択後に表示 */}
-      {factoryId && (
-      <section className="bg-white rounded-lg shadow-sm border space-y-3 p-6">
-        <span className="block text-sm font-bold text-black">配送プロファイル</span>
-        <Select value={shippingProfile} onChange={(e)=> setShippingProfile(e.target.value)}>
-          <option value="factory-default">工場デフォルト料金</option>
-          <option value="weight-based">重量ベース（自動計算）</option>
-          {(() => {
-            const partner = partners.find(p=>p.id===factoryId)
-            const s: any = partner?.shipping_info || null
-            const opts: Array<{v:string,l:string}> = []
-            if (s?.fee_general_jpy) opts.push({ v: 'general', l: `一般送料: ${s.fee_general_jpy}円（${s?.carrier_name || '指定なし'}）` })
-            if (s?.fee_okinawa_jpy) opts.push({ v: 'okinawa', l: `沖縄送料: ${s.fee_okinawa_jpy}円` })
-            return opts.map(o => <option key={o.v} value={o.v}>{o.l}</option>)
-          })()}
-        </Select>
-        {/* 詳細情報は折りたたみ等で将来対応。JSON生表示は削除 */}
-      </section>
-      )}
+      {/* 配送プロファイル（削除） */}
 
-      {/* 印刷仕様 - 工場選択後に表示 */}
-      {factoryId && (
-      <section className="bg-white rounded-lg shadow-sm border space-y-3 p-6">
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="block text-sm font-bold text-black">印刷仕様（面ごと）</span>
-          <Button type="button" onClick={()=> setPrintSurfaces([...printSurfaces, { surfaceId: 'front', widthMm: '', heightMm: '', method: 'DTG', assetUrl: images[0] || '' }])}>面を追加</Button>
-        </div>
-        <div className="space-y-3">
-          {printSurfaces.map((ps, idx) => (
-            <div key={idx} className="rounded border p-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="block text-sm">
-                  <span className="mb-1 block text-xs text-gray-600">面</span>
-                  <Select value={ps.surfaceId} onChange={(e)=>{ const arr=[...printSurfaces]; arr[idx]={...ps, surfaceId: e.target.value}; setPrintSurfaces(arr) }}>
-                    <option value="front">前面</option>
-                    <option value="back">背面</option>
-                    <option value="sleeve">袖</option>
-                  </Select>
-                </label>
-                <label className="block text-sm">
-                  <span className="mb-1 block text-xs text-gray-600">加工方式</span>
-                  <Select value={ps.method} onChange={(e)=>{ const arr=[...printSurfaces]; arr[idx]={...ps, method: e.target.value}; setPrintSurfaces(arr) }}>
-                    <option>DTG</option>
-                    <option>昇華</option>
-                    <option>シルク</option>
-                    <option>刺繍</option>
-                    <option>UV</option>
-                  </Select>
-                </label>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-                <label className="block text-sm">
-                  <span className="mb-1 block text-xs text-gray-600">印刷枠 幅(mm)</span>
-                  <Input type="number" value={ps.widthMm as any} onChange={(e)=>{ const arr=[...printSurfaces]; arr[idx]={...ps, widthMm: e.target.value===''?'':Math.max(0, Math.floor(Number(e.target.value)||0))}; setPrintSurfaces(arr) }} />
-                </label>
-                <label className="block text-sm">
-                  <span className="mb-1 block text-xs text-gray-600">印刷枠 高さ(mm)</span>
-                  <Input type="number" value={ps.heightMm as any} onChange={(e)=>{ const arr=[...printSurfaces]; arr[idx]={...ps, heightMm: e.target.value===''?'':Math.max(0, Math.floor(Number(e.target.value)||0))}; setPrintSurfaces(arr) }} />
-                </label>
-                <label className="block text-sm">
-                  <span className="mb-1 block text-xs text-gray-600">入稿アセットURL</span>
-                  <Select value={ps.assetUrl} onChange={(e)=>{ const arr=[...printSurfaces]; arr[idx]={...ps, assetUrl: e.target.value}; setPrintSurfaces(arr) }}>
-                    {[...images, ''].map((u, i)=>(<option key={u+String(i)} value={u}>{u ? `画像${i+1}` : '未選択'}</option>))}
-                  </Select>
-                </label>
-              </div>
-              <div className="mt-2 text-right"><Button variant="secondary" type="button" onClick={()=> setPrintSurfaces(printSurfaces.filter((_,i)=>i!==idx))}>削除</Button></div>
-            </div>
-          ))}
-        </div>
-      </section>
-      )}
+      {/* 印刷仕様（削除） */}
 
       {/* 価格（概算） */}
       <section className="bg-white rounded-lg shadow-sm border space-y-3 p-6">
