@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Heart, Eye, Star, Filter, Search, TrendingUp, Clock, Award, Grid3X3, List, Home, Store, LayoutDashboard, Users, Building2, Calendar, Trophy, Shield, PlusSquare, Images, Gamepad2, Package as PackageIcon } from 'lucide-react';
+import { ShoppingCart, Heart, Eye, Star, Filter, Search, TrendingUp, Clock, Award, Grid3X3, List, Home, Store, LayoutDashboard, Users, Building2, Calendar, Trophy, Shield, PlusSquare, Images, Gamepad2, Package as PackageIcon, Menu } from 'lucide-react';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth'
@@ -48,7 +48,7 @@ const ProductsMarketplace: React.FC = () => {
   const { requireAuth, LoginGate } = useRequireAuth();
 
   // Default image fallbacks (from storage)
-  const SAMPLE_BUCKET = (import.meta as any).env?.VITE_SAMPLE_BUCKET || 'user-content'
+  const SAMPLE_BUCKET = (import.meta as any).env?.VITE_SAMPLE_BUCKET || 'public-assets'
   const DEFAULT_PRODUCT_PATH = (import.meta as any).env?.VITE_DEFAULT_PRODUCT_IMAGE_PATH || 'defaults/product.jpg'
   const DEFAULT_AVATAR_PATH = (import.meta as any).env?.VITE_DEFAULT_AVATAR_IMAGE_PATH || 'defaults/avatar.jpg'
   const defaultProductUrl = supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(DEFAULT_PRODUCT_PATH).data.publicUrl
@@ -443,7 +443,7 @@ const ProductsMarketplace: React.FC = () => {
                   aria-expanded={menuOpen}
                   title="メニュー"
                 >
-                  メニュー
+                  <Menu className="w-5 h-5" aria-hidden="true" />
                 </button>
                 {menuOpen && (
                   <div className="absolute right-0 mt-2 w-64 rounded-lg border bg-white shadow-lg z-20">

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Users, Sword, ChevronRight, Sparkles, Search, Package, Heart, ShoppingCart, TrendingUp, Zap, Globe, Gamepad2, RefreshCw, Home, Store, LayoutDashboard, Building2, Calendar, Trophy, Shield, PlusSquare, Images } from 'lucide-react'
+import { Users, Sword, ChevronRight, Sparkles, Search, Package, Heart, ShoppingCart, TrendingUp, Zap, Globe, Gamepad2, RefreshCw, Home, Store, LayoutDashboard, Building2, Calendar, Trophy, Shield, PlusSquare, Images, Menu } from 'lucide-react'
 import { APP_NAME } from '@/utils/constants'
 import { useUserRole } from '@/hooks/useUserRole'
 import { supabase } from '@/services/supabaseClient'
@@ -39,7 +39,7 @@ const MerchContentHub: React.FC = () => {
   const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || typeof window !== 'undefined' && !!localStorage.getItem('demoUser')
 
   // Supabase Storage からサンプル画像を読み込む（存在すれば優先）
-  const SAMPLE_BUCKET = (import.meta as any).env?.VITE_SAMPLE_BUCKET || 'user-content'
+  const SAMPLE_BUCKET = (import.meta as any).env?.VITE_SAMPLE_BUCKET || 'public-assets'
   const CREATOR_PREFIX = (import.meta as any).env?.VITE_SAMPLE_CREATOR_PREFIX || 'samples/creators'
   const CONTENT_PREFIX = (import.meta as any).env?.VITE_SAMPLE_CONTENT_PREFIX || 'samples/contents'
   const DEFAULT_CREATOR_PATH = (import.meta as any).env?.VITE_DEFAULT_CREATOR_IMAGE_PATH || 'defaults/creator.jpg'
@@ -191,19 +191,7 @@ const MerchContentHub: React.FC = () => {
     navTo('products-marketplace', { persona })
   }
 
-  // メニュー（ページ内）の状態と項目構築（全表示で共通利用）
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef(null as HTMLDivElement | null)
-  useEffect(() => {
-    const onClick = (e: MouseEvent) => {
-      if (!menuRef.current) return
-      if (!menuRef.current.contains(e.target as Node)) setMenuOpen(false)
-    }
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false) }
-    document.addEventListener('click', onClick)
-    document.addEventListener('keydown', onKey)
-    return () => { document.removeEventListener('click', onClick); document.removeEventListener('keydown', onKey) }
-  }, [])
+  // ページ内メニュー（ゲスト/ログイン時のボタン）は非表示化したため状態管理を削除
 
   type NavItem = { key: string; label: string }
   const viewOverride = typeof window !== 'undefined' ? localStorage.getItem('view_override') : null
@@ -236,39 +224,7 @@ const MerchContentHub: React.FC = () => {
   if (!user) {
     return (
       <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen min-h-screen">
-        {/* Global Menu (guest) */}
-        <div className="fixed top-4 right-4 z-40" ref={menuRef}>
-          <button
-            onClick={() => setMenuOpen(v => !v)}
-            className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm text-gray-900"
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            title="メニュー"
-          >
-            メニュー
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 mt-2 w-64 rounded-lg border bg-white shadow-lg z-50">
-              <ul className="py-2 max-h-[70vh] overflow-y-auto">
-                {dedupedItems.map((it) => (
-                  <li key={it.key}>
-                    <button
-                      className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors text-gray-900 hover:bg-gray-50`}
-                      onClick={() => { navTo(it.key); setMenuOpen(false) }}
-                    >
-                      {(() => {
-                        const iconKey = ROUTES_META[it.key as keyof typeof ROUTES_META]?.icon
-                        const IconComp = iconKey ? iconMap[iconKey] : undefined
-                        return IconComp ? <IconComp className="w-4 h-4" /> : null
-                      })()}
-                      <span className="truncate">{it.label}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
+        {/* Global Menu (guest) — 削除 */}
         {/* Intent switcher */}
         {effectiveIntent && (
           <div className="fixed top-20 right-4 z-40">
@@ -634,45 +590,8 @@ const MerchContentHub: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-soft border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
           <h1 className="text-2xl font-bold text-gray-900">{APP_NAME}</h1>
-          <div className="flex gap-3 items-center">
-            <button onClick={goToDashboard} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-600 to-secondary-600 text-white font-medium rounded-lg hover:shadow-lg transition-all text-sm">
-              <span>ダッシュボード</span>
-            </button>
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => setMenuOpen(v => !v)}
-                className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm text-gray-900"
-                aria-haspopup="menu"
-                aria-expanded={menuOpen}
-                title="メニュー"
-              >
-                メニュー
-              </button>
-              {menuOpen && (
-                <div className="absolute right-0 mt-2 w-64 rounded-lg border bg-white shadow-lg z-50">
-                  <ul className="py-2 max-h-[70vh] overflow-y-auto">
-                    {dedupedItems.map((it) => (
-                      <li key={it.key}>
-                        <button
-                          className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors text-gray-900 hover:bg-gray-50`}
-                          onClick={() => { navTo(it.key); setMenuOpen(false) }}
-                        >
-                          {(() => {
-                            const iconKey = ROUTES_META[it.key as keyof typeof ROUTES_META]?.icon
-                            const IconComp = iconKey ? iconMap[iconKey] : undefined
-                            return IconComp ? <IconComp className="w-4 h-4" /> : null
-                          })()}
-                          <span className="truncate">{it.label}</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
 
