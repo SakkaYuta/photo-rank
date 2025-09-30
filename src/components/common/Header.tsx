@@ -9,6 +9,7 @@ import { useNav } from '@/contexts/NavContext'
 import { allowedViews as ROUTES, ROUTES_META, type RoleKey } from '@/routes'
 import { useEffect } from 'react'
 import { listMyNotifications, markNotificationRead } from '@/services/userNotifications.service'
+import { supabase } from '@/services/supabaseClient'
 
 interface HeaderProps {
   currentView?: string
@@ -20,6 +21,7 @@ export function Header({ currentView }: HeaderProps = {}) {
   const count = items.reduce((s, it) => s + it.qty, 0)
   const { navigate } = useNav()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
   const [notifLoading, setNotifLoading] = useState(false)
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -98,6 +100,18 @@ export function Header({ currentView }: HeaderProps = {}) {
 
   useEffect(() => { refreshNotifications(true) }, [user?.id])
 
+  // 即時反映: user_notifications のリアルタイム購読
+  useEffect(() => {
+    if (!user?.id) return
+    const ch = supabase
+      .channel(`hdr-notifs-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_notifications', filter: `user_id=eq.${user.id}` }, async () => {
+        await refreshNotifications(true)
+      })
+      .subscribe()
+    return () => { try { supabase.removeChannel(ch) } catch {} }
+  }, [user?.id])
+
   return (
     <>
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-soft">
@@ -116,19 +130,71 @@ export function Header({ currentView }: HeaderProps = {}) {
         {/* デスクトップメニュー */}
         <div className="hidden md:flex items-center gap-3 flex-shrink-0 overflow-visible relative">
           {user && (
-            <button
-              className="relative rounded-lg p-2 hover:bg-primary-50 transition-colors group"
-              onClick={async () => { await refreshNotifications(false) }}
-              aria-label="通知"
-              title="通知"
-            >
-              <Bell className="w-5 h-5 text-gray-600 group-hover:text-primary-600 transition-colors" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 inline-flex items-center justify-center rounded-full bg-red-500 text-white text-xs h-5 min-w-[20px] px-1 font-medium">
-                  {unreadCount}
-                </span>
+            <div className="relative">
+              <button
+                className="relative rounded-lg p-2 hover:bg-primary-50 transition-colors group"
+                onClick={async () => { const next = !notifOpen; setNotifOpen(next); if (next) await refreshNotifications(false) }}
+                aria-label="通知"
+                title="通知"
+              >
+                <Bell className="w-5 h-5 text-gray-600 group-hover:text-primary-600 transition-colors" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center rounded-full bg-red-500 text-white text-xs h-5 min-w-[20px] px-1 font-medium">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+              {notifOpen && (
+                <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-auto rounded-lg border bg-white shadow-lg z-50">
+                  <div className="p-2 border-b flex items-center justify-between">
+                    <div className="font-medium text-gray-800">通知</div>
+                    <button className="text-sm text-blue-600" onClick={async()=>{ await refreshNotifications(false) }}>再読込</button>
+                  </div>
+                  {notifLoading ? (
+                    <div className="p-4 text-sm text-gray-600">読み込み中...</div>
+                  ) : notifications.length === 0 ? (
+                    <div className="p-4 text-sm text-gray-600">新しい通知はありません</div>
+                  ) : (
+                    <ul className="divide-y">
+                      {notifications.map((n:any) => (
+                        <li key={n.id} className={`p-3 ${n.read ? 'bg-white' : 'bg-blue-50'}`}>
+                          <button
+                            className="text-left w-full"
+                            onClick={async () => {
+                              try { if (!n.read) await markNotificationRead(n.id) } catch {}
+                              setNotifOpen(false)
+                              const t = (n.type || '') as string
+                              const view = (n.data?.view as string) || ''
+                              const bid = (n.data?.battle_id as string) || ''
+                              if (view === 'live-battle' && bid) {
+                                import('@/utils/navigation').then(m => m.navigate('live-battle', { battle: bid }))
+                              } else if (t === 'battle_request' || t === 'battle_accepted' || t === 'battle_declined') {
+                                navigate('battle-invitations')
+                              } else {
+                                navigate('general-dashboard')
+                              }
+                              setNotifications(prev => prev.map(p => p.id === n.id ? { ...p, read: true, read_at: new Date().toISOString() } : p))
+                              setUnreadCount(c => Math.max(0, c - (n.read ? 0 : 1)))
+                            }}
+                          >
+                            <div className="flex items-start gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-gray-900 truncate">{n.title || '通知'}</div>
+                                {n.message && <div className="text-xs text-gray-600 mt-0.5 line-clamp-2">{n.message}</div>}
+                                <div className="text-[11px] text-gray-400 mt-1">{new Date(n.created_at).toLocaleString()}</div>
+                              </div>
+                              {!n.read && (
+                                <span className="ml-2 inline-block w-2 h-2 rounded-full bg-blue-500 mt-1"/>
+                              )}
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               )}
-            </button>
+            </div>
           )}
           {user && (
             <button
@@ -159,7 +225,7 @@ export function Header({ currentView }: HeaderProps = {}) {
           {user && (
             <button
               className="relative rounded-lg p-2 hover:bg-gray-100 transition-colors"
-              onClick={async () => { await refreshNotifications(false) }}
+              onClick={async () => { const next = !notifOpen; setNotifOpen(next); if (next) await refreshNotifications(false) }}
               aria-label="通知"
               title="通知"
             >
@@ -248,6 +314,52 @@ export function Header({ currentView }: HeaderProps = {}) {
         </div>
       )}
     </header>
-</>
+    {notifOpen && user && (
+      <div className="md:hidden fixed inset-0 z-50" onClick={()=>setNotifOpen(false)}>
+        <div className="absolute inset-0 bg-black/40" />
+        <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-xl max-h-[70vh] overflow-auto">
+          <div className="p-3 border-b flex items-center justify-between">
+            <div className="font-medium">通知</div>
+            <button className="text-sm text-blue-600" onClick={async (e)=>{ e.stopPropagation(); await refreshNotifications(false) }}>再読込</button>
+          </div>
+          {notifLoading ? (
+            <div className="p-4 text-sm text-gray-600">読み込み中...</div>
+          ) : notifications.length === 0 ? (
+            <div className="p-4 text-sm text-gray-600">新しい通知はありません</div>
+          ) : (
+            <ul className="divide-y">
+              {notifications.map((n:any) => (
+                <li key={n.id} className={`p-3 ${n.read ? 'bg-white' : 'bg-blue-50'}`} onClick={e=>e.stopPropagation()}>
+                  <button
+                    className="text-left w-full"
+                    onClick={async () => {
+                      try { if (!n.read) await markNotificationRead(n.id) } catch {}
+                      setNotifOpen(false)
+                      const t = (n.type || '') as string
+                      const view = (n.data?.view as string) || ''
+                      const bid = (n.data?.battle_id as string) || ''
+                      if (view === 'live-battle' && bid) {
+                        import('@/utils/navigation').then(m => m.navigate('live-battle', { battle: bid }))
+                      } else if (t === 'battle_request' || t === 'battle_accepted' || t === 'battle_declined') {
+                        navigate('battle-invitations')
+                      } else {
+                        navigate('general-dashboard')
+                      }
+                      setNotifications(prev => prev.map(p => p.id === n.id ? { ...p, read: true, read_at: new Date().toISOString() } : p))
+                      setUnreadCount(c => Math.max(0, c - (n.read ? 0 : 1)))
+                    }}
+                  >
+                    <div className="text-sm font-medium text-gray-900 truncate">{n.title || '通知'}</div>
+                    {n.message && <div className="text-xs text-gray-600 mt-0.5 line-clamp-2">{n.message}</div>}
+                    <div className="text-[11px] text-gray-400 mt-1">{new Date(n.created_at).toLocaleString()}</div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    )}
+    </>
   )
 }
