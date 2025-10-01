@@ -7,7 +7,7 @@
 - **要件変更に対応したスキーマ修正**
 - **冪等性を保証**
 
-### 📋 推奨実行順序
+### 📋 推奨実行順序（アクティブ）
 
 ```bash
 # 1. 基本テーブル作成（修正版）
@@ -53,8 +53,9 @@ supabase/migrations/20250922_v5_0_storage.sql
 # 15. 追加セキュリティ修正（RLSとsearch_path固定）
 supabase/migrations/20250930_security_fixes.sql
 
-# 16. search_path の一括正常化（SECURITY DEFINER 全関数）
-supabase/migrations/20251004_fix_search_path_all.sql
+# 16. search_path 固定（SECURITY DEFINER 関数）
+supabase/migrations/20250930_fix_function_search_path_any.sql
+supabase/migrations/20251005_fix_function_search_path_security.sql
 
 # 14. テストデータ（開発時のみ）
 supabase/migrations/20241218_test_data_tables.sql
@@ -171,5 +172,6 @@ WHERE n.nspname = 'public'
 ### 📝 注意事項
 
 - 本番環境では**テストデータファイル**を除外
+- `supabase/migrations/archive` 以下は履歴用です。新規セットアップでは実行しないでください。
 - バックアップを取ってから実行推奨
 - 段階的実行でエラー箇所を特定可能

@@ -160,4 +160,5 @@ END $$;
 
 COMMENT ON TABLE public.factory_products IS 'Factory products for partner listings (options jsonb holds merch attributes)';
 COMMENT ON COLUMN public.factory_products.options IS 'JSONB: display_name, category, description, image_url, production_time, sizes[], colors[], materials, print_area, features[], is_recommended, discount_rate';
-
+-- ARCHIVED: Deprecated consolidated migration. Do not run for new setups.
+-- Use individual active migrations instead. Kept for historical reference.

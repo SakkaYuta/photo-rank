@@ -62,4 +62,5 @@ DO $$ BEGIN
     EXECUTE 'ALTER FUNCTION public.audit_trigger() SET search_path = public, pg_temp';
   END IF;
 END $$;
-
+-- ARCHIVED: superseded by later search_path fixes.
+-- Kept for history; do not run in new setups.

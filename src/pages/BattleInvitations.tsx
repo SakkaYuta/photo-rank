@@ -124,12 +124,13 @@ const BattleInvitations: React.FC = () => {
           const accepted = Boolean(it.opponent_accepted)
           const statusLabel = accepted ? '承諾済み' : '承諾待ち'
           const statusClass = accepted ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'
+          const durationText = typeof it.duration_minutes === 'number' && Number.isFinite(it.duration_minutes) ? `${it.duration_minutes}分` : '—'
           return (
             <div key={it.id} className="rounded border p-4 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
               <div className="text-sm text-gray-600 dark:text-gray-400">ID: <span className="font-mono text-gray-800 dark:text-gray-200">{it.id}</span></div>
               <div className="text-sm text-gray-700 dark:text-gray-300">タイトル: <span className="text-gray-900 dark:text-gray-100">{it.title || 'バトル招待'}</span></div>
               <div className="text-sm text-gray-700 dark:text-gray-300">挑戦者: <span className="text-gray-900 dark:text-gray-100">{participants[it.inviter_id]?.display_name || it.inviter_id?.slice(0,8)}</span></div>
-              <div className="text-sm text-gray-700 dark:text-gray-300">時間: <span className="text-gray-900 dark:text-gray-100">{it.duration_minutes}分</span> / 開始予定: <span className="text-gray-900 dark:text-gray-100">{it.requested_start_at ? new Date(it.requested_start_at).toLocaleString('ja-JP') : '未定'}</span></div>
+              <div className="text-sm text-gray-700 dark:text-gray-300">時間: <span className="text-gray-900 dark:text-gray-100">{durationText}</span> / 開始予定: <span className="text-gray-900 dark:text-gray-100">{it.requested_start_at ? new Date(it.requested_start_at).toLocaleString('ja-JP') : '未定'}</span></div>
               <div className="text-sm text-gray-700 dark:text-gray-300">状態: <span className={`font-semibold ${statusClass}`}>{statusLabel}</span></div>
               <div className="text-xs text-gray-500 dark:text-gray-400">作成: {new Date(it.created_at).toLocaleString('ja-JP')}</div>
               <div className="mt-3 flex gap-2">
@@ -137,13 +138,13 @@ const BattleInvitations: React.FC = () => {
                 <button
                   className="btn btn-xs btn-success"
                   onClick={async () => { try { await acceptBattle(it.battle_id); } catch {} }}
-                  title="この招待を承認する"
-                >承認</button>
+                  title="この招待を承諾する"
+                >承諾</button>
                 <button
-                  className="btn btn-xs"
+                  className="btn btn-xs btn-error"
                   onClick={async () => { try { await declineBattle(it.battle_id) } catch {} }}
-                  title="この招待を削除する"
-                >非承認（削除）</button>
+                  title="この招待を辞退する"
+                >辞退</button>
               </div>
             </div>
           )
@@ -194,8 +195,8 @@ const BattleInvitations: React.FC = () => {
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <button className="btn btn-outline" onClick={closeDetail}>閉じる</button>
-                  <button className="btn" onClick={async ()=>{ if(!detail.item) return; try { await declineBattle(detail.item.battle_id, detail.reason?.trim() || undefined); closeDetail() } catch {} }}>辞退（理由送信）</button>
-                  <button className="btn btn-primary" onClick={async ()=>{ if(!detail.item) return; try { await acceptBattle(detail.item.battle_id, detail.reason?.trim() || undefined); closeDetail() } catch {} }}>承諾（理由送信）</button>
+                  <button className="btn btn-error" onClick={async ()=>{ if(!detail.item) return; try { await declineBattle(detail.item.battle_id, detail.reason?.trim() || undefined); closeDetail() } catch {} }}>辞退（理由送信）</button>
+                  <button className="btn btn-success" onClick={async ()=>{ if(!detail.item) return; try { await acceptBattle(detail.item.battle_id, detail.reason?.trim() || undefined); closeDetail() } catch {} }}>承諾（理由送信）</button>
                 </div>
               </div>
             )}

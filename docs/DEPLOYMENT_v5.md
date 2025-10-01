@@ -6,7 +6,7 @@
   - `SUPABASE_URL`
   - `SUPABASE_ANON_KEY`
   - `SUPABASE_SERVICE_ROLE_KEY`
-  - Stripe keys if you integrate tickets/powerups via Stripe later
+- Stripe keys for tickets/powerups via Stripe
 
 ## Apply migrations
 ```bash
@@ -25,7 +25,7 @@ supabase functions deploy generate-preview
 supabase functions deploy battle-request
 supabase functions deploy battle-start
 supabase functions deploy battle-finish
-supabase functions deploy cheer-ticket-purchase
+supabase functions deploy create-cheer-ticket-intent
 ```
 
 ## Quick verification (curl)
@@ -62,12 +62,13 @@ curl -s -X POST https://<project>.supabase.co/functions/v1/battle-start \
  -d '{"battle_id":"<BATTLE_ID>"}'
 ```
 
-5) Cheer ticket (MVP; no Stripe yet)
+5) Cheer ticket intent (Stripe)
 ```bash
-curl -s -X POST https://<project>.supabase.co/functions/v1/cheer-ticket-purchase \
+curl -s -X POST https://<project>.supabase.co/functions/v1/create-cheer-ticket-intent \
  -H "Authorization: Bearer YOUR_JWT" -H "Content-Type: application/json" \
  -d '{"battle_id":"<BATTLE_ID>","creator_id":"<CREATOR_ID>"}'
 ```
+Expected: `{ clientSecret }` (confirm on frontend with Stripe Elements)
 
 6) Battle finish
 ```bash
@@ -81,4 +82,3 @@ curl -s -X POST https://<project>.supabase.co/functions/v1/battle-finish \
 - Storage bucket names: `photos-watermarked` (public), `photos-original` (private). Paths include user_id segment in policies.
 - For production, add anti-abuse (file type/content checks on source fetch), caching, and stricter error handling.
 - Stripe integration for tickets/powerups can reuse `create-payment-intent` + `stripe-webhook`.
-

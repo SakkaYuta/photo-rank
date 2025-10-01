@@ -184,4 +184,5 @@ DROP POLICY IF EXISTS olr_organizer_rw ON public.organizer_leave_requests;
 CREATE POLICY olr_organizer_rw ON public.organizer_leave_requests FOR ALL USING (organizer_id = auth.uid()) WITH CHECK (organizer_id = auth.uid());
 
 -- End of consolidated base schema
-
+-- ARCHIVED: Deprecated consolidated migration. Do not run for new setups.
+-- Use individual active migrations instead. Kept for historical reference.

@@ -49,4 +49,5 @@ END$$;
 -- Optional: Ensure future creations follow best practices (documentation note)
 -- Recommendation: define functions with schema-qualified names and set search_path explicitly
 -- e.g., CREATE FUNCTION ... LANGUAGE sql SET search_path = pg_catalog, public AS $$ ... $$;
-
+-- ARCHIVED: superseded by 20250930_fix_function_search_path_any.sql and 20251005_fix_function_search_path_security.sql
+-- Do not run in new setups.

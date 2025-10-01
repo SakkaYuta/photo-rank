@@ -37,4 +37,5 @@ DO $$ BEGIN
       SET search_path TO public, pg_temp;
   EXCEPTION WHEN undefined_function THEN NULL; END;
 END $$;
-
+-- ARCHIVED: superseded by later search_path fixes.
+-- Kept for history; do not run in new setups.
