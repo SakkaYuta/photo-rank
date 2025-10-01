@@ -303,7 +303,7 @@ const FactoryDashboard: React.FC = () => {
               <p className="text-sm text-gray-500 mt-1">
                 {demoMode
                   ? 'デモ工場（ID: DEMO-001）'
-                  : (partner ? `${partner.company_name || partner.name}（ID: ${partner.id}）` : '—')}
+                  : (partner ? `${partner.company_name || partner.name}（ID: ${partner.id ?? '—'}）` : '—')}
               </p>
             </div>
             <div className="flex items-center gap-3">
