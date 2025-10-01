@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/services/supabaseClient'
 import { acceptBattle, declineBattle, listMyBattleInvitations, getBattleStatus } from '@/services/battle.service'
+import { isBattleDemoEnabled } from '@/utils/demo'
 
 type Invitation = {
   id: string
@@ -53,26 +54,34 @@ const BattleInvitations: React.FC = () => {
             .limit(50)
           const rows = data || []
           if (rows.length === 0) {
-            const now = Date.now()
-            setItems([
-              { id: 'demo-1', battle_id: 'BATTLE-001', inviter_id: 'user-a', opponent_id: 'me', status: 'pending', created_at: new Date(now - 3600_000).toISOString() },
-              { id: 'demo-2', battle_id: 'BATTLE-002', inviter_id: 'user-b', opponent_id: 'me', status: 'accepted', created_at: new Date(now - 7200_000).toISOString() },
-              { id: 'demo-3', battle_id: 'BATTLE-003', inviter_id: 'user-c', opponent_id: 'me', status: 'declined', created_at: new Date(now - 10800_000).toISOString() },
-              { id: 'demo-4', battle_id: 'BATTLE-004', inviter_id: 'user-d', opponent_id: 'me', status: 'expired', created_at: new Date(now - 172800_000).toISOString() },
-            ] as Invitation[])
+            if (isBattleDemoEnabled()) {
+              const now = Date.now()
+              setItems([
+                { id: 'demo-1', battle_id: 'BATTLE-001', inviter_id: 'user-a', opponent_id: 'me', status: 'pending', created_at: new Date(now - 3600_000).toISOString() },
+                { id: 'demo-2', battle_id: 'BATTLE-002', inviter_id: 'user-b', opponent_id: 'me', status: 'accepted', created_at: new Date(now - 7200_000).toISOString() },
+                { id: 'demo-3', battle_id: 'BATTLE-003', inviter_id: 'user-c', opponent_id: 'me', status: 'declined', created_at: new Date(now - 10800_000).toISOString() },
+                { id: 'demo-4', battle_id: 'BATTLE-004', inviter_id: 'user-d', opponent_id: 'me', status: 'expired', created_at: new Date(now - 172800_000).toISOString() },
+              ] as Invitation[])
+            } else {
+              setItems([])
+            }
           } else {
             setItems(rows as any)
           }
         }
       } catch (e: any) {
-        // テーブル未作成/権限なしでもサンプルを表示
-        const now = Date.now()
-        setItems([
-          { id: 'demo-1', battle_id: 'BATTLE-001', inviter_id: 'user-a', opponent_id: 'me', status: 'pending', created_at: new Date(now - 3600_000).toISOString() },
-          { id: 'demo-2', battle_id: 'BATTLE-002', inviter_id: 'user-b', opponent_id: 'me', status: 'accepted', created_at: new Date(now - 7200_000).toISOString() },
-          { id: 'demo-3', battle_id: 'BATTLE-003', inviter_id: 'user-c', opponent_id: 'me', status: 'declined', created_at: new Date(now - 10800_000).toISOString() },
-          { id: 'demo-4', battle_id: 'BATTLE-004', inviter_id: 'user-d', opponent_id: 'me', status: 'expired', created_at: new Date(now - 172800_000).toISOString() },
-        ] as Invitation[])
+        // テーブル未作成/権限なし時のフォールバック
+        if (isBattleDemoEnabled()) {
+          const now = Date.now()
+          setItems([
+            { id: 'demo-1', battle_id: 'BATTLE-001', inviter_id: 'user-a', opponent_id: 'me', status: 'pending', created_at: new Date(now - 3600_000).toISOString() },
+            { id: 'demo-2', battle_id: 'BATTLE-002', inviter_id: 'user-b', opponent_id: 'me', status: 'accepted', created_at: new Date(now - 7200_000).toISOString() },
+            { id: 'demo-3', battle_id: 'BATTLE-003', inviter_id: 'user-c', opponent_id: 'me', status: 'declined', created_at: new Date(now - 10800_000).toISOString() },
+            { id: 'demo-4', battle_id: 'BATTLE-004', inviter_id: 'user-d', opponent_id: 'me', status: 'expired', created_at: new Date(now - 172800_000).toISOString() },
+          ] as Invitation[])
+        } else {
+          setItems([])
+        }
         setError(null)
       } finally {
         setLoading(false)
