@@ -188,14 +188,7 @@ serve(async (req) => {
         processingResult = { processing: true }
         break
       }
-      case 'payment_intent.canceled': {
-        const pi = event.data.object as Stripe.PaymentIntent
-        try {
-          await supabase.from('purchases').update({ payment_status: 'canceled' }).eq('stripe_payment_intent_id', pi.id)
-        } catch {}
-        processingResult = { canceled: true }
-        break
-      }
+      // removed duplicate payment_intent.canceled case to avoid confusion
       default:
         console.log(`Unhandled event type: ${event.type}`);
         processingResult = { unhandled: true };

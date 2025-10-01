@@ -109,6 +109,20 @@ WHERE schemaname = 'public'
   AND tablename LIKE '%partner%' OR tablename LIKE '%factory%' OR tablename LIKE '%manufacturing%'
 ORDER BY tablename, policyname;
 
+-- 追加: rate_limits テーブルRLS確認
+SELECT 
+  n.nspname as schema,
+  c.relname as table,
+  c.relrowsecurity as rls_enabled,
+  c.relforcerowsecurity as rls_forced
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relname = 'rate_limits';
+
+SELECT policyname, cmd, qual, with_check
+FROM pg_policies 
+WHERE schemaname = 'public' AND tablename = 'rate_limits';
+
 -- ============================================================================
 -- 5. ビューと関数の動作確認
 -- ============================================================================
@@ -159,6 +173,19 @@ GROUP BY creator_id, creator_name
 HAVING SUM(creator_profit) >= 5000 -- 最低支払額
 ORDER BY total_creator_profit DESC
 LIMIT 10;
+
+-- 追加: SECURITY DEFINER 関数の search_path 設定確認
+SELECT 
+  n.nspname as schema,
+  p.proname as function,
+  pg_get_function_identity_arguments(p.oid) as args,
+  p.prosecdef as security_definer,
+  p.proconfig as config
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND p.prosecdef = true
+ORDER BY 1,2;
 
 -- pg_cron ジョブ確認（拡張が有効な場合のみ）
 -- SELECT * FROM cron.job WHERE jobname = 'monthly-payout-generation-v50';

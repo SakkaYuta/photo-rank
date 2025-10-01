@@ -5,7 +5,7 @@ serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 })
   try {
     // allow any authenticated user
-    await authenticateUser(req)
+    const user = await authenticateUser(req)
     const supabase = getSupabaseAdmin()
     const body = await req.json().catch(() => ({})) as { status?: 'scheduled'|'live'|'finished', limit?: number, offset?: number, duration?: 5|30|60, only_mine?: boolean, include_participants?: boolean, include_aggregates?: boolean }
     const { status, limit = 20, offset = 0, duration, only_mine, include_participants = true, include_aggregates = true } = body

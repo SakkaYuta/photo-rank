@@ -53,6 +53,9 @@ supabase/migrations/20250922_v5_0_storage.sql
 # 15. 追加セキュリティ修正（RLSとsearch_path固定）
 supabase/migrations/20250930_security_fixes.sql
 
+# 16. search_path の一括正常化（SECURITY DEFINER 全関数）
+supabase/migrations/20251004_fix_search_path_all.sql
+
 # 14. テストデータ（開発時のみ）
 supabase/migrations/20241218_test_data_tables.sql
 ```
