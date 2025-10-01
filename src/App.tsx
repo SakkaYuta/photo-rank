@@ -324,9 +324,10 @@ function App() {
               )}
               {view === 'admin-refunds' && isAdmin && (
                 <PartialErrorBoundary name="返金管理">
-                  <Suspense fallback={<SuspenseFallback />}>
-                    <AdminRefundRequests />
-                  </Suspense>
+                  <div className="p-6">
+                    <h1 className="text-2xl font-bold mb-4">返金管理</h1>
+                    <p className="text-gray-600">返金管理機能は開発中です。</p>
+                  </div>
                 </PartialErrorBoundary>
               )}
               {view === 'partner-dashboard' && canAccessPartnerPages && (
@@ -526,7 +527,6 @@ function App() {
 // Admin pages (lazy import could be added later)
 const AdminAssetPolicies = React.lazy(() => import('./pages/admin/AssetPolicies'))
 const AdminApprovalQueue = React.lazy(() => import('./pages/admin/AssetApprovalQueue'))
-const AdminRefundRequests = React.lazy(() => import('./pages/admin/RefundRequests'))
 const FactorySettings = React.lazy(() => import('./pages/partner/FactorySettings'))
 
 export default App
