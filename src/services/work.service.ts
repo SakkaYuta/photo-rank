@@ -223,7 +223,7 @@ export async function myPurchases(userId: string): Promise<(Purchase & { work: W
 }
 
 export async function listWorksByIds(ids: string[]): Promise<Work[]> {
-  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+  if (isDemoEnabled()) {
     const map = new Map([...sampleCreatedWorks, ...SAMPLE_WORKS].map(w => [w.id, w]))
     return ids.map(id => map.get(id)).filter(Boolean) as Work[]
   }

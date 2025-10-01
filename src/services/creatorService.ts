@@ -177,7 +177,7 @@ export const fetchCreatorDashboard = async (creatorId: string): Promise<CreatorD
 
 export const fetchCreatorWorks = async (creatorId: string): Promise<CreatorWork[]> => {
   try {
-    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+    if (isDemoEnabled()) {
       const works = (await import('@/sample/worksSamples')).SAMPLE_WORKS
       return works.map(w => ({
         id: w.id,

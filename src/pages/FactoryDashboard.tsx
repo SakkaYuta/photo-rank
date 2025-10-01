@@ -283,9 +283,9 @@ const FactoryDashboard: React.FC = () => {
     )
   }
 
-  const demoMode = !partner || !!error
-  const displayStats = stats ?? genDemoStats()
-  const displayOrders = (orders && orders.length > 0) ? orders : genDemoOrders()
+  const demoMode = isDemoEnabled() && (!partner || !!error)
+  const displayStats = demoMode ? (stats ?? genDemoStats()) : (stats ?? { activeProducts: 0, totalOrders: 0, pendingOrders: 0, completedOrders: 0, averageRating: 0, totalReviews: 0 })
+  const displayOrders = demoMode ? ((orders && orders.length > 0) ? orders : genDemoOrders()) : (orders || [])
 
   return (
     <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen min-h-screen bg-gray-50">

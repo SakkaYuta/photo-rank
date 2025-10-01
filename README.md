@@ -39,6 +39,20 @@ npm run dev
 - ビジネス設定: `src/config/business.ts`
 - 技術設定: `src/config/technical.ts`
 
+### デモモードの完全非公開化（外部アクセス遮断）
+- `VITE_ENABLE_SAMPLE` と `VITE_ENABLE_BATTLE_SAMPLE` は有効化フラグです。
+- さらに `VITE_DEMO_ALLOWED_HOSTS`（カンマ区切りのホスト名）に一致する場合のみ、デモ機能が有効になります。
+- 既定では `localhost,127.0.0.1,::1` のみ許可。外部ドメインではデモは常に無効です。
+
+設定例:
+```
+VITE_ENABLE_SAMPLE=true
+VITE_ENABLE_BATTLE_SAMPLE=false
+VITE_DEMO_ALLOWED_HOSTS=localhost,127.0.0.1
+```
+
+実装は `src/utils/demo.ts` に集約されており、各ページ/サービスは `isDemoEnabled()` / `isBattleDemoEnabled()` を参照します。`localStorage` の `demoUser` などでデモを有効化する手段は無効化され、許可ホスト外からはデモ表示になりません。
+
 ## データベース（マイグレーション）
 
 ### v5.0 マーケットプレイス移行
