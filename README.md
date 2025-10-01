@@ -11,7 +11,7 @@ cd photo-rank
 npm install
 ```
 
-2. Supabase 環境変数を設定
+2. Supabase/Edge Functions 環境変数を設定
 
 `.env` を作成し、以下を設定（`.env.example` 参照）:
 
@@ -20,8 +20,13 @@ VITE_SUPABASE_URL=...
 VITE_SUPABASE_ANON_KEY=...
 # 任意（Stripe 決済UIを有効化する場合）
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_xxx
-# Edge Functions の許可オリジン（カンマ区切り）
+# Edge Functions の許可オリジン（カンマ区切り）※本番必須
 ALLOWED_ORIGINS=https://example.com,https://staging.example.com
+# Stripe Secret/Webhook ※Edge Functions に設定
+STRIPE_SECRET_KEY=sk_live_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx
+# スケジューラ保護用のCRONキー ※Edge Functions に設定
+CRON_SECRET=your-strong-secret
 ```
 
 3. 開発サーバー起動
@@ -90,6 +95,9 @@ SELECT public.generate_monthly_payouts_v50();
 ## 実装ガイド・運用文書
 - v3.1 実装ガイド: `docs/implementation_guide_v3.1.md`
 - **v5.0 運用手順書**: `docs/operations_manual_v5.0.md`
+- **設計（バトル/チア/通知）**: `docs/ARCHITECTURE.md`
+- **API一覧（Edge Functions）**: `docs/API_REFERENCE.md`
+- **監査・運用ガイド**: `docs/operations/AUDIT_GUIDE.md`
 - **マイグレーション検証**: `db/verification_queries.sql`
 
 ## Edge Functions（骨組み）
@@ -102,6 +110,27 @@ SELECT public.generate_monthly_payouts_v50();
 - `supabase/functions/process-payouts/`
 
 開発プロジェクトのEdge Functionsとして導入し、Stripe秘密鍵やWebhook署名検証を実装してください。
+
+### バトル機能（招待/承諾/辞退/開始/終了）
+- 招待一覧: `list-my-battle-invitations`（挑戦者プロフィールの同梱）
+- 承諾/辞退: `battle-accept` / `battle-decline`
+  - 承諾: `opponent_accepted=true` を更新、挑戦者にアプリ内通知。予約開始時刻がある場合は「予約」通知も送信。
+  - 辞退: `status='cancelled'` に更新（監査性重視）、挑戦者に辞退通知。
+- ステータス参照: `battle-status`（private の場合は参加者のみ許可）
+- 自動開始/終了: `battle-autostart` / `battle-autofinish`
+  - `POST` 限定、ヘッダ `x-cron-key: $CRON_SECRET` 必須、RateLimit (5/min)。
+  - 開始は承諾済み（`opponent_accepted=true`）のみ対象。
+
+### 応援（チア）/ポイント購入フロー
+- 無料チア: `cheer-ticket-purchase`（free専用）
+  - `options.mode === 'free'` のみ許可。上限はRPC `use_free_cheer` で管理。
+- チアポイント（有料）: `create-cheer-points-intent` → Stripe Checkout → `stripe-webhook` で `cheer_tickets` 付与
+  - 旧 `purchase-cheer-points` は廃止（410 Gone）。
+  - `create-cheer-ticket-intent`（チアチケットIntent）にも CORS/RateLimit を適用。
+
+### アプリ内通知
+- `user_notifications` テーブルに通知を作成。RLSにより本人のみ参照可。
+- ヘッダーのベルから未読件数/一覧をリアルタイム表示（Supabase Realtime購読）。
 
 ### execute-refund
 - 役割: `refund_requests` 行に対する返金実行。StripeのPaymentIntentがある場合はStripe Refund APIを呼び出し、結果に応じて`refund_requests`/`purchases`を更新。
@@ -162,7 +191,20 @@ POST /functions/v1/execute-refund
 - ストレージへのアップロードは省略し、URL直接入力で最小動作にしています。
 - ルーティングは簡易ナビゲーション（状態）で代替しています（`react-router` 未使用）。
 
-## 最近の更新（2025-09-18）
+## 最近の更新（2025-10-01）
+
+- バトル招待
+  - 招待一覧に「詳細を見る」モーダルを追加（理由入力、承諾/辞退）。
+  - 承諾/辞退はアプリ内通知と連動。予約時刻の開始通知も自動化。
+  - private バトルは参加者のみステータス参照可。
+
+- チア/決済
+  - チアポイントは Intent→Webhook検証に一本化（`create-cheer-points-intent`）。
+  - 旧 `purchase-cheer-points` は廃止（410）。
+  - `create-cheer-ticket-intent`/`create-konbini-intent`/`create-bank-transfer-intent` に CORS/RateLimit を適用。
+
+- 自動関数保護
+  - `battle-autostart`/`battle-autofinish` は `POST + x-cron-key` 必須、RateLimit (5/min)。
 
 - ナビゲーション調整
   - 公開タブ「トレンド」「クリエイター検索」削除

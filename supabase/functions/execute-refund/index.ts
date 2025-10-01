@@ -3,6 +3,7 @@
 // Auth: Requires a valid user token with admin role (checked via profiles table), or use service role when invoked by webhook/admin backend.
 
 import { getSupabaseAdmin, authenticateUser } from '../_shared/client.ts'
+import { requireInternalSecret } from '../_shared/auth.ts'
 
 type Json = Record<string, any> | null
 
@@ -41,12 +42,24 @@ async function performStripeRefund(paymentIntentId: string, amount?: number) {
 
 export async function handler(req: Request): Promise<Response> {
   try {
+    // Internal secret from env (required for non-admin access)
+    const internalSecret = Deno.env.get('INTERNAL_CRON_SECRET') || ''
+
     // Admin auth (if Authorization header exists)
     let adminUserId: string | null = null
     try {
       const user = await authenticateUser(req)
       if (user?.id && (await isAdmin(user.id))) adminUserId = user.id
     } catch {}
+
+    if (adminUserId === null) {
+      if (!internalSecret) {
+        // Safe default: deny if secret not configured
+        return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403 })
+      }
+      const secretError = requireInternalSecret(req)
+      if (secretError) return secretError
+    }
 
     const supabase = getSupabaseAdmin()
     const { refundRequestId } = await req.json()
@@ -60,9 +73,8 @@ export async function handler(req: Request): Promise<Response> {
       .single()
     if (rErr || !r) return new Response(JSON.stringify({ error: rErr?.message || 'refund request not found' }), { status: 404 })
 
-    // Optional admin enforcement: if called by non-admin user, block
+    // Additional safety: if Authorization header exists but user is not admin, block
     if (adminUserId === null) {
-      // If not authenticated admin, still allow when called from service role (no Authorization header)
       const authHeader = req.headers.get('Authorization')
       if (authHeader) return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403 })
     }
@@ -98,4 +110,3 @@ export async function handler(req: Request): Promise<Response> {
 
 // Deno Deploy entrypoint
 Deno.serve(handler)
-

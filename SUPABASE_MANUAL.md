@@ -517,3 +517,19 @@ curl -s -X POST "$SUPABASE_URL/functions/v1/battle-autoexpire" \
 
 ### battle_invitations テーブル（任意）
 - 招待UXのためのテーブル。RLSは招待者/相手のみ参照/更新可能。
+## 🔐 Edge Functions 運用上の前提
+
+- CORS 制限: Edge Functions 側で `ALLOWED_ORIGINS` を設定し、許可ドメイン以外は 403。
+- スケジューラ保護: 自動関数（`battle-autostart`/`battle-autofinish` など）は `POST` 限定 + ヘッダ `x-cron-key: $CRON_SECRET` を必須化。
+- Stripe Webhook: `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` を設定し、`stripe-webhook` で署名検証 + 冪等処理（event id upsert）。
+- レート制限: `check_rate_limit` RPC を各関数で適用（例: 5/分）。値は運用に合わせて調整可。
+
+## 🧩 バトル/チア 関数の注意点
+
+- `list-my-battle-invitations` は `battles` を起点に招待一覧を返す（`created_at` を返却。挑戦者の `participants` も同梱）。
+- `battle-accept`/`battle-decline` は RateLimit と理由上限（1000文字）を持ち、通知（`user_notifications`）を作成する。
+- `battle-status` は `visibility='private'` の場合、参加者以外は 403 を返す。
+- `create-cheer-ticket-intent` はチアチケットのIntent作成（CORS/RateLimit適用）。
+- `cheer-ticket-purchase` は free 専用（`mode==='free'` のみ許可）。有料付与は 不可（410）。
+- `create-cheer-points-intent` → `stripe-webhook(payment_intent.succeeded)` で `cheer_tickets` に加算。
+- 旧 `purchase-cheer-points` は 廃止（410 Gone）。

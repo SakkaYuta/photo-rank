@@ -9,7 +9,7 @@ serve(async (req) => {
 
     const { data: rows, error } = await supabase
       .from('battles')
-      .select('id, challenger_id, opponent_id, duration_minutes, requested_start_at, title, status, opponent_accepted')
+      .select('id, challenger_id, opponent_id, duration_minutes, requested_start_at, title, status, opponent_accepted, created_at')
       .eq('opponent_id', user.id)
       .eq('status', 'scheduled')
       .limit(100)

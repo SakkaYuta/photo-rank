@@ -173,7 +173,7 @@ const BattleInvitations: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-gray-600">時間</div>
-                    <div className="font-medium text-gray-900">{detail.item?.duration_minutes}分</div>
+                    <div className="font-medium text-gray-900">{(detail.status?.battle?.duration_minutes ?? detail.item?.duration_minutes) ? `${detail.status?.battle?.duration_minutes ?? detail.item?.duration_minutes}分` : '—'}</div>
                   </div>
                   <div>
                     <div className="text-gray-600">開始予定</div>
