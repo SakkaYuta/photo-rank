@@ -217,14 +217,15 @@ export class ProfileService {
     const fileName = `${user.id}_${Date.now()}.${fileExt}`
     const filePath = `avatars/${fileName}`
 
+    // アバターは公開バケットに保存（public-assets/avatars/...）
     const { error: uploadError } = await supabase.storage
-      .from('user-content')
+      .from('public-assets')
       .upload(filePath, file)
 
     if (uploadError) throw uploadError
 
     const { data } = supabase.storage
-      .from('user-content')
+      .from('public-assets')
       .getPublicUrl(filePath)
 
     // ユーザープロフィールのavatar_urlを更新
