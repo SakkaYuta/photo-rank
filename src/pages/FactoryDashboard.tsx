@@ -16,6 +16,7 @@ import {
   Factory,
   ChevronDown
 } from 'lucide-react';
+import { isDemoEnabled } from '@/utils/demo'
 
 const FactoryDashboard: React.FC = () => {
   const { userProfile } = useUserRole();
@@ -173,7 +174,7 @@ const FactoryDashboard: React.FC = () => {
 
   // リアルタイム更新: 注文・商品・レビューの変更を監視して統計と一覧を更新
   useEffect(() => {
-    const sample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+    const sample = isDemoEnabled()
     if (!partner?.id || partnerLoading || sample) return
 
     // 注文の変更: 一覧と統計を取り直す（JOIN形状の差異を吸収するためリロード）

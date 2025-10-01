@@ -8,6 +8,7 @@ import { resolveImageUrl } from '@/utils/imageFallback'
 import { defaultImages } from '@/utils/defaultImages'
 import { TrendingUp, Heart as HeartIcon, ShoppingCart, ArrowLeft } from 'lucide-react'
 import { useUserRole } from '@/hooks/useUserRole'
+import { isDemoEnabled } from '@/utils/demo'
 
 export function Favorites() {
   const { ids, toggle } = useFavorites()
@@ -17,7 +18,7 @@ export function Favorites() {
   const { showToast } = useToast()
   const [q, setQ] = useState('')
   const [sort, setSort] = useState<'new' | 'priceAsc' | 'priceDesc' | 'title'>('new')
-  const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || (typeof window !== 'undefined' && !!localStorage.getItem('demoUser'))
+  const isSample = isDemoEnabled()
   const { userType } = useUserRole()
 
   useEffect(() => {

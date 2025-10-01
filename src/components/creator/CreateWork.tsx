@@ -14,6 +14,7 @@ import { processUploadedWorkImage } from '@/services/uploadPipeline.service'
 import type { ManufacturingPartner, FactoryProduct } from '@/types/partner.types'
 import { supabase } from '../../services/supabaseClient'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
+import { isDemoEnabled } from '@/utils/demo'
 import { useUserRole } from '@/hooks/useUserRole'
 
 export function CreateWork() {
@@ -440,7 +441,7 @@ export function CreateWork() {
     setBusy(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      const isDemo = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+      const isDemo = isDemoEnabled()
       const creatorUid = user?.id || (isDemo ? ((userProfile as any)?.id || 'demo-user-1') : '')
       if (!creatorUid && !isDemo) {
         if (!requireAuth()) throw new Error('ログインが必要です')
@@ -832,7 +833,7 @@ export function CreateWork() {
               setBusy(true)
               try {
                 const { data: { user } } = await supabase.auth.getUser()
-                const isDemo = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+                const isDemo = isDemoEnabled()
                 const uid = user?.id || (isDemo ? ((userProfile as any)?.id || 'demo-user-1') : '')
                 const secureUploads: string[] = []
                 const previewPaths: string[] = []
@@ -879,7 +880,7 @@ export function CreateWork() {
                 setBusy(false)
                 // ローカルプレビューURLを解放してクリア
                 try {
-                  const isDemo = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+                  const isDemo = isDemoEnabled()
                   if (!isDemo) {
                     setLocalPreviews((prev) => {
                       // 今回追加した分だけ削除・解放（他の未完了プレビューは保持）

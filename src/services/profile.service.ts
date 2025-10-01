@@ -1,10 +1,11 @@
 import { supabase } from './supabaseClient'
 import type { User, UserProfileUpdate, UserNotificationSettings, UserPrivacySettings } from '../types/user.types'
+import { isDemoEnabled } from '../utils/demo'
 
 export class ProfileService {
   // プロフィール情報取得（メール情報含む）
   static async getProfile(): Promise<User | null> {
-    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+    if (isDemoEnabled()) {
       return {
         id: 'demo-user-1',
         display_name: 'デモユーザー',
@@ -33,10 +34,10 @@ export class ProfileService {
 
   // 工場デフォルト（カテゴリ別）取得
   static async getFactoryPreferences(): Promise<Record<string, string>> {
-    // サンプル/デモは localStorage を優先
-    const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+    // サンプル/デモは localStorage を優先（許可されたホストのみ）
+    const isSample = isDemoEnabled()
     try {
-      if (isSample || (typeof window !== 'undefined' && !!localStorage.getItem('demoUser'))) {
+      if (isSample) {
         const raw = localStorage.getItem('factory_prefs')
         return raw ? JSON.parse(raw) : {}
       }
@@ -52,11 +53,11 @@ export class ProfileService {
 
   // 工場デフォルト（カテゴリ別）保存
   static async saveFactoryPreference(categoryKey: string, partnerId: string): Promise<void> {
-    // サンプル/デモ or 未ログイン時は localStorage に保存
-    const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+    // サンプル/デモ or 未ログイン時は localStorage に保存（許可されたホストのみ）
+    const isSample = isDemoEnabled()
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user || isSample || (typeof window !== 'undefined' && !!localStorage.getItem('demoUser'))) {
+      if (!user || isSample) {
         const raw = localStorage.getItem('factory_prefs')
         const prefs = raw ? JSON.parse(raw) : {}
         prefs[categoryKey] = partnerId
@@ -73,7 +74,7 @@ export class ProfileService {
 
   // プロフィール基本情報更新
   static async updateProfile(updates: UserProfileUpdate): Promise<User> {
-    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+    if (isDemoEnabled()) {
       return {
         id: 'demo-user-1',
         display_name: updates.display_name || 'デモユーザー',
@@ -117,7 +118,7 @@ export class ProfileService {
 
   // 通知設定取得
   static async getNotificationSettings(userId: string): Promise<UserNotificationSettings> {
-    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+    if (isDemoEnabled()) {
       return { email_notifications: true, order_updates: true, marketing_emails: false, push_notifications: true }
     }
     const { data, error } = await supabase
@@ -149,7 +150,7 @@ export class ProfileService {
     userId: string,
     settings: UserNotificationSettings
   ): Promise<void> {
-    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') return
+    if (isDemoEnabled()) return
     const { error } = await supabase
       .from('user_notification_settings')
       .upsert({
@@ -163,7 +164,7 @@ export class ProfileService {
 
   // プライバシー設定取得
   static async getPrivacySettings(userId: string): Promise<UserPrivacySettings> {
-    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+    if (isDemoEnabled()) {
       return { profile_visibility: 'public', show_purchase_history: false, show_favorites: true }
     }
     const { data, error } = await supabase
@@ -193,7 +194,7 @@ export class ProfileService {
     userId: string,
     settings: UserPrivacySettings
   ): Promise<void> {
-    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') return
+    if (isDemoEnabled()) return
     const { error } = await supabase
       .from('user_privacy_settings')
       .upsert({
@@ -207,7 +208,7 @@ export class ProfileService {
 
   // アバター画像アップロード
   static async uploadAvatar(file: File): Promise<string> {
-    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+    if (isDemoEnabled()) {
       return 'https://placehold.co/256x256'
     }
     const { data: { user } } = await supabase.auth.getUser()
@@ -238,7 +239,7 @@ export class ProfileService {
 
   // アカウント削除（Edge Function経由で安全に実行）
   static async deleteAccount(): Promise<void> {
-    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') return
+    if (isDemoEnabled()) return
 
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.access_token) throw new Error('認証が必要です')

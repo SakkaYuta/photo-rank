@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { getCurrentPartnerProfile } from '../services/partner.service'
 import { getDemoUser } from '../services/auth.service'
+import { isDemoEnabled } from '@/utils/demo'
 import type { ManufacturingPartner } from '../types'
 
 export function usePartnerAuth() {
@@ -69,7 +70,7 @@ export function usePartnerAuth() {
 
   // パートナー情報のリアルタイム反映（工場設定の変更を即時UIへ）
   useEffect(() => {
-    const sample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+    const sample = isDemoEnabled()
     if (!partner?.id || sample) return
 
     const channel = supabase

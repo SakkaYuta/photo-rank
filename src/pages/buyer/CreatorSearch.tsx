@@ -3,6 +3,7 @@ import { Users, Search, Filter, Star } from 'lucide-react'
 import { supabase } from '@/services/supabaseClient'
 import { resolveImageUrl } from '@/utils/imageFallback'
 import { defaultImages } from '@/utils/defaultImages'
+import { isDemoEnabled } from '@/utils/demo'
 
 type Row = {
   id: string
@@ -11,7 +12,7 @@ type Row = {
   bio?: string
 }
 
-const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || (typeof window !== 'undefined' && !!localStorage.getItem('demoUser'))
+const isSample = isDemoEnabled()
 
 const sampleCreators: Row[] = [
   { id: 'demo-creator-1', display_name: 'デモクリエイター', avatar_url: 'https://images.unsplash.com/photo-1494790108755-2616b332c66a?w=160&h=160&fit=crop&crop=face', bio: '写真とイラストの二刀流' },

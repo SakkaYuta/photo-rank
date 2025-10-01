@@ -5,6 +5,7 @@ import { supabase } from '@/services/supabaseClient'
 import { SAMPLE_BATTLES, SAMPLE_PARTICIPANTS, SAMPLE_SCORES } from '@/sample/battleSamples'
 import { resolveImageUrl } from '@/utils/imageFallback'
 import { defaultImages } from '@/utils/defaultImages'
+import { isBattleDemoEnabled } from '@/utils/demo'
 
 export const BattleRoom: React.FC = () => {
   const [battleId, setBattleId] = useState<string>('')
@@ -25,7 +26,7 @@ export const BattleRoom: React.FC = () => {
   const [tick, setTick] = useState<number>(0)
   const [startTime, setStartTime] = useState<string | undefined>(undefined)
   const [durationMin, setDurationMin] = useState<number>(5)
-  const [useSamples, setUseSamples] = useState<boolean>((import.meta as any).env?.VITE_ENABLE_BATTLE_SAMPLE === 'true')
+  const [useSamples, setUseSamples] = useState<boolean>(isBattleDemoEnabled())
   const [recent, setRecent] = useState<Array<{ creator_id: string; amount: number; purchased_at: string }>>([])
   
 

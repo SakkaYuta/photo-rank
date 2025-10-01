@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient'
 import type { User } from '../types'
 import type { UserType } from '../types/user'
+import { isDemoEnabled } from '../utils/demo'
 
 export async function signInWithGoogle(userType: UserType = 'general') {
   // ログイン時に選択されたユーザータイプをローカルストレージに保存
@@ -118,6 +119,9 @@ export async function signOut() {
 
 // デモモード用のログイン機能
 export async function signInWithDemo(userType: UserType = 'general') {
+  if (!isDemoEnabled()) {
+    throw new Error('Demo mode is disabled on this host')
+  }
   // デモユーザー情報をローカルストレージに保存
   const demoUser = {
     id: `demo-${userType}-${Date.now()}`,
@@ -147,6 +151,7 @@ export async function signOutDemo() {
 
 // デモユーザーの取得
 export function getDemoUser() {
+  if (!isDemoEnabled()) return null
   const demoUserStr = localStorage.getItem('demoUser')
   return demoUserStr ? JSON.parse(demoUserStr) : null
 }

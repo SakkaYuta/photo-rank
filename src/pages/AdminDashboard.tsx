@@ -5,6 +5,7 @@ import { SystemStatus } from '../components/admin/SystemStatus'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '../services/supabaseClient'
 import { SAMPLE_ADMIN_METRICS } from '@/sample/adminMetrics'
+import { isDemoEnabled } from '@/utils/demo'
 
 export const AdminDashboard: React.FC = () => {
   const [metrics, setMetrics] = useState<any>(null)
@@ -13,7 +14,7 @@ export const AdminDashboard: React.FC = () => {
 
   const fetchMetrics = async () => {
     try {
-      if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+      if (isDemoEnabled()) {
         setMetrics({
           todayRevenue: SAMPLE_ADMIN_METRICS.todayRevenue,
           successRate: SAMPLE_ADMIN_METRICS.successRate,

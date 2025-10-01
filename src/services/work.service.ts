@@ -1,12 +1,13 @@
 import { supabase } from './supabaseClient'
 import { SAMPLE_WORKS } from '@/sample/worksSamples'
+import { isDemoEnabled } from '../utils/demo'
 
 // In-memory store for created sample works (dev/demo only)
 const sampleCreatedWorks: Work[] = []
 import type { Work, Purchase, Vote } from '../types'
 
 export async function listTrendingWorks(limit = 20): Promise<Work[]> {
-  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+  if (isDemoEnabled()) {
     const all = [...sampleCreatedWorks, ...SAMPLE_WORKS]
     return all.slice(0, limit)
   }
@@ -29,7 +30,7 @@ export type WorkSearchParams = {
 }
 
 export async function searchWorks(params: WorkSearchParams): Promise<Work[]> {
-  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+  if (isDemoEnabled()) {
     const { q, minPrice, maxPrice, limit = 50 } = params || {}
     let arr = [...sampleCreatedWorks, ...SAMPLE_WORKS]
     if (q && q.trim()) arr = arr.filter(w => w.title.toLowerCase().includes(q.toLowerCase()))
@@ -65,7 +66,7 @@ export async function searchWorks(params: WorkSearchParams): Promise<Work[]> {
 }
 
 export async function createWork(payload: Partial<Work>): Promise<Work> {
-  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+  if (isDemoEnabled()) {
     const w: Work = {
       id: `demo-created-${Date.now()}`,
       title: payload.title || '新規作品',
@@ -159,7 +160,7 @@ export async function createWork(payload: Partial<Work>): Promise<Work> {
 }
 
 export async function myWorks(creatorId: string): Promise<Work[]> {
-  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+  if (isDemoEnabled()) {
     const all = [...sampleCreatedWorks, ...SAMPLE_WORKS]
     // デモ環境ではデモID（例: demo-creator-...）とサンプルのcreator_idが一致しないため全件表示
     if (!creatorId || creatorId.startsWith('demo-')) return all
@@ -199,7 +200,7 @@ export async function voteWork(workId: string): Promise<Vote> {
 }
 
 export async function myPurchases(userId: string): Promise<(Purchase & { work: Work })[]> {
-  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+  if (isDemoEnabled()) {
     return SAMPLE_WORKS.slice(0, 2).map((w, i) => ({
       id: `demo-order-${i+1}`,
       user_id: userId,

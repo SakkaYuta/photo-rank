@@ -7,6 +7,7 @@ import { useNav } from '@/contexts/NavContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/contexts/ToastContext'
 import { AuthModal } from '@/components/auth/AuthModal'
+import { isBattleDemoEnabled } from '@/utils/demo'
 import {
   Gamepad2,
   Clock,
@@ -100,7 +101,7 @@ const BattleSearch: React.FC = () => {
     (async () => {
       setLoading(true)
       try {
-        const useSamples = (import.meta as any).env?.VITE_ENABLE_BATTLE_SAMPLE === 'true'
+        const useSamples = isBattleDemoEnabled()
         if (useSamples) {
           const samples = SAMPLE_BATTLES
             .filter(b => selectedStatus === 'all' || b.status === selectedStatus)

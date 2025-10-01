@@ -39,6 +39,13 @@ serve(async (req) => {
     }
     const supabase = createClient(supabaseUrl, supabaseKey)
 
+    // optional cleanup flag in body
+    let cleanup = false
+    try {
+      const body = await req.json()
+      cleanup = Boolean(body?.cleanup)
+    } catch {}
+
     // fetch users with avatar_url pointing to user-content bucket
     const { data: users, error: qErr } = await supabase
       .from('users')
@@ -87,6 +94,14 @@ serve(async (req) => {
         if (upd.error) throw upd.error
 
         migrated++
+
+        // Optionally delete original object after successful migration
+        if (cleanup) {
+          const del = await supabase.storage.from('user-content').remove([srcPath])
+          if (del.error) {
+            errors.push({ id: row.id, reason: `cleanup_failed: ${del.error.message}` })
+          }
+        }
       } catch (e: any) {
         errors.push({ id: row.id, reason: e?.message || String(e) })
       }

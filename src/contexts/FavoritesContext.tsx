@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/services/supabaseClient'
+import { isDemoEnabled } from '@/utils/demo'
 
 type FavoritesContextType = {
   ids: Set<string>
@@ -33,7 +34,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(ids))) } catch {}
   }, [ids])
 
-  const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+  const isSample = isDemoEnabled()
 
   const add = (id: string) => {
     setIds(prev => new Set(prev).add(id))

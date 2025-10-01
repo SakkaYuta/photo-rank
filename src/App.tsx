@@ -63,6 +63,7 @@ import InvoiceSettings from './pages/organizer/InvoiceSettings'
 import OrganizerRevenue from './pages/organizer/RevenueManagement'
 import OrganizerGuidelines from './pages/organizer/OrganizerGuidelines'
 import BattleInvitations from './pages/BattleInvitations'
+import { isDemoEnabled } from '@/utils/demo'
 
 type ViewKey = typeof ROUTES[number]
 
@@ -78,7 +79,7 @@ function App() {
   const { userType, user, userProfile, loading: roleLoading } = useUserRole()
   const isPartner = Boolean(partner && partner.status === 'approved')
   const isFactoryUser = userType === 'factory'
-  const isDemoMode = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+  const isDemoMode = isDemoEnabled()
 
   // ログイン後のデフォルト遷移先をルートメタに基づいて設定
   useEffect(() => {

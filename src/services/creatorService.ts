@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { getDemoUser } from './auth.service';
+import { isDemoEnabled } from '../utils/demo'
 
 export interface CreatorStats {
   totalWorks: number;
@@ -39,7 +39,7 @@ export interface CreatorDashboardData {
 
 export const fetchCreatorDashboard = async (creatorId: string): Promise<CreatorDashboardData> => {
   try {
-    const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || Boolean(getDemoUser())
+    const isSample = isDemoEnabled()
     if (isSample) {
       const works = (await import('@/sample/worksSamples')).SAMPLE_WORKS.filter(w => w.creator_id === creatorId || true).map(w => ({
         id: w.id,

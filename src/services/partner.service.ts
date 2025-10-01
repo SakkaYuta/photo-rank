@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient'
 import type { ManufacturingPartner, FactoryProduct, ManufacturingOrder, PartnerReview } from '../types'
+import { isDemoEnabled } from '../utils/demo'
 
 export async function getCurrentPartnerProfile(): Promise<ManufacturingPartner | null> {
   // まずは Supabase の実データを優先
@@ -20,7 +21,7 @@ export async function getCurrentPartnerProfile(): Promise<ManufacturingPartner |
   }
 
   // サンプルモードのみ、フォールバックのデモパートナーを返す
-  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+  if (isDemoEnabled()) {
     return {
       id: 'demo-partner-1',
       name: 'デモ製造パートナー',
@@ -37,12 +38,15 @@ export async function getCurrentPartnerProfile(): Promise<ManufacturingPartner |
 }
 
 export async function getPartnerProducts(partnerId: string): Promise<FactoryProduct[]> {
-  // デモIDは Supabase に存在しないので、明示的にフォールバックのみ
+  // デモID: 許可ホストかつデモ有効時のみフォールバック
   if (partnerId.startsWith('demo')) {
-    return [
-      { id: 'prod-1', partner_id: partnerId, product_type: 'tshirt', base_cost: 1500, lead_time_days: 7, minimum_quantity: 1, maximum_quantity: 1000, is_active: true, options: { display_name: 'スタンダードTシャツ' }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-      { id: 'prod-2', partner_id: partnerId, product_type: 'mug', base_cost: 800, lead_time_days: 7, minimum_quantity: 1, maximum_quantity: 1000, is_active: true, options: { display_name: 'セラミックマグ' }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-    ] as any
+    if (isDemoEnabled()) {
+      return [
+        { id: 'prod-1', partner_id: partnerId, product_type: 'tshirt', base_cost: 1500, lead_time_days: 7, minimum_quantity: 1, maximum_quantity: 1000, is_active: true, options: { display_name: 'スタンダードTシャツ' }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: 'prod-2', partner_id: partnerId, product_type: 'mug', base_cost: 800, lead_time_days: 7, minimum_quantity: 1, maximum_quantity: 1000, is_active: true, options: { display_name: 'セラミックマグ' }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      ] as any
+    }
+    return []
   }
 
   // Supabase から取得（優先）。失敗時のみサンプルを返す
@@ -57,7 +61,7 @@ export async function getPartnerProducts(partnerId: string): Promise<FactoryProd
     return (data || []) as FactoryProduct[]
   } catch (e) {
     console.warn('getPartnerProducts: Supabase fetch failed, falling back if sample enabled', e)
-    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+    if (isDemoEnabled()) {
       return [
         { id: 'prod-1', partner_id: partnerId, product_type: 'tshirt', base_cost: 1500, lead_time_days: 7, minimum_quantity: 1, maximum_quantity: 1000, is_active: true, options: { display_name: 'スタンダードTシャツ' }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
         { id: 'prod-2', partner_id: partnerId, product_type: 'mug', base_cost: 800, lead_time_days: 7, minimum_quantity: 1, maximum_quantity: 1000, is_active: true, options: { display_name: 'セラミックマグ' }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
@@ -120,7 +124,7 @@ export async function deleteFactoryProduct(id: string): Promise<void> {
 }
 
 export async function getPartnerOrders(partnerId: string): Promise<any[]> {
-  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || partnerId.startsWith('demo')) {
+  if (isDemoEnabled()) {
     return [
       { id: 'order-1', partner_id: partnerId, status: 'in_production', created_at: new Date().toISOString(), factory_products: { id: 'prod-1', product_type: 'tshirt' }, works: { id: 'demo-work-1', title: '桜の季節', image_url: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=400&h=300&fit=crop' }, purchases: [{ id: 'demo-order-1', user_id: 'demo-buyer-1', purchased_at: new Date().toISOString() }] },
     ]
@@ -247,7 +251,7 @@ export async function updateOrderStatus(
 }
 
 export async function getPartnerStats(partnerId: string) {
-  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || partnerId.startsWith('demo')) {
+  if (isDemoEnabled()) {
     return { activeProducts: 2, totalOrders: 5, pendingOrders: 2, completedOrders: 1, averageRating: 4.3, totalReviews: 12 }
   }
   const [ordersResult, productsResult, reviewsResult] = await Promise.all([
@@ -307,7 +311,7 @@ export async function updatePartnerSettings(
     shipping_info?: Record<string, any> | null
   }
 ): Promise<ManufacturingPartner> {
-  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || partnerId.startsWith('demo')) {
+  if (isDemoEnabled()) {
     // サンプル環境ではローカルで即時反映する体裁のみ
     return {
       id: partnerId,
@@ -351,7 +355,7 @@ export async function updatePartnerSettings(
 // ===== レビュー関連サービス =====
 
 export async function getPartnerReviews(partnerId: string): Promise<PartnerReview[]> {
-  if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+  if (isDemoEnabled()) {
     return [
       { id: 'rev-1', partner_id: partnerId, author_user_id: 'demo-user-1', rating: 5, comment: 'とても素早く対応いただきました！', created_at: new Date().toISOString(), users: { username: 'ユーザーA', avatar_url: undefined } },
     ] as any

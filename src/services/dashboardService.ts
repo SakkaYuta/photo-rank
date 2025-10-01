@@ -1,20 +1,11 @@
 // @ts-nocheck
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from './supabaseClient';
+import { isDemoEnabled } from '../utils/demo'
 
-// サンプルモード判定（環境変数 or デモユーザー or demo-* ユーザーID）
-const isSampleMode = (userId?: string): boolean => {
-  // 環境変数での明示指定
-  // deno-lint-ignore no-explicit-any
-  if (((import.meta as any).env?.VITE_ENABLE_SAMPLE) === 'true') return true
-  // demo-* ID を使用
-  if (userId && userId.startsWith('demo-')) return true
-  // ローカルストレージのデモユーザー
-  try {
-    const du = typeof window !== 'undefined' ? localStorage.getItem('demoUser') : null
-    if (du) return true
-  } catch {}
-  return false
+// サンプルモード判定（中央集約: ホスト制限 + 環境フラグ）
+const isSampleMode = (_userId?: string): boolean => {
+  return isDemoEnabled()
 }
 
 export interface DashboardData {

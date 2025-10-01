@@ -8,6 +8,7 @@ import type { PreviewSlide } from '@/components/goods/GoodsPreviewCarousel'
 import { Button } from '@/components/ui/button'
 import { ProfileService } from '@/services/profile.service'
 import { navigate as navTo } from '@/utils/navigation'
+import { isDemoEnabled } from '@/utils/demo'
 
 const FactoryItemDetail: React.FC = () => {
   const [productId, setProductId] = useState<string>('')
@@ -73,11 +74,7 @@ const FactoryItemDetail: React.FC = () => {
     return imgs.slice(0, 8).map((m, idx) => ({ mockupUrl: m, geometry: mockups[idx]?.geometry }))
   }, [mockups])
 
-  const isSampleMode = () => {
-    // deno-lint-ignore no-explicit-any
-    if (((import.meta as any).env?.VITE_ENABLE_SAMPLE) === 'true') return true
-    try { return typeof window !== 'undefined' && !!localStorage.getItem('demoUser') } catch { return false }
-  }
+  const isSampleMode = () => isDemoEnabled()
 
   const opt = (product as any)?.options || {}
   const sizes: string[] | undefined = Array.isArray(opt.sizes) ? opt.sizes : (isSampleMode() ? ['XS','S','M','L','XL'] : undefined)

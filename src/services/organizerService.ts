@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { isDemoEnabled } from '../utils/demo'
 
 export interface OrganizerCreator {
   id: string;
@@ -57,7 +58,7 @@ export interface OrganizerDashboardData {
 export const fetchOrganizerDashboard = async (organizerId: string): Promise<OrganizerDashboardData> => {
   try {
     // 本番モードではSupabaseから集計し、失敗時のみモックへフォールバック
-    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE !== 'true') {
+    if (!isDemoEnabled()) {
       const now = new Date()
       const oneMonthAgo = new Date(); oneMonthAgo.setMonth(now.getMonth() - 1)
 

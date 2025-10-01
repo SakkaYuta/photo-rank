@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Gamepad2
 } from 'lucide-react';
+import { isDemoEnabled } from '@/utils/demo'
 
 const GeneralDashboard: React.FC = () => {
   const { userProfile, user } = useUserRole();
@@ -28,8 +29,7 @@ const GeneralDashboard: React.FC = () => {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      const envSamples = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
-      const useSamples = envSamples || (user && (user as any).is_demo)
+      const useSamples = isDemoEnabled()
 
       // デモユーザー or サンプルモードは常にサンプルデータを使用
       if (useSamples) {

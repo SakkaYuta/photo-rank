@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react'
 import { supabase } from '@/services/supabaseClient'
 import type { Work } from '@/types'
 import { ProductCard } from '@/components/product/ProductCard'
+import { isDemoEnabled } from '@/utils/demo'
 
-const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || (typeof window !== 'undefined' && !!localStorage.getItem('demoUser'))
+const isSample = isDemoEnabled()
 
 const CreatorProfilePage: React.FC = () => {
   const [creatorId, setCreatorId] = useState<string>('')

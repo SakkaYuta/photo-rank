@@ -12,6 +12,7 @@ import { fetchTrendingProducts } from '@/services/productsService'
 import { allowedViews as ROUTES, ROUTES_META, type RoleKey } from '@/routes'
 import { resolveImageUrl } from '@/utils/imageFallback'
 import { defaultImages } from '@/utils/defaultImages'
+import { isDemoEnabled } from '@/utils/demo'
 
 type FeaturedCreator = {
   id: string
@@ -36,7 +37,7 @@ const MerchContentHub: React.FC = () => {
   const [isIntentModalOpen, setIsIntentModalOpen] = useState(false)
   const [userIntent, setUserIntent] = useState<UserIntent>(null)
   const { user, userType, userProfile } = useUserRole()
-  const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true' || typeof window !== 'undefined' && !!localStorage.getItem('demoUser')
+  const isSample = isDemoEnabled()
 
   // Supabase Storage からサンプル画像を読み込む（存在すれば優先）
   const SAMPLE_BUCKET = (import.meta as any).env?.VITE_SAMPLE_BUCKET || 'public-assets'

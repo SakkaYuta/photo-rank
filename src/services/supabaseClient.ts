@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
+import { isDemoEnabled } from '@/utils/demo'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
-const isSample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+const isSample = isDemoEnabled()
 
 // Ensure a single Supabase client instance in the browser context to avoid
 // duplicate GoTrueClient warnings and undefined behavior.
@@ -63,7 +64,7 @@ const client = (supabaseUrl && supabaseAnonKey) ? realClient() : (isSample ? cre
 
 if (!client) {
   // Missing env and not in sample mode: fail with clear message, but avoid crashing render synchronously
-  console.error('Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY or enable VITE_ENABLE_SAMPLE=true for demo mode.')
+  console.error('Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, or enable demo on allowed hosts.')
 }
 
 export const supabase = g.__supabase__ ?? (client || createStubClient())

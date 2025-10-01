@@ -1,4 +1,5 @@
 import React from 'react'
+import { isDemoEnabled } from '@/utils/demo'
 
 export function Footer() {
   const go = (view: string) => {
@@ -6,7 +7,7 @@ export function Footer() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const isDev = import.meta.env.DEV || (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+  const isDev = import.meta.env.DEV || isDemoEnabled()
 
   return (
     <footer className="mt-12 border-t border-gray-200 dark:border-gray-800 py-8 text-sm text-gray-600 dark:text-gray-400">

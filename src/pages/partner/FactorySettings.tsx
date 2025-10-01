@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { usePartnerAuth } from '@/hooks/usePartnerAuth'
 import { getPartnerProducts, updatePartnerSettings } from '@/services/partner.service'
 import { useNav } from '@/contexts/NavContext'
+import { isDemoEnabled } from '@/utils/demo'
 
 const FactorySettings: React.FC = () => {
   const { partner, loading } = usePartnerAuth()
@@ -35,7 +36,7 @@ const FactorySettings: React.FC = () => {
   const [phoneValid, setPhoneValid] = useState(true)
   const [products, setProducts] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
-  const sample = (import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true'
+  const sample = isDemoEnabled()
 
   useEffect(() => {
     (async () => {

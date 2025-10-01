@@ -1,4 +1,5 @@
 import { supabase } from '@/services/supabaseClient'
+import { isDemoEnabled } from '@/utils/demo'
 import type {
   FactoryProduct,
   ManufacturingOrder,
@@ -36,7 +37,7 @@ export const getManufacturingPartners = async (
   status?: 'approved' | 'pending' | 'suspended'
 ): Promise<ManufacturingPartner[]> => {
   // サンプルモードの簡易パートナー
-  if (isSampleMode()) {
+  if (isDemoEnabled()) {
     const now = new Date().toISOString()
     return [
       { id: 'demo-factory-1', name: 'デモ工場 東京', contact_email: 'tokyo@example.com', status: 'approved', average_rating: 4.6, total_orders: 120, created_at: now, updated_at: now } as any,
@@ -83,7 +84,7 @@ export const getFactoryQuotes = async (
 ): Promise<FactoryQuote[]> => {
   try {
     // サンプルモードはDB照会を行わず、完全にデモ見積もりを返す
-    if (isSampleMode()) {
+    if (isDemoEnabled()) {
       const now = new Date().toISOString()
       const demoPartners: ManufacturingPartner[] = [
         { id: 'demo-factory-1', name: 'デモ工場 東京', contact_email: 'tokyo@example.com', status: 'approved', average_rating: 4.6, total_orders: 120, created_at: now, updated_at: now } as any,
@@ -126,7 +127,7 @@ export const getFactoryQuotes = async (
     const partners = await getManufacturingPartners('approved')
     if (partners.length === 0) {
       // パートナーが居ない環境ではサンプルで見積もりを返却
-      if (isSampleMode()) {
+      if (isDemoEnabled()) {
         const now = new Date().toISOString()
         const demoPartners: ManufacturingPartner[] = [
           { id: 'demo-factory-1', name: 'デモ工場 東京', contact_email: 'tokyo@example.com', status: 'approved', average_rating: 4.6, total_orders: 120, created_at: now, updated_at: now } as any,
@@ -447,9 +448,5 @@ const extractPartnerFeatures = (
 
   return features
 }
-// サンプルモード判定（環境変数 or ローカルのデモユーザー）
-const isSampleMode = (): boolean => {
-  // deno-lint-ignore no-explicit-any
-  if (((import.meta as any).env?.VITE_ENABLE_SAMPLE) === 'true') return true
-  try { return typeof window !== 'undefined' && !!localStorage.getItem('demoUser') } catch { return false }
-}
+// 互換: 既存参照のためのエイリアス
+const isSampleMode = (): boolean => isDemoEnabled()

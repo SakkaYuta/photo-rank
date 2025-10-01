@@ -1,10 +1,11 @@
 import { supabase } from './supabaseClient'
+import { isDemoEnabled } from '../utils/demo'
 import type { Purchase, OrderStatus, ShippingProvider } from '../types/work.types'
 
 export class OrderService {
   // 注文履歴取得
   static async getOrderHistory(userId: string): Promise<(Purchase & { work: any })[]> {
-    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+    if (isDemoEnabled()) {
       const { SAMPLE_ORDERS } = await import('@/sample/ordersSamples')
       return SAMPLE_ORDERS.map(o => ({ ...o, user_id: userId }))
     }
@@ -23,7 +24,7 @@ export class OrderService {
 
   // 注文詳細取得
   static async getOrderDetail(purchaseId: string): Promise<Purchase & { work: any } | null> {
-    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+    if (isDemoEnabled()) {
       const { SAMPLE_ORDERS } = await import('@/sample/ordersSamples')
       return SAMPLE_ORDERS.find(o => o.id === purchaseId) || null
     }
@@ -42,7 +43,7 @@ export class OrderService {
 
   // 注文ステータス履歴取得
   static async getStatusHistory(purchaseId: string): Promise<OrderStatus[]> {
-    if ((import.meta as any).env?.VITE_ENABLE_SAMPLE === 'true') {
+    if (isDemoEnabled()) {
       const { SAMPLE_STATUS_HISTORY } = await import('@/sample/ordersSamples')
       return SAMPLE_STATUS_HISTORY(purchaseId)
     }

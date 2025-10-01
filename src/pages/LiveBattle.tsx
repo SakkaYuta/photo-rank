@@ -8,6 +8,7 @@ import { supabase } from '@/services/supabaseClient'
 import { invalidateBattleCache } from '@/utils/cache'
 import { StripeCheckout } from '@/components/checkout/StripeCheckout'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
+import { isBattleDemoEnabled } from '@/utils/demo'
 
 type Side = 'challenger' | 'opponent'
 
@@ -18,7 +19,7 @@ const LiveBattle: React.FC = () => {
   const [opponent, setOpponent] = useState<{ id: string; name: string; avatar: string }>({ id: '', name: 'Opponent', avatar: '' })
   const [scores, setScores] = useState<{ challenger: number; opponent: number }>({ challenger: 0, opponent: 0 })
   const [effects, setEffects] = useState<{ burst: boolean; side?: Side }>({ burst: false })
-  const [useSamples, setUseSamples] = useState<boolean>((import.meta as any).env?.VITE_ENABLE_BATTLE_SAMPLE === 'true')
+  const [useSamples, setUseSamples] = useState<boolean>(isBattleDemoEnabled())
   const [buying, setBuying] = useState<Side | null>(null)
   const [selectedGoods, setSelectedGoods] = useState<string>('')
   const [selectedPlayer, setSelectedPlayer] = useState<Side | null>(null)
@@ -131,7 +132,7 @@ const LiveBattle: React.FC = () => {
     const id = params.get('battle') || ''
     setBattleId(id)
 
-    if ((import.meta as any).env?.VITE_ENABLE_BATTLE_SAMPLE === 'true') {
+    if (isBattleDemoEnabled()) {
       const b = SAMPLE_BATTLES.find(x => x.id === id) || SAMPLE_BATTLES[0]
       if (b) {
         setTitle(b.title)
@@ -159,7 +160,7 @@ const LiveBattle: React.FC = () => {
 
   // 本番モードではリアルタイムにスコア/状態を追従
   useEffect(() => {
-    if (!battleId || (import.meta as any).env?.VITE_ENABLE_BATTLE_SAMPLE === 'true') return
+    if (!battleId || isBattleDemoEnabled()) return
     const channel = supabase
       .channel(`live-battle-${battleId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cheer_tickets', filter: `battle_id=eq.${battleId}` }, async () => {
