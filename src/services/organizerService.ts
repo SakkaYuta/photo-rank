@@ -62,20 +62,22 @@ export const fetchOrganizerDashboard = async (organizerId: string): Promise<Orga
       const now = new Date()
       const oneMonthAgo = new Date(); oneMonthAgo.setMonth(now.getMonth() - 1)
 
-      // 売上（全期間/直近）の取得（organizer紐付け）
+      // v6: 売上（全期間/直近）の取得（sales_vw使用）
       const [allSalesRes, monthSalesRes, pendingRes] = await Promise.all([
         supabase
-          .from('sales')
-          .select('creator_id, work_id, net_amount, created_at')
-          .eq('organizer_id', organizerId),
-        supabase
-          .from('sales')
+          .from('sales_vw')
           .select('creator_id, work_id, net_amount, created_at')
           .eq('organizer_id', organizerId)
+          .eq('payment_state', 'captured'),  // v6: 支払い完了のみ
+        supabase
+          .from('sales_vw')
+          .select('creator_id, work_id, net_amount, created_at')
+          .eq('organizer_id', organizerId)
+          .eq('payment_state', 'captured')
           .gte('created_at', oneMonthAgo.toISOString()),
         supabase
-          .from('publishing_approvals')
-          .select('id, work_id, requested_at, works(id, title, creator_id, price, created_at)')
+          .from('publishing_approvals_vw')
+          .select('*')
           .eq('status', 'pending')
           .eq('organizer_id', organizerId)
           .order('requested_at', { ascending: false })
@@ -85,11 +87,11 @@ export const fetchOrganizerDashboard = async (organizerId: string): Promise<Orga
       const monthSales = (monthSalesRes.data || []) as Array<{ creator_id: string; work_id: string; net_amount: number; created_at: string }>
       const pendingRows = (pendingRes.data || []) as Array<any>
 
-      // 関与しているクリエイター集合
+      // v6: 関与しているクリエイター集合
       const creatorIds = Array.from(
         new Set([
           ...allSales.map(s => s.creator_id),
-          ...pendingRows.map(r => r?.works?.creator_id).filter(Boolean)
+          ...pendingRows.map((r: any) => r?.creator_id).filter(Boolean)
         ])
       ) as string[]
 
@@ -144,16 +146,16 @@ export const fetchOrganizerDashboard = async (organizerId: string): Promise<Orga
         }
       })
 
-      // ペンディング作品
-      const pendingWorks: PendingWork[] = pendingRows.map((r) => ({
+      // v6: ペンディング作品（publishing_approvals_vw から）
+      const pendingWorks: PendingWork[] = pendingRows.map((r: any) => ({
         id: r.work_id,
-        title: r?.works?.title || '作品',
-        creator_name: profileMap.get(r?.works?.creator_id || '')?.display_name || 'Creator',
-        creator_id: r?.works?.creator_id,
-        image_url: '',
-        price: r?.works?.price || 0,
+        title: r?.title || '作品',
+        creator_name: profileMap.get(r?.creator_id || '')?.display_name || 'Creator',
+        creator_id: r?.creator_id,
+        image_url: '',  // TODO: primary_asset_id から画像URL取得
+        price: 0,  // TODO: product から価格取得
         submitted_at: r?.requested_at,
-        description: '',
+        description: r?.description || '',
         status: 'pending',
         quality_score: 80,
       }))

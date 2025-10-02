@@ -155,20 +155,22 @@ export class FactoryCompareService {
     try {
       const { data, error } = await supabase
         .from('manufacturing_partners')
-        .select(`
-          *,
-          factory_products (*)
-        `)
+        .select(`*`)
         .eq('id', partnerId)
         .eq('status', 'approved')
-        .eq('is_active', true)
         .single();
 
       if (error) {
         throw error;
       }
 
-      return data;
+      if (!data) return null
+      // 互換：製品は factory_products_vw から取得して付与
+      const { data: prows } = await supabase
+        .from('factory_products_vw')
+        .select('*')
+        .eq('factory_id', partnerId)
+      return { ...(data as any), factory_products: prows || [] } as any;
     } catch (error) {
       console.error('Get factory details error:', error);
       return null;

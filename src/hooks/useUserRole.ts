@@ -80,70 +80,85 @@ export const useUserRole = () => {
           }
         }
 
-        // Regular user profile fetch
+        // v6: users_vw を使用（user_profiles の display_name などを含む）
         const { data: userData, error: userError } = await supabase
-          .from('users')
+          .from('users_vw')
           .select('*')
           .eq('id', user.id)
           .single();
 
         if (userError) {
-          // If user doesn't exist in our users table, create one
+          // If user doesn't exist in our users_vw, create user_profile
           if (userError.code === 'PGRST116') {
-            const { data: newUser, error: createError } = await supabase
-              .from('users')
+            const { data: newProfile, error: createError } = await supabase
+              .from('user_profiles')
               .insert({
-                id: user.id,
-                email: user.email,
+                user_id: user.id,
                 display_name: user.user_metadata?.display_name || user.email?.split('@')[0],
-                user_type: 'general'
               })
               .select()
               .single();
 
             if (createError) throw createError;
-            setUserProfile(newUser);
+            setUserProfile({ ...newProfile, id: user.id, email: user.email } as any);
             setUserType('general');
           } else {
             throw userError;
           }
         } else {
-          // Detect effective user type by checking associated profiles as a fallback
-          let effectiveType = (userData.user_type as UserType) || 'general'
-          let profileData: UserWithProfiles = userData
+          let profileData: UserWithProfiles = userData as any
 
-          // Fetch both profiles to robustly infer role
-          const [factoryResult, organizerResult] = await Promise.all([
-            supabase.from('factory_profiles').select('*').eq('user_id', user.id).maybeSingle(),
+          // v6: user_roles テーブルでロールを確認
+          const { data: roles } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id);
+
+          const userRoles = new Set((roles || []).map((r: any) => r.role));
+
+          // v6: partner_users と organizer_profiles を取得
+          const [partnerResult, organizerResult] = await Promise.all([
+            supabase.from('partner_users').select('*, partners(*)').eq('user_id', user.id).maybeSingle(),
             supabase.from('organizer_profiles').select('*').eq('user_id', user.id).maybeSingle(),
           ])
 
-          const factoryProfile = factoryResult.data
+          const partnerUser = partnerResult.data
           const organizerProfile = organizerResult.data
 
           // Handle errors gracefully
           if (import.meta.env.DEV) {
-            if (factoryResult.error) {
-              console.debug('Factory profiles table issue:', factoryResult.error.message)
+            if (partnerResult.error) {
+              console.debug('Partner users table issue:', partnerResult.error.message)
             }
             if (organizerResult.error) {
               console.debug('Organizer profiles table issue:', organizerResult.error.message)
             }
             console.debug('Profile detection', {
-              hasFactory: !!factoryProfile,
+              hasPartner: !!partnerUser,
               hasOrganizer: !!organizerProfile,
-              userType: userData.user_type,
-              isCreator: userData.is_creator
+              roles: Array.from(userRoles),
             })
           }
 
+          // v6: ロール優先順位で effectiveType を決定
+          let effectiveType: UserType = 'general'
+          // Note: admin role exists in user_roles but not in UserType
+          // For now, we don't handle admin in this hook since UserType doesn't include it
           if (organizerProfile) {
             profileData.organizer_profile = organizerProfile as any
             effectiveType = 'organizer'
-          } else if (factoryProfile) {
-            profileData.factory_profile = factoryProfile as any
+          } else if (partnerUser) {
+            // v6: factory_profiles 互換形式に変換
+            profileData.factory_profile = {
+              id: partnerUser.id,
+              user_id: partnerUser.user_id,
+              partner_id: partnerUser.partner_id,
+              name: (partnerUser.partners as any)?.name || '',
+              is_active: partnerUser.is_active,
+              created_at: partnerUser.created_at,
+            } as any
             effectiveType = 'factory'
-          } else if (userData.is_creator) {
+          } else if (userRoles.has('creator')) {
             effectiveType = 'creator'
           }
 
@@ -167,7 +182,13 @@ export const useUserRole = () => {
     try {
       setError(null);
 
-      // updating user type
+      // v6: user_roles テーブルで既存ロールを取得
+      const { data: existingRoles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+
+      const currentRoles = new Set((existingRoles || []).map((r: any) => r.role));
 
       // Create organizer profile if switching to organizer
       if (newUserType === 'organizer') {
@@ -191,16 +212,30 @@ export const useUserRole = () => {
         } catch (error) { /* silent */ }
       }
 
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({
-          user_type: newUserType,
-          is_creator: newUserType === 'creator',
-          is_factory: newUserType === 'factory'
-        })
-        .eq('id', user.id);
+      // v6: user_roles テーブルでロールを管理
+      // 既存のcreator/factory/organizerロールを削除して新しいロールを追加
+      const rolesToRemove = ['creator', 'factory', 'organizer'].filter(r => currentRoles.has(r as any));
+      if (rolesToRemove.length > 0) {
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', user.id)
+          .in('role', rolesToRemove);
+      }
 
-      if (updateError) throw updateError;
+      // general以外の場合は新しいロールを追加
+      if (newUserType !== 'general') {
+        const { error: insertError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: user.id,
+            role: newUserType,
+          });
+
+        if (insertError && insertError.code !== '23505') { // 重複エラーは無視
+          throw insertError;
+        }
+      }
 
       setUserType(newUserType);
 
@@ -209,9 +244,7 @@ export const useUserRole = () => {
         setUserProfile({
           ...userProfile,
           user_type: newUserType,
-          is_creator: newUserType === 'creator',
-          is_factory: newUserType === 'factory'
-        });
+        } as any);
       }
 
       return true;

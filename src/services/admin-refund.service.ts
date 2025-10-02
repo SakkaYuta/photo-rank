@@ -26,13 +26,10 @@ export const AdminRefundService = {
     const allowed = await RateLimit.allow(key, 60, 60)
     if (!allowed) throw new Error('リクエストが多すぎます。しばらくしてから再度お試しください。')
 
-    // v6: refunds テーブルから直接取得（payment_idでusersを結合）
+    // v6: refunds テーブルから直接取得（ユーザー情報は別取得に切替可能）
     let query = supabase
       .from('refunds')
-      .select(`
-        *,
-        payment:payments!inner(id, order_id, orders!inner(user_id, users(id, email)))
-      `)
+      .select(`*`)
       .order('created_at', { ascending: false })
 
     if (state) query = query.eq('state', state)
@@ -40,11 +37,7 @@ export const AdminRefundService = {
     const { data, error } = await query
     if (error) throw error
 
-    // データ整形: payment.orders.users を user フィールドに展開
-    return (data || []).map((r: any) => ({
-      ...r,
-      user: r?.payment?.orders?.users || null
-    })) as any
+    return (data || []) as any
   },
 
   async updateStatus(id: string, state: RefundRequestStatus, adminNote?: string) {

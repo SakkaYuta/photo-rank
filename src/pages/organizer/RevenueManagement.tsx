@@ -19,17 +19,20 @@ export const RevenueManagement = () => {
 
   const fetchRevenue = async () => {
     if (!profile?.id) return
+    // v6: sales_vw を使用
     const currentMonth = await supabase
-      .from('sales')
+      .from('sales_vw')
       .select('net_amount')
       .eq('organizer_id', profile.id)
+      .eq('payment_state', 'captured')  // v6: 支払い完了のみ
       .gte('created_at', startOfMonth())
       .lte('created_at', endOfMonth())
 
     const lastMonth = await supabase
-      .from('sales')
+      .from('sales_vw')
       .select('net_amount')
       .eq('organizer_id', profile.id)
+      .eq('payment_state', 'captured')  // v6: 支払い完了のみ
       .gte('created_at', startOfLastMonth())
       .lte('created_at', endOfLastMonth())
 

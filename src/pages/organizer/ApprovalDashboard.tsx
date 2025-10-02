@@ -32,15 +32,16 @@ export const ApprovalDashboard = () => {
 
   const fetchPending = async () => {
     setLoading(true)
+    // v6: publishing_approvals_vw を使用
     const { data, error } = await supabase
-      .from('publishing_approvals')
-      .select(`*, works ( id, title, creator_id )`)
+      .from('publishing_approvals_vw')
+      .select(`*`)
       .eq('status', 'pending')
       .eq('organizer_id', profile!.id)
 
     if (!error) {
       const arr = (data as any) || []
-      const ids = Array.from(new Set(arr.map((r: any) => r?.works?.creator_id).filter(Boolean)))
+      const ids = Array.from(new Set(arr.map((r: any) => r?.creator_id).filter(Boolean)))
       let nameMap = new Map<string, string>()
       if (ids.length > 0) {
         const { data: profiles } = await supabase
@@ -52,8 +53,10 @@ export const ApprovalDashboard = () => {
       const withNames = arr.map((r: any) => ({
         ...r,
         works: {
-          ...r.works,
-          users: { display_name: nameMap.get(r?.works?.creator_id) || 'Creator' }
+          id: r.work_id,
+          title: r.title,
+          creator_id: r.creator_id,
+          users: { display_name: nameMap.get(r?.creator_id) || 'Creator' }
         }
       }))
       setRows(withNames)

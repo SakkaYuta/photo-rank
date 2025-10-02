@@ -47,47 +47,55 @@ export async function setupUserProfileAfterAuth() {
   localStorage.removeItem('pendingUserType')
 
   try {
-    // 既存のユーザープロフィールを確認
-    const { data: existingUser, error: fetchError } = await supabase
-      .from('users')
+    // v6: user_profilesを確認
+    const { data: existingProfile, error: fetchError } = await supabase
+      .from('user_profiles')
       .select('*')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
 
     if (fetchError && fetchError.code === 'PGRST116') {
-      // ユーザーが存在しない場合、新規作成
-      const { data: newUser, error: createError } = await supabase
-        .from('users')
+      // v6: user_profilesに新規作成
+      const { data: newProfile, error: createError } = await supabase
+        .from('user_profiles')
         .insert({
-          id: user.id,
-          email: user.email,
+          user_id: user.id,
           display_name: user.user_metadata?.display_name || user.email?.split('@')[0],
-          user_type: pendingUserType,
-          is_creator: pendingUserType === 'creator',
-          is_factory: pendingUserType === 'factory'
         })
         .select()
         .single()
 
       if (createError) throw createError
-      return newUser
+
+      // v6: user_rolesにロールを追加（general以外）
+      if (pendingUserType !== 'general') {
+        await supabase.from('user_roles').insert({
+          user_id: user.id,
+          role: pendingUserType
+        })
+      }
+
+      return { ...newProfile, id: user.id, email: user.email, user_type: pendingUserType }
     } else if (fetchError) {
       throw fetchError
     } else {
-      // ユーザーが既に存在する場合、ユーザータイプを更新（既存ユーザーが別のタイプでログインした場合）
-      const { data: updatedUser, error: updateError } = await supabase
-        .from('users')
-        .update({
-          user_type: pendingUserType,
-          is_creator: pendingUserType === 'creator',
-          is_factory: pendingUserType === 'factory'
-        })
-        .eq('id', user.id)
-        .select()
-        .single()
+      // v6: 既存ユーザーのロール更新
+      // 既存のcreator/factory/organizerロールを削除
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', user.id)
+        .in('role', ['creator', 'factory', 'organizer'])
 
-      if (updateError) throw updateError
-      return updatedUser
+      // general以外なら新しいロールを追加
+      if (pendingUserType !== 'general') {
+        await supabase.from('user_roles').insert({
+          user_id: user.id,
+          role: pendingUserType
+        })
+      }
+
+      return { ...existingProfile, id: user.id, email: user.email, user_type: pendingUserType }
     }
   } catch (error) {
     console.error('Error setting up user profile:', error)
@@ -165,8 +173,10 @@ export async function getCurrentUserProfile(): Promise<User | null> {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
+
+  // v6: users_vw を使用（user_profiles + 認証情報を含む）
   const { data, error } = await supabase
-    .from('users')
+    .from('users_vw')
     .select('*')
     .eq('id', user.id)
     .single()

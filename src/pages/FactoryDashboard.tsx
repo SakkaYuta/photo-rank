@@ -378,12 +378,7 @@ const FactoryDashboard: React.FC = () => {
                 )}
                 <div className="space-y-4">
                   {(loading && !demoMode ? [] : (displayOrders.filter(o => (o.status === 'accepted' || o.status === 'in_production'))
-                    .filter(o => {
-                      if (!productFilter) return true
-                      const fp = (o as any).factory_products
-                      const k = fp?.id || (o.request_payload as any)?.product_id || (o.request_payload as any)?.product_type
-                      return String(k) === productFilter
-                    })
+                    .filter(o => (!productFilter || String((o as any).product_type || 'unknown') === productFilter))
                   )).slice(0, 5).map((order) => (
                     <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                       <div className="flex items-center gap-4">

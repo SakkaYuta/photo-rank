@@ -11,11 +11,20 @@ export function CreatorSearch() {
   useEffect(() => {
     const handler = setTimeout(async () => {
       if (!q) { setItems([]); return }
+      // v6: user_rolesでcreatorロールを持つユーザーを検索
+      const { data: creatorRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'creator')
+
+      const creatorIds = (creatorRoles || []).map((r: any) => r.user_id)
+      if (creatorIds.length === 0) { setItems([]); return }
+
       const { data, error } = await supabase
-        .from('users')
+        .from('users_vw')
         .select('*')
         .ilike('display_name', `%${q}%`)
-        .eq('is_creator', true)
+        .in('id', creatorIds)
         .limit(20)
       if (!error) setItems((data || []) as User[])
     }, 300)

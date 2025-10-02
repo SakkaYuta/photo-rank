@@ -1,0 +1,147 @@
+# Page snapshot
+
+```yaml
+- banner:
+  - heading "マイクラサーバーおすすめ比較" [level=1]
+  - paragraph: 用途・人数・予算から最適な構成を提案
+- main "マイクラサーバー診断メインコンテンツ":
+  - text: 🎮 MINECRAFT SERVER FINDER 2025
+  - heading "⛏️ マイクラサーバー おすすめ比較 ⚒️" [level=1]: ⛏️ マイクラサーバーおすすめ比較 ⚒️
+  - paragraph: Minecraftサーバー選びで迷わない！
+  - paragraph: 5つの質問に答えるだけ！
+  - paragraph: 人数 MOD/プラグイン 予算 → 最適なサーバーを提案
+  - heading "取り扱いサーバー会社" [level=2]
+  - link "ConoHa VPS - 公式サイトへ":
+    - /url: https://www.conoha.jp/vps/
+    - img
+  - link "さくらのVPS - 公式サイトへ":
+    - /url: https://vps.sakura.ad.jp/
+    - img
+  - link "XServer VPS - 公式サイトへ":
+    - /url: https://vps.xserver.ne.jp/
+    - img
+  - link "KAGOYA - 公式サイトへ":
+    - /url: https://www.kagoya.jp/
+    - img
+  - link "MelonCube - 公式サイトへ":
+    - /url: https://meloncube.net/
+    - img
+  - link "Shockbyte - 公式サイトへ":
+    - /url: https://shockbyte.com/
+    - img
+  - link "MCProHosting - 公式サイトへ":
+    - /url: https://mcprohosting.com/
+    - img
+  - link "APEX Hosting - 公式サイトへ":
+    - /url: https://apexminecrafthosting.com/
+    - img
+  - link "Nodecraft - 公式サイトへ":
+    - /url: https://nodecraft.com/
+    - img
+  - link "ConoHa VPS - 公式サイトへ":
+    - /url: https://www.conoha.jp/vps/
+    - img
+  - link "さくらのVPS - 公式サイトへ":
+    - /url: https://vps.sakura.ad.jp/
+    - img
+  - link "XServer VPS - 公式サイトへ":
+    - /url: https://vps.xserver.ne.jp/
+    - img
+  - link "KAGOYA - 公式サイトへ":
+    - /url: https://www.kagoya.jp/
+    - img
+  - link "MelonCube - 公式サイトへ":
+    - /url: https://meloncube.net/
+    - img
+  - link "Shockbyte - 公式サイトへ":
+    - /url: https://shockbyte.com/
+    - img
+  - link "MCProHosting - 公式サイトへ":
+    - /url: https://mcprohosting.com/
+    - img
+  - link "APEX Hosting - 公式サイトへ":
+    - /url: https://apexminecrafthosting.com/
+    - img
+  - link "Nodecraft - 公式サイトへ":
+    - /url: https://nodecraft.com/
+    - img
+  - button "マイクラサーバー診断を開始する": 今すぐ診断スタート！
+  - text: 完全無料 自動提案 プレイスタイル診断
+  - heading "マイクラの遊び方タイプ" [level=2]
+  - paragraph: あなたはどのタイプに当てはまる？回答に基づいてタイプを判定します
+  - heading "フレンドと気軽にバニラ" [level=3]
+  - paragraph: すぐに遊びたい、導入を簡単に済ませたい方向け
+  - text: 導入が簡単 低コストでもOK
+  - heading "プラグインで快適運営" [level=3]
+  - paragraph: Paper/Spigot等でミニゲームや便利機能を使いたい方向け
+  - text: プラグイン対応 管理パネルが使いやすい
+  - heading "Modpack探索派" [level=3]
+  - paragraph: Forge/Fabricや大型Modpackでガッツリ遊びたい方向け
+  - text: Modpackテンプレ 十分なメモリ
+  - heading "大人数コミュニティ運営" [level=3]
+  - paragraph: イベントや公開サーバーで多人数をさばきたい方向け
+  - text: 高性能CPU 大容量メモリ
+  - heading "コスパ重視" [level=3]
+  - paragraph: できるだけ安く、でも十分に遊びたい方向け
+  - text: 低価格 必要十分な性能
+  - heading "統合版で家族・友達" [level=3]
+  - paragraph: 統合版（Bedrock）で気軽にマルチを楽しみたい方向け
+  - text: 統合版対応 導入簡単
+  - heading "VPSで自由構築" [level=3]
+  - paragraph: 細かくチューニングしたい、Linuxも扱える方向け
+  - text: 自由度が高い 費用最適化しやすい
+  - paragraph: 比較を開始して、あなたに最適なマイクラサーバーを見つけましょう
+  - paragraph: 5つの質問に答えるだけで、ぴったりのプランが見つかります
+  - text: 📋
+  - heading "かんたん比較" [level=3]
+  - paragraph: 5つの質問に答えるだけで、最適なマイクラサーバー案を表示
+  - text: ⚡
+  - heading "最速提案" [level=3]
+  - paragraph: わずか数秒で候補を提示
+  - text: 🎯
+  - heading "用途別に最適化" [level=3]
+  - paragraph: バニラ/プラグイン/MOD、少人数〜大規模まで対応
+  - heading "よくある質問（FAQ）" [level=2]
+  - heading "Q1 マイクラサーバーの選び方は？" [level=3]
+  - paragraph:
+    - strong: 人数・MOD/プラグイン・予算
+    - text: の3つの軸で選ぶのがおすすめです。 •
+    - strong: 少人数バニラ（2-5人）
+    - text: ": 低価格プラン（月額1,000円以下）でOK •"
+    - strong: MOD/大人数（20人以上）
+    - text: ": ハイスペックプラン（月額3,000円以上）を推奨 •"
+    - strong: VPS
+    - text: ": 自由度高い、上級者向け"
+  - heading "Q2 Java版と統合版（Bedrock）の違いは？" [level=3]
+  - paragraph:
+    - text: •
+    - strong: Java版
+    - text: ": MOD/プラグインに強い、PC専用 •"
+    - strong: 統合版（Bedrock）
+    - text: ": 家庭用ゲーム機（Switch/PS/Xbox）とクロスプレイ可能 プレイスタイルに合わせて選びましょう！"
+  - heading "Q3 おすすめのマイクラホスティングは？" [level=3]
+  - paragraph:
+    - text: •
+    - strong: 初心者向け
+    - text: ": Shockbyte、APEX Hosting等のマイクラ特化ホスティング •"
+    - strong: 上級者向け
+    - text: ": ConoHa VPS、さくらのVPS、XServer VPS等でカスタマイズ 当診断で最適なプランを見つけられます！"
+  - heading "埋め込みコード" [level=3]
+  - paragraph: 以下のコードを別サイトに貼り付けると、このページが読み込まれます。
+  - text: "注: ローカル/プレビューURLではなく、新しい本番ドメインを src に設定してください。 推奨（本番ドメイン用）"
+  - code: "<iframe src=\"https://YOUR_NEW_DOMAIN.example\" style=\"width:100%;min-height:720px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden\" loading=\"lazy\" referrerpolicy=\"no-referrer-when-downgrade\"></iframe>"
+  - button "コードをコピー":
+    - img
+    - text: コードをコピー
+  - paragraph: "所要時間: 約10秒 | 完全無料 | 2025年最新版"
+- contentinfo:
+  - link "運営者情報":
+    - /url: https://www.mfro.net/
+  - link "免責事項":
+    - /url: https://www.mfro.net/privacy/
+  - link "お問い合わせ":
+    - /url: https://www.mfro.net/contact/
+  - link "個人情報の取り扱いについて":
+    - /url: https://www.mfro.net/privacy/
+  - paragraph: この診断には広告が含まれます。
+```
