@@ -75,11 +75,11 @@ export const fetchDashboardData = async (userId: string): Promise<DashboardData>
     }
     // コレクション数を取得（購入したクリエイターの数）
     const { data: collectionsData } = await supabase
-      .from('purchases')
-      .select('work_id, works!inner(creator_id)')
+      .from('purchases_vw')
+      .select('creator_id')
       .eq('user_id', userId);
 
-    const uniqueCreators = new Set(collectionsData?.map((p: any) => p.works?.creator_id).filter(Boolean) || []);
+    const uniqueCreators = new Set((collectionsData || []).map((p: any) => p.creator_id).filter(Boolean));
     const collections = uniqueCreators.size;
 
     // お気に入り数を取得
@@ -98,7 +98,7 @@ export const fetchDashboardData = async (userId: string): Promise<DashboardData>
 
     // 注文数を取得
     const { count: orders } = await supabase
-      .from('purchases')
+      .from('purchases_vw')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId);
 
@@ -160,30 +160,21 @@ export const fetchRecentActivities = async (userId: string): Promise<Activity[]>
 
     // 最近の注文
     const { data: ordersData } = await supabase
-      .from('purchases')
-      .select(`
-        id,
-        created_at,
-        status,
-        works!inner(
-          title,
-          creator_id
-        )
-      `)
+      .from('purchases_vw')
+      .select('id, created_at, status')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(3);
 
     ordersData?.forEach((order: any) => {
-      if (order?.works?.creator_id) creatorIdSet.add(order.works.creator_id)
       activities.push({
         id: order.id,
         type: 'order',
-        title: `「${order.works?.title || '作品'}」を注文しました`,
+        title: `ご注文が作成されました`,
         timestamp: formatTimestamp(order.created_at),
         icon: null,
         color: 'from-green-500 to-green-600',
-        workTitle: order.works?.title || '',
+        workTitle: '',
         creatorName: '',
         orderStatus: order.status
       });
@@ -222,7 +213,7 @@ export const fetchRecentActivities = async (userId: string): Promise<Activity[]>
     if (creatorIdSet.size > 0) {
       const ids = Array.from(creatorIdSet)
       const { data: profiles } = await supabase
-        .from('user_public_profiles')
+        .from('users_vw')
         .select('id, display_name')
         .in('id', ids)
       const nameMap = new Map<string, string>((profiles || []).map((p: any) => [p.id, p.display_name]))
@@ -308,7 +299,7 @@ export const fetchUserCollections = async (userId: string): Promise<Collection[]
     let profileMap = new Map<string, { name: string; avatar: string }>()
     if (creatorIds.length > 0) {
       const { data: profiles } = await supabase
-        .from('user_public_profiles')
+        .from('users_vw')
         .select('id, display_name, avatar_url')
         .in('id', creatorIds)
       profileMap = new Map((profiles || []).map((p: any) => [p.id, { name: p.display_name, avatar: p.avatar_url }]))
@@ -379,7 +370,7 @@ export const fetchOrderHistory = async (userId: string): Promise<OrderHistory[]>
     let oNameMap = new Map<string, string>()
     if (oCreatorIds.length > 0) {
       const { data: profiles } = await supabase
-        .from('user_public_profiles')
+        .from('users_vw')
         .select('id, display_name')
         .in('id', oCreatorIds)
       oNameMap = new Map((profiles || []).map((p: any) => [p.id, p.display_name]))

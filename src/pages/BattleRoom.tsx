@@ -165,7 +165,7 @@ export const BattleRoom: React.FC = () => {
                 if (!opponentId) return
                 try {
                   const { data, error } = await supabase
-                    .from('user_public_profiles')
+                    .from('users_vw')
                     .select('id, display_name, avatar_url')
                     .eq('id', opponentId)
                     .single()
@@ -194,7 +194,7 @@ export const BattleRoom: React.FC = () => {
                     if (!q || q.length < 2) { setNameSuggestions([]); return }
                     try {
                       const { data } = await supabase
-                        .from('user_public_profiles')
+                        .from('users_vw')
                         .select('id, display_name, avatar_url')
                         .ilike('display_name', `%${q}%`)
                         .limit(5)

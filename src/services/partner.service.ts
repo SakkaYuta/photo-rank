@@ -198,10 +198,10 @@ export async function getPartnerOrders(partnerId: string): Promise<any[]> {
 
   const [creatorProfiles, customerProfiles] = await Promise.all([
     creatorIds.length > 0
-      ? supabase.from('user_public_profiles').select('id, display_name, avatar_url').in('id', creatorIds)
+      ? supabase.from('users_vw').select('id, display_name, avatar_url').in('id', creatorIds)
       : Promise.resolve({ data: [] as any[] }),
     customerIds.length > 0
-      ? supabase.from('user_public_profiles').select('id, display_name, avatar_url').in('id', customerIds)
+      ? supabase.from('users_vw').select('id, display_name, avatar_url').in('id', customerIds)
       : Promise.resolve({ data: [] as any[] }),
   ])
 
@@ -372,7 +372,7 @@ export async function getPartnerReviews(partnerId: string): Promise<PartnerRevie
   let profileMap = new Map<string, { display_name: string; avatar_url?: string }>()
   if (authorIds.length > 0) {
     const { data: profiles } = await supabase
-      .from('user_public_profiles')
+      .from('users_vw')
       .select('id, display_name, avatar_url')
       .in('id', authorIds)
     profileMap = new Map((profiles || []).map((p: any) => [p.id, { display_name: p.display_name, avatar_url: p.avatar_url }]))

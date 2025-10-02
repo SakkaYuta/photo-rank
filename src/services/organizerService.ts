@@ -97,7 +97,7 @@ export const fetchOrganizerDashboard = async (organizerId: string): Promise<Orga
       let profileMap = new Map<string, { display_name?: string; avatar_url?: string; email?: string }>()
       if (creatorIds.length > 0) {
         const { data: profiles } = await supabase
-          .from('user_public_profiles')
+          .from('users_vw')
           .select('id, display_name, avatar_url')
           .in('id', creatorIds)
         for (const p of (profiles || []) as any[]) {

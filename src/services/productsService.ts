@@ -151,7 +151,7 @@ export async function fetchProducts(
     let profiles: Record<string, { display_name?: string; avatar_url?: string }> = {}
     if (creatorIds.length > 0) {
       const { data: upp } = await supabase
-        .from('user_public_profiles')
+        .from('users_vw')
         .select('id, display_name, avatar_url')
         .in('id', creatorIds)
       if (upp) profiles = Object.fromEntries(upp.map((p: any) => [p.id, { display_name: p.display_name, avatar_url: p.avatar_url }]))
@@ -239,7 +239,7 @@ export async function fetchProductsByIds(productIds: string[]): Promise<Product[
 
       if (creatorIds.length > 0) {
         const { data: upp } = await supabase
-          .from('user_public_profiles')
+          .from('users_vw')
           .select('id, display_name, avatar_url')
           .in('id', creatorIds);
 
@@ -335,7 +335,7 @@ export async function fetchProductById(productId: string): Promise<Product | nul
     // 補助: 公開プロフィールから表示名/アバターを解決
     try {
       const { data: upp } = await supabase
-        .from('user_public_profiles')
+        .from('users_vw')
         .select('id, display_name, avatar_url')
         .eq('id', base.creator_id)
         .single()

@@ -44,7 +44,7 @@ export const ApprovalDashboard = () => {
       let nameMap = new Map<string, string>()
       if (ids.length > 0) {
         const { data: profiles } = await supabase
-          .from('user_public_profiles')
+          .from('users_vw')
           .select('id, display_name')
           .in('id', ids)
         nameMap = new Map((profiles || []).map((p: any) => [p.id, p.display_name]))
