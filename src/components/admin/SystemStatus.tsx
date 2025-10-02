@@ -12,18 +12,12 @@ export const SystemStatus: React.FC<{ refreshInterval?: number }> = ({ refreshIn
   const check = async () => {
     setIsRefreshing(true)
     try {
-      // 相対パスが失敗する環境向けに invoke フォールバック
+      // 認証付きの Edge Functions 呼び出しに一本化
       let data: any | null = null
       try {
-        const res = await fetch('/functions/v1/admin-metrics')
-        if (res.ok) data = await res.json()
+        const inv = await (await import('@/services/supabaseClient')).supabase.functions.invoke('admin-metrics', { body: {} })
+        if (!inv.error) data = inv.data
       } catch {}
-      if (!data) {
-        try {
-          const inv = await (await import('@/services/supabaseClient')).supabase.functions.invoke('admin-metrics', { body: {} })
-          if (!inv.error) data = inv.data
-        } catch {}
-      }
       if (!data) throw new Error('metrics unavailable')
       const s: Item[] = [
         {

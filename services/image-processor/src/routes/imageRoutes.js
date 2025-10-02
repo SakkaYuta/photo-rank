@@ -13,18 +13,18 @@ const upload = multer({
     files: 1 // 1ファイルのみ
   },
   fileFilter: (req, file, cb) => {
-    // MIME type validation
+    // MIME type validation (restrictive for security)
     const allowedMimes = [
       'image/jpeg',
       'image/png',
       'image/webp',
       'image/avif'
     ];
-    
+
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only JPEG, PNG, WebP, GIF, and SVG are allowed.'), false);
+      cb(new Error('Invalid file type. Only JPEG, PNG, WebP, and AVIF are allowed.'), false);
     }
   }
 });

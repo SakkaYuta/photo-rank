@@ -25,7 +25,8 @@ const config = {
     MAX_FILE_SIZE: parseInt(process.env.MAX_FILE_SIZE) || 50 * 1024 * 1024, // 50MB
     MAX_WIDTH: parseInt(process.env.MAX_WIDTH) || 4000,
     MAX_HEIGHT: parseInt(process.env.MAX_HEIGHT) || 4000,
-    ALLOWED_FORMATS: ['jpeg', 'jpg', 'png', 'webp', 'gif', 'svg+xml'],
+    // Keep formats in sync with routes/imageRoutes.js fileFilter
+    ALLOWED_FORMATS: ['jpeg', 'jpg', 'png', 'webp', 'avif'],
     DEFAULT_QUALITY: parseInt(process.env.DEFAULT_QUALITY) || 80,
     WATERMARK_SETTINGS: {
       DEFAULT_TEXT: process.env.WATERMARK_TEXT || 'PhotoRank',

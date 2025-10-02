@@ -103,7 +103,8 @@ serve(async (req) => {
         size: config.size || '',
         address_id: addressId || ''
       },
-      description: `Custom product: ${work.title}`,
+      // Use the prepared title. Avoid referencing out-of-scope variables.
+      description: `Custom product: ${title}`,
       automatic_payment_methods: { enabled: true },
     })
 

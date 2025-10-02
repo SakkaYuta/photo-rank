@@ -88,6 +88,7 @@ export const AddressService = {
       .from('user_addresses')
       .update({ is_default: true })
       .eq('id', id)
+      .eq('user_id', user.id)
     if (error) throw error
   },
 }

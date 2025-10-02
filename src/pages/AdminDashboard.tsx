@@ -28,20 +28,12 @@ export const AdminDashboard: React.FC = () => {
         })))
         return
       }
-      // まずは相対パス（Vercel等のリライト前提）。失敗時は functions.invoke にフォールバック
+      // 認証付きの Edge Functions 呼び出しに一本化
       let data: any | null = null
       try {
-        const res = await fetch('/functions/v1/admin-metrics')
-        if (res.ok) {
-          data = await res.json()
-        }
+        const inv = await supabase.functions.invoke('admin-metrics', { body: {} })
+        if (!inv.error) data = inv.data
       } catch {}
-      if (!data) {
-        try {
-          const inv = await supabase.functions.invoke('admin-metrics', { body: {} })
-          if (!inv.error) data = inv.data
-        } catch {}
-      }
       if (data?.metrics) setMetrics(data.metrics)
 
       const { data: dailyData } = await supabase

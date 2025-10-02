@@ -76,17 +76,26 @@ app.use('*', (req, res) => {
 // エラーハンドラー
 app.use(errorHandler);
 
-// サーバー起動
-const port = config.PORT || 3001;
-const server = app.listen(port, '0.0.0.0', () => {
-  console.log(`🖼️  Image Processor Service running on port ${port}`);
-  console.log(`📊 Health check: http://localhost:${port}/health`);
-  console.log(`🌐 Environment: ${config.NODE_ENV}`);
-});
+// サーバー起動（テスト環境では自動起動しない）
+let server;
+const start = () => {
+  const port = config.PORT || 3001;
+  server = app.listen(port, '0.0.0.0', () => {
+    console.log(`🖼️  Image Processor Service running on port ${port}`);
+    console.log(`📊 Health check: http://localhost:${port}/health`);
+    console.log(`🌐 Environment: ${config.NODE_ENV}`);
+  });
+  return server;
+};
+
+if (process.env.NODE_ENV !== 'test') {
+  start();
+}
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('🛑 SIGTERM received, shutting down gracefully');
+  if (!server) process.exit(0);
   server.close(() => {
     console.log('✅ Server closed');
     process.exit(0);
@@ -95,10 +104,11 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   console.log('🛑 SIGINT received, shutting down gracefully');
+  if (!server) process.exit(0);
   server.close(() => {
     console.log('✅ Server closed');
     process.exit(0);
   });
 });
 
-module.exports = app;
+module.exports = { app, start };

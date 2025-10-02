@@ -475,7 +475,7 @@ const LiveBattle: React.FC = () => {
             </div>
           </div>
 
-          <div className="text-xs text-gray-400 bg-white/5 rounded-lg p-3 mt-6">
+          <div className="text-xs text-white bg-white/5 rounded-lg p-3 mt-6">
             💡 アイテム購入で応援するプレイヤーに50ポイントが加算されます！限定デザインで推しクリエイターを応援しよう
           </div>
         </div>
