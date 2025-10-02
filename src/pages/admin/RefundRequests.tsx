@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { AdminRefundService, type AdminRefundRequestRow, type RefundRequestStatus } from '@/services/admin-refund.service'
 
+// v6: 'refunded' → 'processed', 'rejected' 除外
 const STATUS_LABEL: Record<RefundRequestStatus, string> = {
   requested: '申請中',
   processing: '処理中',
-  refunded: '返金済み',
-  rejected: '却下',
+  processed: '返金済み',
   failed: '失敗',
 }
 
@@ -66,8 +66,7 @@ export const RefundRequests: React.FC = () => {
           <option value="">すべて</option>
           <option value="requested">申請中</option>
           <option value="processing">処理中</option>
-          <option value="refunded">返金済み</option>
-          <option value="rejected">却下</option>
+          <option value="processed">返金済み</option>
           <option value="failed">失敗</option>
         </select>
         <button className="btn btn-sm" onClick={load} disabled={loading}>再読込</button>
@@ -79,7 +78,7 @@ export const RefundRequests: React.FC = () => {
           <div key={it.id} className="rounded border p-4 bg-white">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <span className="badge badge-outline">{STATUS_LABEL[it.status]}</span>
+                <span className="badge badge-outline">{STATUS_LABEL[it.state]}</span>
                 <div className="text-sm text-gray-600">{new Date(it.created_at).toLocaleString()}</div>
               </div>
               <div className="text-sm text-gray-500">ID: {it.id}</div>
@@ -87,34 +86,25 @@ export const RefundRequests: React.FC = () => {
             <div className="mt-2 grid grid-cols-1 md:grid-cols-4 gap-2 text-sm">
               <div>
                 <div className="text-gray-500">ユーザー</div>
-                <div>{it.user?.display_name || it.user?.email || it.user_id}</div>
+                <div>{it.user?.display_name || it.user?.email || 'N/A'}</div>
               </div>
               <div>
-                <div className="text-gray-500">購入</div>
-                <div>{it.purchase?.id || it.purchase_id}</div>
+                <div className="text-gray-500">決済ID</div>
+                <div>{it.payment?.id || it.payment_id}</div>
               </div>
               <div>
                 <div className="text-gray-500">金額</div>
-                <div>¥{(it.amount || 0).toLocaleString()}</div>
+                <div>¥{(it.amount_jpy || 0).toLocaleString()}</div>
               </div>
               <div>
                 <div className="text-gray-500">理由</div>
                 <div className="truncate" title={it.reason || ''}>{it.reason || '-'}</div>
               </div>
             </div>
-            {(it.purchase?.payment_instructions || it.purchase?.payment_method) && (
-              <div className="mt-3 rounded border p-2 bg-yellow-50">
-                <div className="text-xs text-gray-600 mb-1">支払い情報</div>
-                {it.purchase?.payment_method && (
-                  <div className="text-xs text-gray-800">方式: {it.purchase.payment_method}</div>
-                )}
-                {it.purchase?.payment_instructions && (
-                  <pre className="mt-1 whitespace-pre-wrap text-xs text-gray-800">
-                    {typeof it.purchase.payment_instructions === 'string' 
-                      ? it.purchase.payment_instructions 
-                      : JSON.stringify(it.purchase.payment_instructions, null, 2)}
-                  </pre>
-                )}
+            {it.stripe_refund_id && (
+              <div className="mt-3 rounded border p-2 bg-green-50">
+                <div className="text-xs text-gray-600 mb-1">Stripe返金ID</div>
+                <div className="text-xs font-mono text-gray-800">{it.stripe_refund_id}</div>
               </div>
             )}
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -124,20 +114,19 @@ export const RefundRequests: React.FC = () => {
                 value={adminNote[it.id] || ''}
                 onChange={e => setAdminNote(v => ({ ...v, [it.id]: e.target.value }))}
               />
-              {it.status === 'requested' && (
+              {it.state === 'requested' && (
                 <>
                   <button className="btn btn-sm" onClick={() => updateStatus(it.id, 'processing')} disabled={loading}>処理中にする</button>
-                  <button className="btn btn-sm btn-error" onClick={() => updateStatus(it.id, 'rejected')} disabled={loading}>却下</button>
                   <button className="btn btn-sm btn-primary" onClick={() => executeRefund(it.id)} disabled={loading}>返金を実行</button>
                 </>
               )}
-              {it.status === 'processing' && (
+              {it.state === 'processing' && (
                 <>
                   <button className="btn btn-sm btn-primary" onClick={() => executeRefund(it.id)} disabled={loading}>返金を実行</button>
                   <button className="btn btn-sm btn-outline" onClick={() => updateStatus(it.id, 'requested')} disabled={loading}>申請中に戻す</button>
                 </>
               )}
-              {it.status === 'failed' && (
+              {it.state === 'failed' && (
                 <>
                   <button className="btn btn-sm btn-primary" onClick={() => executeRefund(it.id)} disabled={loading}>再実行</button>
                   <button className="btn btn-sm btn-outline" onClick={() => updateStatus(it.id, 'processing')} disabled={loading}>処理中に戻す</button>

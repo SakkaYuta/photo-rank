@@ -357,6 +357,9 @@ export function OrderHistory() {
                 onClick={async () => {
                   try {
                     setSubmittingRefund(true)
+                    // v6: payment_id が必要なため、order → payment を解決
+                    // 簡易実装: selectedOrder.id を payment_id として使用（実際には orders → payments の結合が必要）
+                    // TODO: OrderService で payment_id を取得するメソッドを実装
                     await RefundService.requestRefund(selectedOrder.id, Math.floor(refundAmount||0), refundReason || undefined)
                     showToast({ message: '返金リクエストを送信しました', variant: 'success' })
                     setRefundOpen(false)

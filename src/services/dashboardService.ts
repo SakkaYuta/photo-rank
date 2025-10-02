@@ -161,20 +161,21 @@ export const fetchRecentActivities = async (userId: string): Promise<Activity[]>
     // 最近の注文
     const { data: ordersData } = await supabase
       .from('purchases_vw')
-      .select('id, created_at, status')
+      .select('id, created_at, status, work_title, creator_id')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(3);
 
     ordersData?.forEach((order: any) => {
+      if (order?.creator_id) creatorIdSet.add(order.creator_id)
       activities.push({
         id: order.id,
         type: 'order',
-        title: `ご注文が作成されました`,
+        title: `「${order.work_title || '作品'}」を注文しました`,
         timestamp: formatTimestamp(order.created_at),
         icon: null,
         color: 'from-green-500 to-green-600',
-        workTitle: '',
+        workTitle: order.work_title || '',
         creatorName: '',
         orderStatus: order.status
       });
@@ -265,21 +266,10 @@ export const fetchUserCollections = async (userId: string): Promise<Collection[]
       ]
     }
     const { data: purchasesData } = await supabase
-      .from('purchases')
-      .select(`
-        id,
-        price,
-        purchased_at,
-        works!inner(
-          id,
-          title,
-          image_url,
-          price,
-          creator_id
-        )
-      `)
+      .from('purchases_vw')
+      .select('id, price, created_at, work_id, work_title, work_image_url, creator_id')
       .eq('user_id', userId)
-      .order('purchased_at', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (!purchasesData) return [];
 
@@ -287,7 +277,7 @@ export const fetchUserCollections = async (userId: string): Promise<Collection[]
     const creatorGroups = new Map<string, any[]>();
 
     purchasesData.forEach((purchase: any) => {
-      const creatorId = purchase.works?.creator_id;
+      const creatorId = purchase.creator_id;
       if (!creatorGroups.has(creatorId)) {
         creatorGroups.set(creatorId, []);
       }
@@ -295,7 +285,7 @@ export const fetchUserCollections = async (userId: string): Promise<Collection[]
     });
 
     // クリエイターの公開プロフィール取得
-    const creatorIds = Array.from(new Set((purchasesData || []).map((p: any) => p.works?.creator_id).filter(Boolean)))
+    const creatorIds = Array.from(new Set((purchasesData || []).map((p: any) => p.creator_id).filter(Boolean)))
     let profileMap = new Map<string, { name: string; avatar: string }>()
     if (creatorIds.length > 0) {
       const { data: profiles } = await supabase
@@ -309,7 +299,7 @@ export const fetchUserCollections = async (userId: string): Promise<Collection[]
     const collections: Collection[] = Array.from(creatorGroups.entries()).map(([creatorId, purchases]) => {
       const firstPurchase = purchases[purchases.length - 1];
       const latestPurchase = purchases[0];
-      const totalSpent = purchases.reduce((sum, p) => sum + p.price, 0);
+      const totalSpent = purchases.reduce((sum, p) => sum + (p.price || 0), 0);
       const prof = profileMap.get(creatorId) || { name: 'Creator', avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${creatorId}` }
 
       return {
@@ -319,14 +309,14 @@ export const fetchUserCollections = async (userId: string): Promise<Collection[]
         creator_avatar: prof.avatar,
         work_count: purchases.length,
         total_spent: totalSpent,
-        first_purchase_date: firstPurchase.purchased_at,
-        latest_purchase_date: latestPurchase.purchased_at,
-        works: purchases.map(p => ({
-          id: p.works.id,
-          title: p.works.title,
-          image_url: p.works.image_url,
+        first_purchase_date: firstPurchase.created_at,
+        latest_purchase_date: latestPurchase.created_at,
+        works: purchases.map((p: any) => ({
+          id: p.work_id,
+          title: p.work_title,
+          image_url: p.work_image_url,
           price: p.price,
-          purchased_at: p.purchased_at
+          purchased_at: p.created_at
         }))
       };
     });
@@ -344,29 +334,15 @@ export const fetchUserCollections = async (userId: string): Promise<Collection[]
 export const fetchOrderHistory = async (userId: string): Promise<OrderHistory[]> => {
   try {
     const { data: ordersData } = await supabase
-      .from('purchases')
-      .select(`
-        id,
-        price,
-        status,
-        purchased_at,
-        tracking_number,
-        shipped_at,
-        delivered_at,
-        works!inner(
-          id,
-          title,
-          image_url,
-          creator_id
-        )
-      `)
+      .from('purchases_vw')
+      .select('id, price, status, created_at, work_id, work_title, work_image_url, creator_id')
       .eq('user_id', userId)
-      .order('purchased_at', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (!ordersData) return [];
 
     // クリエイター名の取得
-    const oCreatorIds = Array.from(new Set((ordersData || []).map((o: any) => o.works?.creator_id).filter(Boolean)))
+    const oCreatorIds = Array.from(new Set((ordersData || []).map((o: any) => o.creator_id).filter(Boolean)))
     let oNameMap = new Map<string, string>()
     if (oCreatorIds.length > 0) {
       const { data: profiles } = await supabase
@@ -376,18 +352,18 @@ export const fetchOrderHistory = async (userId: string): Promise<OrderHistory[]>
       oNameMap = new Map((profiles || []).map((p: any) => [p.id, p.display_name]))
     }
 
-    return ordersData.map((order: any) => ({
+    return (ordersData || []).map((order: any) => ({
       id: order.id,
-      work_id: order.works?.id,
-      work_title: order.works?.title,
-      work_image_url: order.works?.image_url,
-      creator_name: oNameMap.get(order.works?.creator_id) || 'Creator',
+      work_id: order.work_id,
+      work_title: order.work_title,
+      work_image_url: order.work_image_url,
+      creator_name: oNameMap.get(order.creator_id) || 'Creator',
       price: order.price,
       status: order.status,
-      purchased_at: order.purchased_at,
-      tracking_number: order.tracking_number,
-      shipped_at: order.shipped_at,
-      delivered_at: order.delivered_at
+      purchased_at: order.created_at,
+      tracking_number: undefined,
+      shipped_at: undefined,
+      delivered_at: undefined
     }));
 
   } catch (error) {

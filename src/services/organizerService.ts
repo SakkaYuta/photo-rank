@@ -75,7 +75,7 @@ export const fetchOrganizerDashboard = async (organizerId: string): Promise<Orga
           .gte('created_at', oneMonthAgo.toISOString()),
         supabase
           .from('publishing_approvals')
-          .select('id, work_id, requested_at, works(id, title, image_url, creator_id, price, created_at)')
+          .select('id, work_id, requested_at, works(id, title, creator_id, price, created_at)')
           .eq('status', 'pending')
           .eq('organizer_id', organizerId)
           .order('requested_at', { ascending: false })
@@ -150,7 +150,7 @@ export const fetchOrganizerDashboard = async (organizerId: string): Promise<Orga
         title: r?.works?.title || '作品',
         creator_name: profileMap.get(r?.works?.creator_id || '')?.display_name || 'Creator',
         creator_id: r?.works?.creator_id,
-        image_url: r?.works?.image_url,
+        image_url: '',
         price: r?.works?.price || 0,
         submitted_at: r?.requested_at,
         description: '',

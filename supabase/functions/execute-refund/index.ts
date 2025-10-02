@@ -1,6 +1,6 @@
-// Supabase Edge Function: execute-refund
-// Purpose: Execute a refund for a refund_requests row, update statuses, and log admin note if provided.
-// Auth: Requires a valid user token with admin role (checked via profiles table), or use service role when invoked by webhook/admin backend.
+// Supabase Edge Function: execute-refund (v6)
+// Purpose: Execute a refund for a refunds row, update statuses, and log admin note if provided.
+// Auth: Requires a valid user token with admin role (checked via user_roles table), or use service role when invoked by webhook/admin backend.
 
 import { getSupabaseAdmin, authenticateUser } from '../_shared/client.ts'
 import { requireInternalSecret } from '../_shared/auth.ts'
@@ -9,12 +9,14 @@ type Json = Record<string, any> | null
 
 async function isAdmin(userId: string): Promise<boolean> {
   const supabase = getSupabaseAdmin()
+  // v6: user_roles テーブルでadminロールを確認
   const { data } = await supabase
-    .from('profiles')
+    .from('user_roles')
     .select('role')
-    .eq('id', userId)
-    .single()
-  return !!data && (data as any).role === 'admin'
+    .eq('user_id', userId)
+    .eq('role', 'admin')
+    .maybeSingle()
+  return !!data
 }
 
 async function performStripeRefund(paymentIntentId: string, amount?: number) {
@@ -65,13 +67,13 @@ export async function handler(req: Request): Promise<Response> {
     const { refundRequestId } = await req.json()
     if (!refundRequestId) return new Response(JSON.stringify({ error: 'refundRequestId required' }), { status: 400 })
 
-    // Get refund request + purchase
+    // v6: Get refund + payment + order
     const { data: r, error: rErr } = await supabase
-      .from('refund_requests')
-      .select('*, purchase:purchases(*)')
+      .from('refunds')
+      .select('*, payment:payments!inner(id, stripe_payment_intent_id, order_id)')
       .eq('id', refundRequestId)
       .single()
-    if (rErr || !r) return new Response(JSON.stringify({ error: rErr?.message || 'refund request not found' }), { status: 404 })
+    if (rErr || !r) return new Response(JSON.stringify({ error: rErr?.message || 'refund not found' }), { status: 404 })
 
     // Additional safety: if Authorization header exists but user is not admin, block
     if (adminUserId === null) {
@@ -79,28 +81,33 @@ export async function handler(req: Request): Promise<Response> {
       if (authHeader) return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403 })
     }
 
-    const purchase = r.purchase || {}
-    const paymentIntentId = purchase.stripe_payment_intent_id as string | null
-    const amount = r.amount as number | undefined
+    const payment = r.payment || {}
+    const paymentIntentId = payment.stripe_payment_intent_id as string | null
+    const amountJpy = r.amount_jpy as number | undefined
 
-    // Try Stripe refund first if possible
+    // Try Stripe refund first if possible (amount in cents for Stripe API)
     let stripeResult: { ok: boolean; reason?: string; data?: Json } = { ok: false }
-    if (paymentIntentId) {
-      stripeResult = await performStripeRefund(paymentIntentId, amount)
+    if (paymentIntentId && amountJpy) {
+      const amountCents = amountJpy * 100  // Convert JPY to cents for Stripe
+      stripeResult = await performStripeRefund(paymentIntentId, amountCents)
     }
 
-    // Update DB statuses regardless (if Stripe not configured, treat as offline refund)
-    const updates: Record<string, any> = { status: stripeResult.ok ? 'refunded' : 'processing' }
-    const { error: upErr } = await supabase.from('refund_requests').update(updates).eq('id', refundRequestId)
+    // v6: Update refunds table
+    const updates: Record<string, any> = {
+      state: stripeResult.ok ? 'processed' : 'processing',  // v5: 'refunded' → v6: 'processed'
+      stripe_refund_id: stripeResult.ok ? (stripeResult.data as any)?.id : null,
+      processed_at: stripeResult.ok ? new Date().toISOString() : null
+    }
+    const { error: upErr } = await supabase.from('refunds').update(updates).eq('id', refundRequestId)
     if (upErr) throw upErr
 
-    // Also reflect into purchases
-    const pUpdates: Record<string, any> = {
-      refund_status: stripeResult.ok ? 'refunded' : 'processing',
-      refund_amount: amount || null,
-      refund_processed_at: stripeResult.ok ? new Date().toISOString() : null,
+    // v6: Update payment state
+    if (stripeResult.ok) {
+      await supabase
+        .from('payments')
+        .update({ state: 'refunded' })
+        .eq('id', r.payment_id)
     }
-    await supabase.from('purchases').update(pUpdates).eq('id', r.purchase_id)
 
     return new Response(JSON.stringify({ ok: true, stripe: stripeResult }), { status: 200 })
   } catch (e) {

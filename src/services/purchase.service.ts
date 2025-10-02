@@ -43,12 +43,12 @@ export class PurchaseService {
   async checkPurchaseCompletion(paymentIntentId: string, maxAttempts = 10, intervalMs = 2000): Promise<PurchaseFlowResult> {
     for (let i = 0; i < maxAttempts; i++) {
       const { data } = await supabase
-        .from('purchases')
-        .select('id, work_id, status, stripe_payment_intent_id')
+        .from('purchases_vw')
+        .select('id, work_id, status, payment_status, stripe_payment_intent_id')
         .eq('stripe_payment_intent_id', paymentIntentId)
-        .single()
-      if (data && data.status === 'paid') {
-        return { status: 'completed', purchaseId: data.id, workId: data.work_id }
+        .maybeSingle()
+      if (data && (data as any).payment_status === 'captured') {
+        return { status: 'completed', purchaseId: (data as any).id, workId: (data as any).work_id }
       }
       if (i < maxAttempts - 1) await new Promise(r => setTimeout(r, intervalMs))
     }
@@ -126,13 +126,13 @@ export class PurchaseService {
   async checkBulkPurchaseCompletion(paymentIntentId: string, maxAttempts = 10, intervalMs = 2000): Promise<BulkPurchaseFlowResult> {
     for (let i = 0; i < maxAttempts; i++) {
       const { data } = await supabase
-        .from('purchases')
-        .select('id, work_id, status, stripe_payment_intent_id')
+        .from('purchases_vw')
+        .select('id, work_id, status, payment_status, stripe_payment_intent_id')
         .eq('stripe_payment_intent_id', paymentIntentId)
 
       if (data && data.length > 0) {
-        const completedItems = data.filter((item: any) => item.status === 'paid')
-        if (completedItems.length === data.length) {
+        const completedItems = (data as any[]).filter((item) => item.payment_status === 'captured')
+        if (completedItems.length === (data as any[]).length) {
           return {
             status: 'completed',
             purchaseIds: completedItems.map((item: any) => item.id),
@@ -170,10 +170,9 @@ export class PurchaseService {
 
       // 追跡番号がない最近の購入を取得
       const { data: purchases } = await supabase
-        .from('purchases')
+        .from('purchases_vw')
         .select('id, created_at')
         .eq('user_id', user.id)
-        .is('tracking_number', null)
         .order('created_at', { ascending: false })
         .limit(5)
 
@@ -183,15 +182,7 @@ export class PurchaseService {
       for (const purchase of purchases) {
         const trackingNumber = this.generateMockTrackingNumber()
         const shippedAt = new Date(Date.now() + Math.random() * 24 * 60 * 60 * 1000).toISOString()
-
-        await supabase
-          .from('purchases')
-          .update({
-            tracking_number: trackingNumber,
-            shipped_at: shippedAt,
-            status: 'shipped'
-          })
-          .eq('id', purchase.id)
+        // v6: 追跡番号の直接更新は非対応（shipments 管理）。デモ用のため今回はスキップ。
       }
     } catch (error) {
       console.error('Failed to set mock tracking numbers:', error)

@@ -175,16 +175,9 @@ export async function myWorks(creatorId: string): Promise<Work[]> {
   return data as Work[]
 }
 
+// v6: 直接購入レコードは作成せず、PaymentIntentフローを利用
 export async function purchaseWork(workId: string, price: number): Promise<Purchase> {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
-  const { data, error } = await supabase
-    .from('purchases')
-    .insert({ user_id: user.id, work_id: workId, price })
-    .select('*')
-    .single()
-  if (error) throw error
-  return data as Purchase
+  throw new Error('Direct purchase is not supported in v6. Use PurchaseService.initiatePurchase instead.')
 }
 
 export async function voteWork(workId: string): Promise<Vote> {
@@ -214,12 +207,23 @@ export async function myPurchases(userId: string): Promise<(Purchase & { work: W
     } as any))
   }
   const { data, error } = await supabase
-    .from('purchases')
-    .select('*, work:works(*)')
+    .from('purchases_vw')
+    .select('id, user_id, work_id, work_title, work_image_url, price, status, created_at')
     .eq('user_id', userId)
-    .order('purchased_at', { ascending: false })
+    .order('created_at', { ascending: false })
   if (error) throw error
-  return (data || []) as any
+  // 互換: workフィールドを付与
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    user_id: r.user_id,
+    work_id: r.work_id,
+    price: r.price,
+    amount: r.price,
+    status: r.status,
+    purchased_at: r.created_at,
+    created_at: r.created_at,
+    work: { id: r.work_id, title: r.work_title, image_url: r.work_image_url },
+  })) as any
 }
 
 export async function listWorksByIds(ids: string[]): Promise<Work[]> {

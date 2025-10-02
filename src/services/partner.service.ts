@@ -52,13 +52,26 @@ export async function getPartnerProducts(partnerId: string): Promise<FactoryProd
   // Supabase から取得（優先）。失敗時のみサンプルを返す
   try {
     const { data, error } = await supabase
-      .from('factory_products')
-      .select('*')
-      .eq('partner_id', partnerId)
+      .from('factory_products_vw')
+      .select('id, factory_id, name, base_price_jpy, options, lead_time_days, created_at')
+      .eq('factory_id', partnerId)
       .order('created_at', { ascending: false })
 
     if (error) throw error
-    return (data || []) as FactoryProduct[]
+    const mapped = (data || []).map((r: any) => ({
+      id: r.id,
+      partner_id: r.factory_id,
+      product_type: r.name, // 互換: 表示用途に名称を流用
+      base_cost: r.base_price_jpy,
+      lead_time_days: r.lead_time_days,
+      minimum_quantity: 1,
+      maximum_quantity: 1000,
+      is_active: true,
+      options: r.options,
+      created_at: r.created_at,
+      updated_at: r.created_at,
+    })) as FactoryProduct[]
+    return mapped
   } catch (e) {
     console.warn('getPartnerProducts: Supabase fetch failed, falling back if sample enabled', e)
     if (isDemoEnabled()) {
@@ -73,12 +86,27 @@ export async function getPartnerProducts(partnerId: string): Promise<FactoryProd
 
 export async function getFactoryProductById(id: string): Promise<FactoryProduct | null> {
   const { data, error } = await supabase
-    .from('factory_products')
-    .select('*')
+    .from('factory_products_vw')
+    .select('id, factory_id, name, base_price_jpy, options, lead_time_days, created_at')
     .eq('id', id)
     .maybeSingle()
   if (error) throw error
-  return (data || null) as FactoryProduct | null
+  if (!data) return null
+  const r: any = data
+  const mapped: FactoryProduct = {
+    id: r.id,
+    partner_id: r.factory_id,
+    product_type: r.name,
+    base_cost: r.base_price_jpy,
+    lead_time_days: r.lead_time_days,
+    minimum_quantity: 1,
+    maximum_quantity: 1000,
+    is_active: true,
+    options: r.options,
+    created_at: r.created_at,
+    updated_at: r.created_at,
+  } as any
+  return mapped
 }
 
 export async function getPartnerById(partnerId: string): Promise<ManufacturingPartner | null> {
@@ -92,31 +120,71 @@ export async function getPartnerById(partnerId: string): Promise<ManufacturingPa
 }
 
 export async function createFactoryProduct(product: Omit<FactoryProduct, 'id' | 'created_at' | 'updated_at'>): Promise<FactoryProduct> {
+  // v6: partner_products にマッピングして作成
+  const payload = {
+    partner_id: (product as any).partner_id,
+    name: product.product_type,
+    base_cost_jpy: product.base_cost,
+    specs: product.options || {},
+    lead_time_days: product.lead_time_days ?? null,
+  }
   const { data, error } = await supabase
-    .from('factory_products')
-    .insert(product)
-    .select()
+    .from('partner_products')
+    .insert(payload)
+    .select('id, partner_id, name, base_cost_jpy, specs, lead_time_days, created_at')
     .single()
   
   if (error) throw error
-  return data as FactoryProduct
+  const r: any = data
+  return {
+    id: r.id,
+    partner_id: r.partner_id,
+    product_type: r.name,
+    base_cost: r.base_cost_jpy,
+    lead_time_days: r.lead_time_days,
+    minimum_quantity: 1,
+    maximum_quantity: 1000,
+    is_active: true,
+    options: r.specs,
+    created_at: r.created_at,
+    updated_at: r.created_at,
+  } as any
 }
 
 export async function updateFactoryProduct(id: string, updates: Partial<FactoryProduct>): Promise<FactoryProduct> {
+  // v6: partner_products を更新
+  const payload: any = {}
+  if (updates.product_type !== undefined) payload.name = updates.product_type
+  if (updates.base_cost !== undefined) payload.base_cost_jpy = updates.base_cost
+  if (updates.options !== undefined) payload.specs = updates.options
+  if (updates.lead_time_days !== undefined) payload.lead_time_days = updates.lead_time_days
   const { data, error } = await supabase
-    .from('factory_products')
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .from('partner_products')
+    .update({ ...payload, updated_at: new Date().toISOString() })
     .eq('id', id)
-    .select()
+    .select('id, partner_id, name, base_cost_jpy, specs, lead_time_days, created_at, updated_at')
     .single()
   
   if (error) throw error
-  return data as FactoryProduct
+  const r: any = data
+  return {
+    id: r.id,
+    partner_id: r.partner_id,
+    product_type: r.name,
+    base_cost: r.base_cost_jpy,
+    lead_time_days: r.lead_time_days,
+    minimum_quantity: 1,
+    maximum_quantity: 1000,
+    is_active: true,
+    options: r.specs,
+    created_at: r.created_at,
+    updated_at: r.updated_at,
+  } as any
 }
 
 export async function deleteFactoryProduct(id: string): Promise<void> {
   const { error } = await supabase
-    .from('factory_products')
+    .from('partner_products')
     .delete()
     .eq('id', id)
   
@@ -130,95 +198,15 @@ export async function getPartnerOrders(partnerId: string): Promise<any[]> {
     ]
   }
   // まずは統合ビューを利用（なければフォールバック）
-  const { data: viewRows, error: viewErr } = await supabase
-    .from('partner_orders_view')
-    .select('*')
-    .eq('partner_id', partnerId)
-    .order('created_at', { ascending: false })
-
-  if (!viewErr && Array.isArray(viewRows)) {
-    // ビューの行を既存UI互換の形に整形
-    return (viewRows as any[]).map((r) => ({
-      id: r.id,
-      order_id: r.order_id,
-      partner_id: r.partner_id,
-      status: r.status,
-      created_at: r.created_at,
-      assigned_at: r.assigned_at,
-      shipped_at: r.shipped_at,
-      tracking_number: r.tracking_number,
-      factory_products: {
-        id: r.factory_product_id,
-        product_type: r.product_type,
-        product_name: r.product_name,
-      },
-      works: {
-        id: r.work_id,
-        title: r.work_title,
-        image_url: r.work_image_url,
-        creator_id: r.creator_id,
-      },
-      creator_profile: r.creator_id
-        ? { id: r.creator_id, display_name: r.creator_name, avatar_url: r.creator_avatar }
-        : null,
-      customer_profile: r.customer_id
-        ? { id: r.customer_id, display_name: r.customer_name, avatar_url: r.customer_avatar }
-        : null,
-    }))
-  }
-
-  // フォールバック: 旧JOIN戦略（公開プロフィールを後付け）
+  // v6: manufacturing_orders_vw を利用（簡素情報）
   const { data, error } = await supabase
-    .from('manufacturing_orders')
-    .select(`
-      *,
-      factory_products(
-        id,
-        product_type
-      ),
-      works(
-        id,
-        title,
-        image_url,
-        creator_id
-      ),
-      purchases(
-        id,
-        user_id,
-        purchased_at
-      )
-    `)
-    .eq('partner_id', partnerId)
+    .from('manufacturing_orders_vw')
+    .select('id, factory_id, status, tracking_number, carrier, shipment_status, created_at, updated_at, order_item_id')
+    .eq('factory_id', partnerId)
     .order('created_at', { ascending: false })
   if (error) throw error
 
-  const orders = (data || []) as any[]
-  const creatorIds = Array.from(new Set(orders.map(o => o?.works?.creator_id).filter(Boolean)))
-  const customerIds = Array.from(new Set(orders.map(o => (o?.purchases?.[0]?.user_id) || o?.creator_user_id).filter(Boolean)))
-
-  const [creatorProfiles, customerProfiles] = await Promise.all([
-    creatorIds.length > 0
-      ? supabase.from('users_vw').select('id, display_name, avatar_url').in('id', creatorIds)
-      : Promise.resolve({ data: [] as any[] }),
-    customerIds.length > 0
-      ? supabase.from('users_vw').select('id, display_name, avatar_url').in('id', customerIds)
-      : Promise.resolve({ data: [] as any[] }),
-  ])
-
-  const creatorMap = new Map((creatorProfiles.data || []).map((p: any) => [p.id, p]))
-  const customerMap = new Map((customerProfiles.data || []).map((p: any) => [p.id, p]))
-
-  return orders.map(o => {
-    const cId = o?.works?.creator_id
-    const custId = (o?.purchases?.[0]?.user_id) || o?.creator_user_id
-    return {
-      ...o,
-      // ビューがない環境向けフォールバックとして product_name を product_type で埋める
-      factory_products: o.factory_products ? { ...o.factory_products, product_name: o.factory_products.product_type } : o.factory_products,
-      creator_profile: cId ? creatorMap.get(cId) : null,
-      customer_profile: custId ? customerMap.get(custId) : null,
-    }
-  })
+  return (data || []) as any[]
 }
 
 export async function updateOrderStatus(
@@ -226,21 +214,14 @@ export async function updateOrderStatus(
   status: ManufacturingOrder['status'], 
   updates?: { tracking_number?: string }
 ): Promise<ManufacturingOrder> {
+  // v6: fulfillments.state を更新（追跡番号等は shipments 管理のため別途）
   const updateData: any = { 
-    status, 
+    state: status, 
     updated_at: new Date().toISOString() 
   }
-  
-  if (status === 'shipped') {
-    updateData.shipped_at = new Date().toISOString()
-  }
-  
-  if (updates?.tracking_number) {
-    updateData.tracking_number = updates.tracking_number
-  }
-  
+
   const { data, error } = await supabase
-    .from('manufacturing_orders')
+    .from('fulfillments')
     .update(updateData)
     .eq('id', id)
     .select()
@@ -256,14 +237,13 @@ export async function getPartnerStats(partnerId: string) {
   }
   const [ordersResult, productsResult, reviewsResult] = await Promise.all([
     supabase
-      .from('manufacturing_orders')
+      .from('manufacturing_orders_vw')
       .select('status')
-      .eq('partner_id', partnerId),
+      .eq('factory_id', partnerId),
     supabase
-      .from('factory_products')
+      .from('factory_products_vw')
       .select('id')
-      .eq('partner_id', partnerId)
-      .eq('is_active', true),
+      .eq('factory_id', partnerId),
     supabase
       .from('partner_reviews')
       .select('rating')
@@ -450,10 +430,9 @@ export async function canUserReviewPartner(
 
   // そのパートナーとの完了した注文があるかチェック
   const { data: orders, error: ordersError } = await supabase
-    .from('manufacturing_orders')
+    .from('manufacturing_orders_vw')
     .select('id')
-    .eq('partner_id', partnerId)
-    .eq('creator_user_id', user.id)
+    .eq('factory_id', partnerId)
     .eq('status', 'shipped')
 
   if (ordersError || !orders?.length) return false

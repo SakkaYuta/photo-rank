@@ -170,14 +170,32 @@ export const getFactoryQuotes = async (
     const partnerIds = partners.map((p) => p.id)
 
     // 2) 対象商品の一括取得
-    const { data: products, error } = await supabase
-      .from('factory_products')
-      .select('*')
-      .in('partner_id', partnerIds)
-      .eq('product_type', productType)
-      .eq('is_active', true)
+    const { data: productsRows, error } = await supabase
+      .from('factory_products_vw')
+      .select('id, factory_id, name, base_price_jpy, options, lead_time_days, created_at')
+      .in('factory_id', partnerIds)
     if (error) throw error
-    let productsData = (products || []) as FactoryProduct[]
+    // 粗く productType でフィルタ
+    let productsData = ((productsRows || [])
+      .filter((r: any) => {
+        const name = (r.name || '').toString().toLowerCase()
+        const optType = (r.options?.product_type || '').toString().toLowerCase()
+        const want = (productType || '').toLowerCase()
+        return name.includes(want) || optType.includes(want)
+      })
+      .map((r: any) => ({
+        id: r.id,
+        partner_id: r.factory_id,
+        product_type: r.name,
+        base_cost: r.base_price_jpy,
+        lead_time_days: r.lead_time_days ?? 7,
+        minimum_quantity: 1,
+        maximum_quantity: 1000,
+        options: r.options,
+        is_active: true,
+        created_at: r.created_at,
+        updated_at: r.created_at,
+      })) as FactoryProduct[])
     if (productsData.length === 0) {
       if (isSampleMode()) {
         // パートナーは居るが対象商品が無い → サンプル製品を合成
@@ -322,16 +340,10 @@ export const updateOrderStatus = async (
   additionalData?: Partial<ManufacturingOrder>
 ): Promise<{ ok: boolean; error?: string }> => {
   try {
-    const updateData: any = { status, updated_at: new Date().toISOString() }
-
-    // 既存カラムのみタイムスタンプ付与
-    if (status === 'accepted') updateData.assigned_at = new Date().toISOString()
-    if (status === 'shipped') updateData.shipped_at = new Date().toISOString()
-
-    if (additionalData) Object.assign(updateData, additionalData)
-
+    // v6: fulfillments.state を更新
+    const updateData: any = { state: status, updated_at: new Date().toISOString() }
     const { error } = await supabase
-      .from('manufacturing_orders')
+      .from('fulfillments')
       .update(updateData)
       .eq('id', orderId)
     if (error) throw error

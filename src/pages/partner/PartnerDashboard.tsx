@@ -68,13 +68,9 @@ export function PartnerDashboard() {
     async function fetchRecentOrders() {
       try {
         const { data, error } = await supabase
-          .from('manufacturing_orders')
-          .select(`
-            *,
-            factory_products(product_type),
-            manufacturing_partners(name)
-          `)
-          .eq('partner_id', partner!.id)
+          .from('manufacturing_orders_vw')
+          .select('id, factory_id, status, created_at, tracking_number, carrier, shipment_status')
+          .eq('factory_id', partner!.id)
           .order('created_at', { ascending: false })
           .limit(5)
 
@@ -363,9 +359,9 @@ export function PartnerDashboard() {
                 {recentOrders.map(order => (
                   <div key={order.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg transition-base hover-lift">
                     <div>
-                      <p className="font-medium">{order.factory_products?.product_name || order.factory_products?.product_type}</p>
+                      <p className="font-medium">{order.product_type || '製造注文'}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {order.quantity}個 × ¥{order.unit_price?.toLocaleString() || 'N/A'}
+                        {new Date(order.created_at).toLocaleString()} ・ {order.factory_id}
                       </p>
                     </div>
                     <Badge variant={

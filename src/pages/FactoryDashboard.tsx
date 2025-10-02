@@ -69,8 +69,7 @@ const FactoryDashboard: React.FC = () => {
   const productKeys = useMemo(() => {
     const keys = new Set<string>()
     ;(orders || []).forEach(o => {
-      const fp = (o as any).factory_products
-      const k = fp?.id || (o.request_payload as any)?.product_id || (o.request_payload as any)?.product_type
+      const k = (o as any).product_type || (o as any).product_variant_id || 'unknown'
       if (k) keys.add(String(k))
     })
     return Array.from(keys)
@@ -78,11 +77,7 @@ const FactoryDashboard: React.FC = () => {
 
   const filteredOrders = useMemo(() => {
     if (!productFilter) return orders
-    return (orders || []).filter(o => {
-      const fp = (o as any).factory_products
-      const k = fp?.id || (o.request_payload as any)?.product_id || (o.request_payload as any)?.product_type
-      return String(k) === productFilter
-    })
+    return (orders || []).filter(o => String((o as any).product_type || 'unknown') === productFilter)
   }, [orders, productFilter])
 
   const labelOf = (status: ManufacturingOrder['status']) => {
@@ -183,7 +178,7 @@ const FactoryDashboard: React.FC = () => {
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'manufacturing_orders',
+        table: 'fulfillments',
         filter: `partner_id=eq.${partner.id}`,
       }, async () => {
         try {
@@ -206,7 +201,7 @@ const FactoryDashboard: React.FC = () => {
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'factory_products',
+        table: 'partner_products',
         filter: `partner_id=eq.${partner.id}`,
       }, async () => {
         try {
@@ -396,7 +391,7 @@ const FactoryDashboard: React.FC = () => {
                         <div>
                           <h3 className="font-medium text-gray-900">{order.id}</h3>
                           <p className="text-sm text-gray-600">注文開始: {new Date(order.created_at).toLocaleString()}</p>
-                          <p className="text-xs text-gray-500">製品ID: {String(((order as any).factory_products?.id) || (order.request_payload as any)?.product_id || (order.request_payload as any)?.product_type || '—')}</p>
+                          <p className="text-xs text-gray-500">製品: {String(((order as any).product_type) || '—')}</p>
                           {(order as any).works && (
                             <p className="text-xs text-gray-500">
                               作品: {(order as any).works.title} / クリエイター: {(order as any).creator_profile?.display_name || '—'}
@@ -477,7 +472,7 @@ const FactoryDashboard: React.FC = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {(loading && !demoMode ? [] : displayOrders.filter(o => {
                     if (!productFilter) return true
-                    const k = (o.request_payload as any)?.product_id || (o.request_payload as any)?.product_type
+                    const k = (o as any).product_type || 'unknown'
                     return String(k) === productFilter
                   }).slice(0, 10)).map((order) => (
                     <tr key={order.id}>
@@ -491,7 +486,7 @@ const FactoryDashboard: React.FC = () => {
                         {(order as any).creator_profile?.display_name || '—'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {String(((order as any).factory_products?.id) || (order.request_payload as any)?.product_id || (order.request_payload as any)?.product_type || '—')}
+                        {String(((order as any).product_type) || '—')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {order.request_payload?.quantity ?? '—'}

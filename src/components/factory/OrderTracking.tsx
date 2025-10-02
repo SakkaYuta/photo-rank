@@ -11,8 +11,8 @@ export const OrderTracking = ({ orderId }: { orderId: string }) => {
   useEffect(() => {
     const fetchOrder = async () => {
       const { data } = await supabase
-        .from('manufacturing_orders')
-        .select(`*, manufacturing_partners(name), factory_products(product_type)`) // product_name 列は未定義のため product_type を表示
+        .from('manufacturing_orders_vw')
+        .select('id, factory_id, status, tracking_number, carrier, shipment_status, created_at, updated_at')
         .eq('id', orderId)
         .maybeSingle()
       setOrder(data)
@@ -24,7 +24,7 @@ export const OrderTracking = ({ orderId }: { orderId: string }) => {
       .channel('order_updates')
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'manufacturing_orders', filter: `id=eq.${orderId}` },
+        { event: 'UPDATE', schema: 'public', table: 'fulfillments', filter: `id=eq.${orderId}` },
         (payload: any) => setOrder((cur: any) => ({ ...(cur || {}), ...(payload.new as any) }))
       )
       .subscribe()
@@ -88,11 +88,11 @@ export const OrderTracking = ({ orderId }: { orderId: string }) => {
               <dl className="space-y-2">
                 <div className="flex justify-between">
                   <dt className="text-gray-600">製造パートナー</dt>
-                  <dd className="font-medium">{order.manufacturing_partners?.name}</dd>
+                  <dd className="font-medium">{order.factory_name || order.factory_id}</dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-gray-600">商品タイプ</dt>
-                  <dd className="font-medium">{order.factory_products?.product_type}</dd>
+                  <dd className="font-medium">{order.product_type || '—'}</dd>
                 </div>
                 {order.tracking_number && (
                   <div className="flex justify-between">

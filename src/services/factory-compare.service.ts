@@ -70,61 +70,65 @@ export class FactoryCompareService {
       // 承認済み・アクティブな製造パートナーを取得
       const { data: partners, error: partnersError } = await supabase
         .from('manufacturing_partners')
-        .select(`
-          *,
-          factory_products!inner (
-            id,
-            product_type,
-            base_cost,
-            lead_time_days,
-            minimum_quantity,
-            maximum_quantity,
-            is_active
-          )
-        `)
+        .select('*')
         .eq('status', 'approved')
-        .eq('is_active', true)
-        .eq('factory_products.product_type', request.product_type)
-        .eq('factory_products.is_active', true)
-        .gte('factory_products.maximum_quantity', request.quantity)
-        .lte('factory_products.minimum_quantity', request.quantity);
 
-      if (partnersError) {
-        throw partnersError;
+      if (partnersError) throw partnersError;
+      if (!partners || partners.length === 0) return [];
+
+      // 各工場の商品（ビュー）をまとめて取得してメモリでフィルタ
+      const partnerIds = partners.map((p: any) => p.id)
+      const { data: productsAll, error: prodErr } = await supabase
+        .from('factory_products_vw')
+        .select('id, factory_id, name, base_price_jpy, options, lead_time_days, created_at')
+        .in('factory_id', partnerIds)
+      if (prodErr) throw prodErr
+
+      // パートナーごとにグループ化 + リクエスト適合でフィルタリング
+      const byPartner = new Map<string, any[]>()
+      for (const r of productsAll || []) {
+        const list = byPartner.get(r.factory_id) || []
+        list.push(r)
+        byPartner.set(r.factory_id, list)
       }
 
-      if (!partners || partners.length === 0) {
-        return [];
-      }
+      const results: FactoryComparisonResult[] = (partners as any[]).map((partner: any) => {
+        const rows = byPartner.get(partner.id) || []
+        // 粗い製品タイプマッチ: name または options.product_type に request.product_type を含む
+        const products: FactoryProduct[] = rows
+          .filter((r: any) => {
+            const name = (r.name || '').toString().toLowerCase()
+            const optType = (r.options?.product_type || '').toString().toLowerCase()
+            const want = (request.product_type || '').toLowerCase()
+            return name.includes(want) || optType.includes(want)
+          })
+          .map((r: any) => ({
+            id: r.id,
+            partner_id: r.factory_id,
+            product_type: r.name,
+            base_cost: r.base_price_jpy,
+            lead_time_days: r.lead_time_days ?? 7,
+            minimum_quantity: 1,
+            maximum_quantity: 1000,
+            is_active: true,
+            options: r.options,
+            created_at: r.created_at,
+            updated_at: r.created_at,
+          }))
 
-      // 各工場の価格計算とマッチングスコア算出
-      const results: FactoryComparisonResult[] = partners.map((partner: any) => {
-        const products = partner.factory_products as FactoryProduct[];
-        const mainProduct = products[0]; // 該当する商品タイプの最初の商品
-        
-        if (!mainProduct) {
-          return null;
-        }
+        const mainProduct = products[0]
+        if (!mainProduct) return null
 
-        // 納期フィルタリング
-        if (request.max_delivery_days && mainProduct.lead_time_days > request.max_delivery_days) {
-          return null;
-        }
+        if (request.max_delivery_days && mainProduct.lead_time_days > request.max_delivery_days) return null
 
-        // 価格計算
-        const pricing = calculatePricing(mainProduct.base_cost, request.creator_profit);
-        
-        // 価格上限フィルタリング
-        if (request.max_price && pricing.salesPrice > request.max_price) {
-          return null;
-        }
+        const pricing = calculatePricing(mainProduct.base_cost, request.creator_profit)
+        if (request.max_price && pricing.salesPrice > request.max_price) return null
 
-        // マッチングスコア計算
         const matchScore = calculateMatchScore(
           { ...partner, available_products: products },
           request,
           pricing.salesPrice
-        );
+        )
 
         return {
           ...partner,
@@ -134,8 +138,8 @@ export class FactoryCompareService {
           match_score: matchScore,
           platform_fee: pricing.platformFee,
           creator_profit: request.creator_profit
-        };
-      }).filter(Boolean) as FactoryComparisonResult[];
+        } as FactoryComparisonResult
+      }).filter(Boolean) as FactoryComparisonResult[]
 
       // マッチングスコア降順でソート
       return results.sort((a, b) => b.match_score - a.match_score);

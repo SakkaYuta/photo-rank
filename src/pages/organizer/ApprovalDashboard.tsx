@@ -34,7 +34,7 @@ export const ApprovalDashboard = () => {
     setLoading(true)
     const { data, error } = await supabase
       .from('publishing_approvals')
-      .select(`*, works ( id, title, image_url, creator_id )`)
+      .select(`*, works ( id, title, creator_id )`)
       .eq('status', 'pending')
       .eq('organizer_id', profile!.id)
 
@@ -82,7 +82,7 @@ export const ApprovalDashboard = () => {
         {rows.map((approval) => (
           <div key={approval.id} className="border rounded-lg p-4">
             <div className="flex gap-4">
-              <img src={resolveImageUrl(approval.works?.image_url, [defaultImages.work, defaultImages.product])} alt={approval.works?.title || ''} className="w-32 h-32 object-cover rounded" />
+              <img src={resolveImageUrl(undefined, [defaultImages.work, defaultImages.product])} alt={approval.works?.title || ''} className="w-32 h-32 object-cover rounded" />
               <div className="flex-1">
                 <h3 className="font-semibold">{approval.works?.title}</h3>
                 <p className="text-sm text-gray-600">作成者: {approval.works?.users?.display_name ?? '—'}</p>
