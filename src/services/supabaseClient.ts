@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { isDemoEnabled } from '@/utils/demo'
+import type { Database } from '@/types/supabase'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
@@ -51,7 +52,7 @@ function createStubClient() {
   } as any
 }
 
-const realClient = () => createClient(supabaseUrl!, supabaseAnonKey!, {
+const realClient = () => createClient<Database>(supabaseUrl!, supabaseAnonKey!, {
   auth: {
     storageKey: 'photo-rank-auth',
     autoRefreshToken: true,

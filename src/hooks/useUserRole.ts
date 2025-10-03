@@ -118,7 +118,7 @@ export const useUserRole = () => {
 
           // v6: partner_users と organizer_profiles を取得
           const [partnerResult, organizerResult] = await Promise.all([
-            supabase.from('partner_users').select('*, partners(*)').eq('user_id', user.id).maybeSingle(),
+            supabase.from('partner_users').select('partner_id, user_id, role').eq('user_id', user.id).maybeSingle(),
             supabase.from('organizer_profiles').select('*').eq('user_id', user.id).maybeSingle(),
           ])
 
@@ -148,14 +148,25 @@ export const useUserRole = () => {
             profileData.organizer_profile = organizerProfile as any
             effectiveType = 'organizer'
           } else if (partnerUser) {
-            // v6: factory_profiles 互換形式に変換
+            // v6: partner_users -> manufacturing_partners を解決
+            let partnerName = ''
+            try {
+              if (partnerUser.partner_id) {
+                const { data: mp } = await supabase
+                  .from('manufacturing_partners')
+                  .select('name')
+                  .eq('id', partnerUser.partner_id)
+                  .maybeSingle()
+                partnerName = (mp as any)?.name || ''
+              }
+            } catch {}
+
+            // factory_profiles 互換形式
             profileData.factory_profile = {
-              id: partnerUser.id,
+              id: partnerUser.partner_id,
               user_id: partnerUser.user_id,
               partner_id: partnerUser.partner_id,
-              name: (partnerUser.partners as any)?.name || '',
-              is_active: partnerUser.is_active,
-              created_at: partnerUser.created_at,
+              name: partnerName,
             } as any
             effectiveType = 'factory'
           } else if (userRoles.has('creator')) {
