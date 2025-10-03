@@ -9,6 +9,8 @@
 
 ### 📋 推奨実行順序（アクティブ）
 
+注: 運用で使うマイグレーションの単一の出所は `supabase/migrations` に統一します。`photo-rank/db/migrations` 内の SQL は参照用アーカイブとし、直接適用しません。
+
 ```bash
 # 1. 基本テーブル作成（修正版）
 supabase/migrations/20240115_core_tables.sql
@@ -40,8 +42,8 @@ supabase/migrations/20250922_schema_requirements_update.sql
 # 10. セキュリティRLSポリシー（新規追加）
 supabase/migrations/20250922_security_rls_policies.sql
 
-# 11. 監査ログとレート制限テーブル（新規追加）
-supabase/migrations/20250922_audit_and_rate_limit_tables.sql
+# 11. 監査ログ（新規追加）
+supabase/migrations/20250922_audit_tables.sql
 
 # 12. RLSポリシー修正（新規追加）
 supabase/migrations/20250922_rls_policy_fixes.sql
@@ -56,6 +58,9 @@ supabase/migrations/20250930_security_fixes.sql
 # 16. search_path 固定（SECURITY DEFINER 関数）
 supabase/migrations/20250930_fix_function_search_path_any.sql
 supabase/migrations/20251005_fix_function_search_path_security.sql
+
+# 17. レートリミット統一（v5モデルに統一）
+supabase/migrations/20251003_unify_rate_limit_v5.sql
 
 # 14. テストデータ（開発時のみ）
 supabase/migrations/20241218_test_data_tables.sql
@@ -175,3 +180,9 @@ WHERE n.nspname = 'public'
 - `supabase/migrations/archive` 以下は履歴用です。新規セットアップでは実行しないでください。
 - バックアップを取ってから実行推奨
 - 段階的実行でエラー箇所を特定可能
+
+### 追加補足（Rate Limiting の統一方針）
+
+- v6 では `public.rate_limit_logs`（イベント行）と `public.upload_attempts` を用いたレート制限に統一します。
+- 旧 v5 の集約テーブル `public.rate_limits` は非推奨です。新規コード・新規環境では作成しないでください。
+- 監視は `sql/security_rate_limit_stats.sql` により作成される `public.security_rate_limit_stats` ビューで行います（基盤テーブルを自動検出）。

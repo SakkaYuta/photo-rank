@@ -89,10 +89,10 @@ async function processImage(buffer: ArrayBuffer) {
 async function checkRateLimit(supabase: any, userId: string) {
   const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
 
-  // Check recent upload attempts (you may need to create an upload_attempts table)
-  const { data, error } = await supabase
+  // Check recent upload attempts (v6 schema: row-per-attempt)
+  const { count, error } = await supabase
     .from('upload_attempts')
-    .select('count')
+    .select('id', { count: 'exact', head: true })
     .eq('user_id', userId)
     .gte('created_at', oneMinuteAgo)
 
@@ -101,7 +101,7 @@ async function checkRateLimit(supabase: any, userId: string) {
     return false // Allow on error to avoid blocking legitimate users
   }
 
-  const recentAttempts = data?.length || 0
+  const recentAttempts = count || 0
   if (recentAttempts >= RATE_LIMIT_PER_MINUTE) {
     throw new Error(`Rate limit exceeded: maximum ${RATE_LIMIT_PER_MINUTE} uploads per minute`)
   }
@@ -109,7 +109,7 @@ async function checkRateLimit(supabase: any, userId: string) {
   // Log this attempt
   await supabase
     .from('upload_attempts')
-    .insert({ user_id: userId, created_at: new Date().toISOString() })
+    .insert({ user_id: userId, created_at: new Date().toISOString(), target: 'image-upload', outcome: 'attempt' })
 
   return true
 }

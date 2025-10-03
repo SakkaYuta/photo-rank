@@ -22,19 +22,16 @@ export async function checkRateLimit(
   const windowStart = now - config.windowMs
 
   try {
-    // 現在の窓の中のリクエスト数を取得
-    const { data: existing, error } = await supabase
+    // v6 スキーマ: rate_limit_logs はイベント行ベース
+    const { count, error: countErr } = await supabase
       .from('rate_limit_logs')
-      .select('count')
+      .select('id', { count: 'exact', head: true })
       .eq('key', key)
-      .gte('created_at', new Date(windowStart).toISOString())
-      .single()
+      .gte('occurred_at', new Date(windowStart).toISOString())
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
-      throw error
-    }
+    if (countErr) throw countErr
 
-    const currentCount = existing?.count || 0
+    const currentCount = count || 0
 
     if (currentCount >= config.maxRequests) {
       return {
@@ -44,19 +41,20 @@ export async function checkRateLimit(
       }
     }
 
-    // レート制限ログを更新または挿入
+    // 新規イベントを書き込む（成功と見なす）
     await supabase
       .from('rate_limit_logs')
-      .upsert({
+      .insert({
+        user_id: null, // 呼び出し側でユーザーIDがあれば拡張
+        endpoint: config.keyPrefix,
         key,
-        count: currentCount + 1,
-        created_at: new Date(now).toISOString(),
-        expires_at: new Date(now + config.windowMs).toISOString()
+        occurred_at: new Date().toISOString(),
+        status: 200
       })
 
     return {
       allowed: true,
-      remaining: config.maxRequests - currentCount - 1,
+      remaining: Math.max(0, config.maxRequests - currentCount - 1),
       resetTime: windowStart + config.windowMs
     }
   } catch (error) {

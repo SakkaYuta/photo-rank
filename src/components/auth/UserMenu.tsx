@@ -19,7 +19,12 @@ export function UserMenu() {
   const DEFAULT_AVATAR_PATH = (import.meta as any).env?.VITE_DEFAULT_AVATAR_IMAGE_PATH || 'defaults/avatar.jpg'
   const defaultAvatarUrl = supabase.storage.from(SAMPLE_BUCKET).getPublicUrl(DEFAULT_AVATAR_PATH).data.publicUrl
 
-  if (loading) return <div className="h-8 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-800" />
+  // 読み込み中もボタン形状を表示（スケルトンから変更）
+  if (loading) return (
+    <button className="btn btn-outline text-xs md:text-sm px-2 md:px-4 !text-black hover:!text-black" disabled>
+      ログアウト
+    </button>
+  )
   if (!profile) return (
     <>
       <button className="btn btn-primary" onClick={() => setOpen(true)}>新規登録</button>
