@@ -1,188 +1,179 @@
 # データベースマイグレーション実行順序 🚀
 
-## 修正版実行順序（2025-09-22更新）
+## v6 統合スキーマ（2025-10-03更新）
 
 ### ⚠️ 重要な変更
-- **トリガー競合エラー対応済み**
-- **要件変更に対応したスキーマ修正**
-- **冪等性を保証**
+- **v6 統合スキーマに一本化**: すべてのマイグレーションは `photo-rank/supabase/migrations/` に統一
+- **v5 系はアーカイブ化**: 旧v5系は `migrations_old/` に退避、適用対象外
+- **権威ディレクトリの明確化**: `photo-rank/supabase/migrations/` のみが唯一の適用対象
 
-### 📋 推奨実行順序（アクティブ）
+### 📋 権威ディレクトリ（v6 のみ）
 
-注: 運用で使うマイグレーションの単一の出所は `supabase/migrations` に統一します。`photo-rank/db/migrations` 内の SQL は参照用アーカイブとし、直接適用しません。
+**唯一の適用対象**: `photo-rank/supabase/migrations/`
 
+このディレクトリ内のマイグレーションファイルのみを適用してください。
+
+### 🔧 実行コマンド（v6）
+
+#### 推奨：プロジェクトディレクトリからの適用
 ```bash
-# 1. 基本テーブル作成（修正版）
-supabase/migrations/20240115_core_tables.sql
-
-# 2. プロフィールテーブル
-supabase/migrations/20240118_add_profile_tables.sql
-
-# 3. RLSポリシー
-supabase/migrations/20240119_add_rls_policies.sql
-
-# 4. ユーザータイプ機能
-supabase/migrations/20241219_add_user_types.sql
-
-# 5. Webhookテーブル
-supabase/migrations/20241217_basic_webhook_tables.sql
-
-# 6. トリガー競合修正（新規追加）
-supabase/migrations/20250922_fix_trigger_conflicts.sql
-
-# 7. ユーザーテーブルスキーマ修正（新規追加）
-supabase/migrations/20250922_fix_users_table_schema.sql
-
-# 8. 作品テーブルスキーマ修正（新規追加）
-supabase/migrations/20250922_fix_works_table_schema.sql
-
-# 9. 要件変更対応スキーマ修正（新規追加）
-supabase/migrations/20250922_schema_requirements_update.sql
-
-# 10. セキュリティRLSポリシー（新規追加）
-supabase/migrations/20250922_security_rls_policies.sql
-
-# 11. 監査ログ（新規追加）
-supabase/migrations/20250922_audit_tables.sql
-
-# 12. RLSポリシー修正（新規追加）
-supabase/migrations/20250922_rls_policy_fixes.sql
-
-# 13. v5.0機能
-supabase/migrations/20250922_v5_0_core.sql
-supabase/migrations/20250922_v5_0_storage.sql
-
-# 15. 追加セキュリティ修正（RLSとsearch_path固定）
-supabase/migrations/20250930_security_fixes.sql
-
-# 16. search_path 固定（SECURITY DEFINER 関数）
-supabase/migrations/20250930_fix_function_search_path_any.sql
-supabase/migrations/20251005_fix_function_search_path_security.sql
-
-# 17. レートリミット統一（v5モデルに統一）
-supabase/migrations/20251003_unify_rate_limit_v5.sql
-
-# 14. テストデータ（開発時のみ）
-supabase/migrations/20241218_test_data_tables.sql
+cd photo-rank
+supabase link --project-ref YOUR_PROJECT_REF
+supabase db push  # v6 マイグレーションのみを適用
 ```
 
-### 🔧 実行コマンド
-
-#### 全マイグレーション実行
+#### 全マイグレーション実行（開発環境）
 ```bash
-# 全てリセットして新規適用
-supabase db reset
-
-# または段階的適用
-supabase db push
+cd photo-rank
+supabase db reset  # ローカル環境を完全にリセットして再適用
 ```
 
-#### 個別実行（トラブルシューティング用）
-```bash
-# トリガー競合解決
-psql -h your-host -d your-db -f supabase/migrations/20250922_fix_trigger_conflicts.sql
+### 📂 v6 マイグレーションファイル一覧
 
-# スキーマ要件更新
-psql -h your-host -d your-db -f supabase/migrations/20250922_schema_requirements_update.sql
-```
+権威ディレクトリ `photo-rank/supabase/migrations/` に含まれるファイル：
 
-### 🔒 セキュリティ補遺（手動適用SQLの例）
-以下の指摘（linter）がある場合、環境に応じて SQL を直接適用してください（権限が必要な場合あり）。
+1. **基盤スキーマ（v6統合）**
+   - `20251002100000_v6_unified_schema.sql` - v6統合スキーマ（テーブル、インデックス、関数）
+   - `20251002100001_v6_config_and_helpers.sql` - 設定とヘルパー関数
 
-- RLS disabled in public（public テーブルの RLS 無効）
-```
-ALTER TABLE IF EXISTS public.schema_migrations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.simple_rate_limits ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS schema_migrations_deny_all ON public.schema_migrations;
-DROP POLICY IF EXISTS simple_rate_limits_deny_all ON public.simple_rate_limits;
-CREATE POLICY schema_migrations_deny_all ON public.schema_migrations FOR ALL TO PUBLIC USING (false) WITH CHECK (false);
-CREATE POLICY simple_rate_limits_deny_all ON public.simple_rate_limits FOR ALL TO PUBLIC USING (false) WITH CHECK (false);
-```
+2. **セキュリティ強化**
+   - `20251002110000_v6_security_hardening.sql` - セキュリティ強化（RLS、関数search_path）
+   - `20251002134500_v6_security_hardening_followup.sql` - セキュリティ強化フォローアップ
+   - `20251002150000_security_hardening_fixes.sql` - セキュリティ修正
 
-- 指定テーブルのみ service_role に限定（例: manufacturing_order_status_history）
-```
-ALTER TABLE IF EXISTS public.manufacturing_order_status_history ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS mo_status_admin_all ON public.manufacturing_order_status_history;
-CREATE POLICY mo_status_admin_all ON public.manufacturing_order_status_history FOR ALL TO authenticated
-USING ((current_setting('request.jwt.claims', true)::jsonb ->> 'role') = 'service_role')
-WITH CHECK ((current_setting('request.jwt.claims', true)::jsonb ->> 'role') = 'service_role');
-```
+3. **互換性ビュー**
+   - `20251002120000_v6_compatibility_views.sql` - v5互換ビュー
+   - `20251002130000_v6_compatibility_views_v2.sql` - 互換ビューv2
+   - `20251002133000_v6_compatibility_views_v3.sql` - 互換ビューv3
+   - `20251002140000_v6_organizer_compatibility_views.sql` - オーガナイザー互換ビュー
 
-- extension in public（pg_trgm を public から移動）
-```
-CREATE SCHEMA IF NOT EXISTS extensions;
-ALTER EXTENSION pg_trgm SET SCHEMA extensions;
-```
+4. **v6追加機能（2025-10-05）**
+   - `20251005_repair_enums_and_views.sql` - Enum型とビューの修復
+   - `20251005_registration_applications.sql` - 登録申請機能
+   - `20251005_fix_view_security_invoker.sql` - ビューのSECURITY INVOKER修正
 
-- function search_path mutable（public 関数に search_path 固定）
-```
-SELECT format(
-  'ALTER FUNCTION %I.%I(%s) SET search_path TO pg_catalog, public;',
-  n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)
-)
-FROM pg_proc p
-JOIN pg_namespace n ON n.oid = p.pronamespace
+5. **RLS有効化**
+   - `RLS_ENABLE_V6_TABLES.sql` - v6テーブルのRLS有効化（通知のみスタブ版）
+
+6. **リモート適用用SQL（参考）**
+   - `REMOTE_APPLY_*.sql` - 本番環境への段階的適用用（必要に応じて使用）
+   - `SECURITY_ENHANCEMENT_PII.sql` - PII保護強化
+
+### ✅ 反映確認クエリ
+
+マイグレーション適用後、以下のクエリで確認してください：
+
+```sql
+-- v6 テーブル群の存在確認
+SELECT
+  to_regclass('public.rate_limit_logs') AS has_rate_limit_logs,
+  to_regclass('public.upload_attempts')  AS has_upload_attempts,
+  to_regclass('public.users_vw')        AS has_users_vw,
+  to_regclass('public.user_roles')      AS has_user_roles,
+  to_regclass('public.user_profiles')   AS has_user_profiles;
+
+-- RLS 確認（v6 テーブル）
+SELECT relname, relrowsecurity
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE n.nspname = 'public'
-  AND p.proname IN (
-    'set_updated_at','get_user_type','is_user_factory','get_creator_monthly_summary',
-    'is_admin','generate_monthly_payouts_v50','simple_rate_check','update_updated_at_column',
-    'check_rate_limit_safe','validate_image_mime_safe','is_admin_safe',
-    'sanitize_xml_safe','sync_user_public_profile','delete_user_public_profile'
-  );
-# 出力された ALTER FUNCTION 文を実行
+  AND relname IN ('rate_limit_logs', 'upload_attempts', 'user_roles', 'user_profiles')
+ORDER BY relname;
+
+-- Enum型の確認
+SELECT typname, typtype
+FROM pg_type
+WHERE typname IN ('user_role_type', 'application_status', 'registration_type')
+ORDER BY typname;
 ```
 
-### ✅ 解決された問題
+### 🚫 アーカイブディレクトリ（適用対象外）
 
-1. **ERROR: 42710: trigger already exists**
-   - `DROP TRIGGER IF EXISTS`で安全に削除してから再作成
-   - 冪等性を保証
-   - stripe_webhook_events トリガー競合も含む
+以下のディレクトリ内のファイルは**適用しないでください**：
 
-2. **ERROR: 42703: column "email" of relation "users" does not exist**
-   - usersテーブルに必要なカラムを動的に追加
-   - 条件チェック付きINSERT文
+1. **photo-rank/supabase/migrations_old/**
+   - 79個の旧v5系マイグレーション
+   - 履歴保持用、参考用のみ
 
-3. **ERROR: 42703: column "description" of relation "works" does not exist**
-   - worksテーブルスキーマを完全修正
-   - 全カラムの存在チェックと追加
+2. **supabase/migrations_old/**
+   - ルート直下の補助SQL（7ファイル）
+   - `README_ARCHIVE.md` に警告記載
 
-4. **要件変更対応**
-   - 新しいカラム追加（user_type, metadata）
-   - メタデータ対応
-   - ユーザータイプ管理強化
+3. **photo-rank/db/migrations_old/**
+   - v5/v3.1系マイグレーション（12ファイル）
+   - `README_ARCHIVE.md` に警告記載
 
-5. **セキュリティ強化**
-   - 重要テーブルのRLSポリシー追加
-   - ユーザーデータアクセス制御
-   - サービスロール権限管理
-
-6. **パフォーマンス最適化**
-   - 適切なインデックス追加
-   - GINインデックスでJSONB検索高速化
-
-7. **セキュリティ強化（追加対応）**
-   - Edge Functionsのレート制限実装
-   - 包括的な監査ログシステム
-   - pre-commitフックでシークレット検知
-   - CORS処理の統一と改善
+4. **supabase/migrations/** (ルート)
+   - 空ディレクトリ（誤適用防止のため）
 
 ### 🛡️ 安全性について
 
 - 全てのマイグレーションは冪等性を保証
 - `IF NOT EXISTS`、`IF EXISTS`チェック使用
 - データ損失なしで実行可能
-- ロールバック可能
+- ロールバック可能（必要に応じてREMOTE_APPLY系を使用）
 
-### 📝 注意事項
+### 📝 注意事項（重要）
 
-- 本番環境では**テストデータファイル**を除外
-- `supabase/migrations/archive` 以下は履歴用です。新規セットアップでは実行しないでください。
-- バックアップを取ってから実行推奨
-- 段階的実行でエラー箇所を特定可能
+1. **権威ディレクトリの厳守**
+   - `photo-rank/supabase/migrations/` のみが適用対象
+   - 他のディレクトリのSQLファイルは適用しない
 
-### 追加補足（Rate Limiting の統一方針）
+2. **実行ディレクトリの確認**
+   - 必ず `photo-rank/` ディレクトリに移動してから実行
+   - ルートディレクトリからの実行は避ける
 
-- v6 では `public.rate_limit_logs`（イベント行）と `public.upload_attempts` を用いたレート制限に統一します。
-- 旧 v5 の集約テーブル `public.rate_limits` は非推奨です。新規コード・新規環境では作成しないでください。
-- 監視は `sql/security_rate_limit_stats.sql` により作成される `public.security_rate_limit_stats` ビューで行います（基盤テーブルを自動検出）。
+3. **バックアップの推奨**
+   - 本番環境では必ずバックアップを取得
+   - `supabase db dump` でバックアップ作成
+
+4. **段階的適用**
+   - トラブルシューティング時は個別ファイルを順次適用可能
+   - `psql` コマンドでの手動適用も可能
+
+### 🔍 トラブルシューティング
+
+#### エラーが発生した場合
+
+1. **マイグレーション履歴の確認**
+   ```sql
+   SELECT * FROM supabase_migrations.schema_migrations
+   ORDER BY version DESC
+   LIMIT 10;
+   ```
+
+2. **個別ファイルの適用**
+   ```bash
+   cd photo-rank
+   psql -h your-host -d your-db -f supabase/migrations/[ファイル名].sql
+   ```
+
+3. **ログの確認**
+   - Supabaseダッシュボードのログを確認
+   - `supabase db diff` でスキーマ差分を確認
+
+### 📚 関連ドキュメント
+
+- **README.md**: プロジェクト概要とv6権威パスの説明
+- **supabase/MIGRATION_GUIDE.md**: v5→v6移行ガイド
+- **supabase/V6_COMPLETION_REPORT.md**: v6完了レポート
+- **supabase/SCHEMA_REDESIGN.md**: v6スキーマ設計詳細
+
+### 🎯 v6 の主な変更点
+
+1. **テーブル構造の統一**
+   - `user_roles` テーブルでロール管理
+   - `users_vw` ビューで統合ユーザー情報提供
+
+2. **セキュリティ強化**
+   - すべての関数に `search_path` 固定
+   - RLSポリシーの全面的見直し
+   - PII保護の強化
+
+3. **レート制限の統一**
+   - `rate_limit_logs` イベントベースに統一
+   - `upload_attempts` で画像アップロード制限
+
+4. **互換性の維持**
+   - v5互換ビューで既存コードとの互換性確保
+   - 段階的移行をサポート

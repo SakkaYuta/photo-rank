@@ -1,3 +1,6 @@
+-- Archived copy of v3.1 differential migration (see history for original context)
+-- (Content preserved from original file)
+
 -- v3.1 differential migration (non-destructive)
 -- Creates new org/sales/approvals/payouts_v31 tables and helper functions
 -- Marks schema_migrations with version 'v3.1_differential_update'
@@ -143,3 +146,4 @@ $$ LANGUAGE plpgsql;
 INSERT INTO public.schema_migrations(version, checksum)
 VALUES ('v3.1_differential_update', 'local')
 ON CONFLICT (version) DO NOTHING;
+

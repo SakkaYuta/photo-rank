@@ -55,52 +55,32 @@ VITE_DEMO_ALLOWED_HOSTS=localhost,127.0.0.1
 
 ## データベース（マイグレーション）
 
-### v5.0 マーケットプレイス移行
-製造パートナー型マーケットプレイスへの完全移行
-
-**マイグレーションファイル:**
-- `db/migrations/v5_0_marketplace.sql` - パートナー・工場・製造オーダーテーブル
-- `db/migrations/v5_0_rls.sql` - RLS ポリシーと認可制御
-- `db/migrations/v5_0_backfill.sql` - 二段階手数料のバックフィル
-- `db/migrations/v5_0_payouts.sql` - 支払いビューと月次生成関数
-
-**適用コマンド:**
+### 権威ディレクトリ（v6 系）
+- Authoritative: `photo-rank/supabase/migrations`（v6 統合スキーマ）
+- 適用例:
 ```bash
-# Supabase プロジェクトに接続
+cd photo-rank
 supabase link --project-ref YOUR_PROJECT_REF
-
-# マイグレーション適用（順番重要）
-supabase db push --file db/migrations/v5_0_marketplace.sql
-supabase db push --file db/migrations/v5_0_rls.sql  
-supabase db push --file db/migrations/v5_0_backfill.sql
-supabase db push --file db/migrations/v5_0_payouts.sql
-# 2025-09-18 追加: 工場ダッシュボード強化（ビュー/参照項目拡張）
-supabase db push --file supabase/migrations/20250918_partner_orders_enhancements.sql
+supabase db push  # v6 のマイグレーションのみを適用
 ```
 
-**反映確認:**
+### アーカイブ（適用対象外）
+- 旧 v5 系: `photo-rank/db/migrations_old/`（従来の `db/migrations` から退避済み）
+- 旧ルート: `supabase/migrations_old/`（ルート直下の補助SQLは退避済み）
+- これらは履歴/参考用であり、適用しないでください。
+
+### 反映確認（例）
 ```sql
--- 適用済みマイグレーション確認
-SELECT version FROM schema_migrations 
-WHERE version IN ('v5.0_marketplace','v5.0_rls','v5.0_backfill','v5.0_payouts');
+-- v6 テーブル群の存在確認（一例）
+SELECT to_regclass('public.rate_limit_logs') AS has_rate_limit_logs,
+       to_regclass('public.upload_attempts')  AS has_upload_attempts,
+       to_regclass('public.users_vw')        AS has_users_vw;
 
--- 手数料バックフィル確認
-SELECT COUNT(*) FROM purchases WHERE platform_total_revenue IS NULL;
-
--- パートナーテーブル確認
-SELECT COUNT(*) FROM manufacturing_partners;
-SELECT COUNT(*) FROM factory_products;
+-- RLS 確認（v6 レート制限テーブル）
+SELECT relname, relrowsecurity
+FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+WHERE n.nspname='public' AND relname IN ('rate_limit_logs','upload_attempts');
 ```
-
-**月次支払い生成の設定:**
-```sql
--- pg_cron 拡張が利用可能な場合、月次ジョブが自動設定されます
--- 手動実行の場合:
-SELECT public.generate_monthly_payouts_v50();
-```
-
-### v3.1（旧版・参考）
-- v3.1 追加: `db/migrations/v3_1_differential.sql`
 
 ## 要件定義
 - v5.0（最終・マーケットプレイス型）: `docs/requirements_v5.0.md`
