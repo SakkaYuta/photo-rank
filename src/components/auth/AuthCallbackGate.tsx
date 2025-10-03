@@ -2,10 +2,51 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/services/supabaseClient'
 import { setupUserProfileAfterAuth } from '@/services/auth.service'
 import { useToast } from '@/contexts/ToastContext'
+import { defaultViewFor, type RoleKey } from '@/routes'
 
 export function AuthCallbackGate() {
   const [message, setMessage] = useState('Google認証処理中...')
   const { showToast } = useToast()
+
+  // ユーザーのロールに基づいてリダイレクト先を決定
+  const getRoleBasedRedirect = async (): Promise<string> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return '#merch'
+
+      // user_roles テーブルでロールを確認
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+
+      const userRoles = new Set((roles || []).map((r: any) => r.role))
+
+      // partner_users と organizer_profiles を取得
+      const [partnerResult, organizerResult] = await Promise.all([
+        supabase.from('partner_users').select('partner_id').eq('user_id', user.id).maybeSingle(),
+        supabase.from('organizer_profiles').select('user_id').eq('user_id', user.id).maybeSingle(),
+      ])
+
+      // ロール優先順位で決定
+      let roleKey: RoleKey = 'general'
+      if (organizerResult.data) {
+        roleKey = 'organizer'
+      } else if (partnerResult.data) {
+        roleKey = 'factory'
+      } else if (userRoles.has('creator')) {
+        roleKey = 'creator'
+      } else if (userRoles.has('admin')) {
+        roleKey = 'admin'
+      }
+
+      const defaultView = defaultViewFor(roleKey)
+      return `#${defaultView}`
+    } catch (error) {
+      console.error('Error determining role-based redirect:', error)
+      return '#merch'
+    }
+  }
 
   useEffect(() => {
     const run = async () => {
@@ -38,14 +79,16 @@ export function AuthCallbackGate() {
             message: '認証が完了しました',
             duration: 3000
           })
-          let redirect = '#merch'
+          let redirect = await getRoleBasedRedirect()
           try {
             if (nextParam) {
               const decoded = decodeURIComponent(nextParam)
               redirect = decoded.startsWith('#') ? decoded : `#${decoded}`
             } else {
               const saved = localStorage.getItem('postLoginRedirect')
-              if (saved) redirect = saved.startsWith('#') ? saved : `#${saved}`
+              if (saved) {
+                redirect = saved.startsWith('#') ? saved : `#${saved}`
+              }
             }
             localStorage.removeItem('postLoginRedirect')
             localStorage.removeItem('pendingSignUp')
@@ -97,8 +140,8 @@ export function AuthCallbackGate() {
           duration: 3000
         })
 
-        // 復帰先（ログイン直前に保存したハッシュ）
-        let redirect = '#merch'
+        // 復帰先（ログイン直前に保存したハッシュまたはロール別ダッシュボード）
+        let redirect = await getRoleBasedRedirect()
         try {
           if (nextParam) {
             const decoded = decodeURIComponent(nextParam)
@@ -107,10 +150,10 @@ export function AuthCallbackGate() {
             const saved = localStorage.getItem('postLoginRedirect')
             if (saved) {
               redirect = saved.startsWith('#') ? saved : `#${saved}`
-              localStorage.removeItem('postLoginRedirect')
             }
           }
-          // サインアップフラグをクリア
+          // フラグをクリア
+          localStorage.removeItem('postLoginRedirect')
           localStorage.removeItem('pendingSignUp')
         } catch {}
         // クエリを消してからハッシュへ遷移
