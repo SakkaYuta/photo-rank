@@ -16,10 +16,6 @@
           "value": "nosniff"
         },
         {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        },
-        {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
         },
@@ -38,7 +34,7 @@
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "https://photo-rank.vercel.app"
+          "value": "$VERCEL_URL"
         },
         {
           "key": "Access-Control-Allow-Methods", 
@@ -51,10 +47,5 @@
       ]
     }
   ],
-  "rewrites": [
-    {
-      "source": "/api/image-processor/(.*)",
-      "destination": "http://localhost:3002/$1"
-    }
-  ]
+  "rewrites": []
 }

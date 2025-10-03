@@ -13,6 +13,13 @@ export default defineConfig({
       clientPort: 3000,
       protocol: 'ws',
     },
+    proxy: {
+      '/api/images': {
+        target: process.env.IMAGE_PROCESSOR_URL || 'http://localhost:3001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/images/, '/api/images'),
+      },
+    },
   },
   preview: {
     port: 3000,
