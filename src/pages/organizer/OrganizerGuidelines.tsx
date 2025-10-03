@@ -18,6 +18,7 @@ const OrganizerGuidelines: React.FC = () => {
         <h3 className="text-lg font-semibold text-gray-900">登録申請</h3>
         <p className="text-gray-700">
           オーガナイザーになろうとする方は、PhotoRankオーガナイザー規約を承認の上、当社の定める手続きにより登録を申請し、当社の承諾を得なければならないものとします。
+          登録は承認制です。申請受付後、<span className="font-medium">2週間以内</span>を目安に、登録可否をメールでご連絡します（審査状況により前後する場合があります）。
         </p>
 
         <h4 className="font-semibold text-gray-900">提出書類</h4>
@@ -339,4 +340,3 @@ const OrganizerGuidelines: React.FC = () => {
 }
 
 export default OrganizerGuidelines
-

@@ -122,9 +122,14 @@ export function PartnerDashboard() {
       <div className="p-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4 text-gray-900">製造パートナーダッシュボード</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            製造パートナーとして登録されていません。
-          </p>
+          <div className="mx-auto max-w-xl space-y-3">
+            <p className="text-gray-700 dark:text-gray-300">
+              製造パートナー（工場・印刷業者）として登録されていません。
+            </p>
+            <p className="text-gray-700 dark:text-gray-300">
+              登録は<span className="font-medium">承認制</span>です。申請受付後、<span className="font-medium">2週間以内</span>を目安に、登録可否をメールでご連絡します（審査状況により前後する場合があります）。
+            </p>
+          </div>
         </div>
       </div>
     )
