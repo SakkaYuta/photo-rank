@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/services/supabaseClient'
 import { setupUserProfileAfterAuth } from '@/services/auth.service'
+import { useToast } from '@/contexts/ToastContext'
 
 export function AuthCallbackGate() {
   const [message, setMessage] = useState('Google認証処理中...')
+  const { showToast } = useToast()
 
   useEffect(() => {
     const run = async () => {
@@ -13,6 +15,16 @@ export function AuthCallbackGate() {
       const nextParam = params.get('next')
       if (error) {
         setMessage(`認証エラー: ${error}`)
+        showToast({
+          variant: 'error',
+          title: 'ログイン失敗',
+          message: `認証エラーが発生しました: ${error}`,
+          duration: 5000
+        })
+        // 3秒後にホームへリダイレクト
+        setTimeout(() => {
+          window.location.hash = '#'
+        }, 3000)
         return
       }
       if (!code) {
@@ -20,6 +32,12 @@ export function AuthCallbackGate() {
         const { data: sessionData } = await supabase.auth.getSession()
         if (sessionData.session) {
           // セッションがあれば通常フローへ
+          showToast({
+            variant: 'success',
+            title: 'ログイン成功！',
+            message: '認証が完了しました',
+            duration: 3000
+          })
           let redirect = '#merch'
           try {
             if (nextParam) {
@@ -37,11 +55,21 @@ export function AuthCallbackGate() {
           return
         }
         setMessage('認証コードが見つかりません。リダイレクトURLの設定（Additional Redirect URLs）をご確認ください。')
+        showToast({
+          variant: 'error',
+          title: 'ログイン失敗',
+          message: '認証コードが見つかりません。リダイレクトURLの設定をご確認ください。',
+          duration: 6000
+        })
         return
       }
       try {
         const { error: exchErr } = await supabase.auth.exchangeCodeForSession(code)
         if (exchErr) throw exchErr
+
+        // サインアップかログインかを判定
+        const isSignUp = localStorage.getItem('pendingSignUp') === '1'
+
         // プロフィール作成/更新（サインアップモードやpendingUserTypeがある場合に実行）
         try {
           const pendingType = localStorage.getItem('pendingUserType')
@@ -53,7 +81,21 @@ export function AuthCallbackGate() {
           // 続行するがメッセージ表示
           console.warn('Profile setup failed after OAuth:', e)
           setMessage('認証は成功しましたが、プロフィール作成に失敗しました。後でアカウント設定から情報を更新してください。')
+          showToast({
+            variant: 'warning',
+            title: '認証成功',
+            message: '認証は成功しましたが、プロフィール作成に失敗しました。後でアカウント設定から情報を更新してください。',
+            duration: 5000
+          })
         }
+
+        // 成功トースト表示
+        showToast({
+          variant: 'success',
+          title: isSignUp ? '会員登録成功！' : 'ログイン成功！',
+          message: isSignUp ? '会員登録が完了しました。ようこそ！' : 'ログインが完了しました',
+          duration: 3000
+        })
 
         // 復帰先（ログイン直前に保存したハッシュ）
         let redirect = '#merch'
@@ -76,10 +118,16 @@ export function AuthCallbackGate() {
         window.location.hash = redirect
       } catch (e: any) {
         setMessage(`セッション確立に失敗しました: ${e?.message || '不明なエラー'}`)
+        showToast({
+          variant: 'error',
+          title: 'ログイン失敗',
+          message: `セッション確立に失敗しました: ${e?.message || '不明なエラー'}`,
+          duration: 6000
+        })
       }
     }
     run()
-  }, [])
+  }, [showToast])
 
   return (
     <div className="min-h-screen grid place-items-center">
