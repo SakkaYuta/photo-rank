@@ -74,7 +74,7 @@ const product2 = await fetchProductById('id2');
 const products = await fetchProductsByIds(['id1', 'id2']);
 ```
 
-### 4. データベース最適化 (`supabase/migrations/20250929_performance_optimization.sql`)
+### 4. データベース最適化 (`photo-rank/supabase/migrations/20250929_performance_optimization.sql` が存在する場合)
 
 **機能:**
 - 戦略的インデックス設定

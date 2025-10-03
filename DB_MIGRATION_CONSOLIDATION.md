@@ -10,9 +10,9 @@
 ### マイグレーション分散状況
 
 **3つのディレクトリに分散**:
-1. `supabase/migrations/` - v6系統一スキーマ（最新・権威）
+1. `photo-rank/supabase/migrations/` - v6系統一スキーマ（最新・権威）
 2. `db/migrations/` - v5系旧スキーマ（レガシー）
-3. ルート `photo-rank/supabase/migrations/` - 上記と同一
+3. ルート `photo-rank/supabase/migrations/` - 権威（新規作成/適用はこちら）
 
 ### 問題点
 
@@ -82,7 +82,7 @@ EOF
 
 ```bash
 # v6 マイグレーションファイル一覧
-ls -1 supabase/migrations/202510*.sql
+ls -1 photo-rank/supabase/migrations/202510*.sql
 
 # 期待されるファイル:
 # 20251002100000_v6_unified_schema.sql
@@ -133,7 +133,7 @@ curl -X POST http://localhost:54321/functions/v1/process-uploaded-image \
 ### 新規マイグレーション作成
 
 ```bash
-# 必ず supabase/migrations/ 配下で作成
+# 必ず photo-rank/supabase/migrations/ 配下で作成
 npx supabase migration new <migration_name>
 
 # ファイル名形式: YYYYMMDDHHMMSS_<migration_name>.sql
@@ -168,7 +168,7 @@ npx supabase db reset
 
 ### マイグレーション統一確認
 
-- [ ] `supabase/migrations/` のみが権威ソースとして認識されている
+- [ ] `photo-rank/supabase/migrations/` のみが権威ソースとして認識されている
 - [ ] `db/migrations/` は `db/migrations_archive_v5/` に移動済み
 - [ ] Supabase CLI が正しいディレクトリを参照している
 
@@ -203,7 +203,7 @@ npx supabase db reset
 ```bash
 # 手動適用
 psql -h 127.0.0.1 -p 54322 -U postgres postgres \
-  -f supabase/migrations/20251002110000_v6_security_hardening.sql
+  -f photo-rank/supabase/migrations/20251002110000_v6_security_hardening.sql
 ```
 
 ### エラー: "duplicate key value violates unique constraint"
@@ -235,7 +235,7 @@ AND ctid NOT IN (
 
 1. ✅ v6 マイグレーションのみが権威ソース
 2. ✅ Edge Functions が正常動作
-3. ✅ 新規マイグレーションは `supabase/migrations/` で作成
+3. ✅ 新規マイグレーションは `photo-rank/supabase/migrations/` で作成
 
 ### 本番環境適用
 

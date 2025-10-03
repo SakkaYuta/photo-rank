@@ -56,8 +56,8 @@ supabase db reset  # ローカル環境を完全にリセットして再適用
    - `RLS_ENABLE_V6_TABLES.sql` - v6テーブルのRLS有効化（通知のみスタブ版）
 
 6. **リモート適用用SQL（参考）**
-   - `REMOTE_APPLY_*.sql` - 本番環境への段階的適用用（必要に応じて使用）
-   - `SECURITY_ENHANCEMENT_PII.sql` - PII保護強化
+   - `migrations/archive/REMOTE_APPLY_*.sql` - 本番環境への段階的適用用（参考用、通常は適用しない）
+   - `SECURITY_ENHANCEMENT_PII.sql` - PII保護強化（必要時のみ）
 
 ### ✅ 反映確認クエリ
 
@@ -145,7 +145,7 @@ ORDER BY typname;
 2. **個別ファイルの適用**
    ```bash
    cd photo-rank
-   psql -h your-host -d your-db -f supabase/migrations/[ファイル名].sql
+   psql -h your-host -d your-db -f photo-rank/supabase/migrations/[ファイル名].sql
    ```
 
 3. **ログの確認**

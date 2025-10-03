@@ -60,7 +60,7 @@ SELECT 'order_items', COUNT(*) FROM order_items;
 
 1. ファイルを開く:
    ```
-   supabase/migrations/REMOTE_APPLY_v6_compatibility.sql
+   photo-rank/supabase/migrations/REMOTE_APPLY_v6_compatibility.sql
    ```
 
 2. ファイル全体をコピー

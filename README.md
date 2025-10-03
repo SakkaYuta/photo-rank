@@ -225,9 +225,6 @@ POST /functions/v1/execute-refund
 - アイコン
   - `public/favicon.ico` を追加
 
-- データベース拡張
-  - `supabase/migrations/20250918_partner_orders_enhancements.sql` 追加
-    - `manufacturing_orders`: `factory_product_id`, `purchase_id` 追加 + インデックス
-    - `manufacturing_order_status_history` 追加
-    - 統合ビュー `partner_orders_view` 追加（注文/商品/作品/クリエイター/顧客を1クエリで参照）
-  - RLS 環境では、ビューの参照ポリシー（`partner_id = セッションのパートナー`）を別途追加してください
+-- データベース拡張（v6 権威）
+  - v6 に統合済み。`photo-rank/supabase/migrations/` 配下の関連SQLをご確認ください。
+  - RLS 環境では、ビュー参照ポリシー（`partner_id = セッションのパートナー`）の適用を忘れずに。

@@ -105,7 +105,7 @@ CREATE TRIGGER update_cart_items_updated_at BEFORE UPDATE ON cart_items FOR EACH
 ### 2-Extra. 工場ダッシュボード拡張（2025-09-18）
 ```sql
 -- 追加マイグレーション: パートナー注文ビューとリレーション強化
--- ファイル: supabase/migrations/20250918_partner_orders_enhancements.sql
+-- ファイル（v6 権威）: photo-rank/supabase/migrations/20250918_partner_orders_enhancements.sql（存在する場合）
 
 -- 1) manufacturing_orders に外部キーを追加
 ALTER TABLE public.manufacturing_orders
@@ -255,7 +255,7 @@ CREATE TRIGGER update_user_privacy_settings_updated_at BEFORE UPDATE ON user_pri
 
 ### 2-Extra. 商品登録の配送情報必須化（2025-09-30）
 ```sql
--- ファイル: supabase/migrations/20250930_require_shipping_info_for_products.sql
+-- ファイル（v6 権威）: photo-rank/supabase/migrations/20250930_require_shipping_info_for_products.sql（存在する場合）
 -- 概要: factory_products の INSERT/UPDATE 時に、対応パートナーの shipping_info（method_title, carrier_name, fee_general_jpy）
 -- が未設定/不正な場合はエラーにします。
 
@@ -265,14 +265,14 @@ CREATE TRIGGER update_user_privacy_settings_updated_at BEFORE UPDATE ON user_pri
 
 ### 2-Extra. Stripe購入の冪等性（2025-09-30）
 ```sql
--- ファイル: supabase/migrations/20250930_unique_pi_on_purchases.sql
+-- ファイル（v6 権威）: photo-rank/supabase/migrations/20250930_unique_pi_on_purchases.sql（存在する場合）
 -- 概要: purchases.stripe_payment_intent_id にユニークインデックスを追加し、
 -- 同一PaymentIntentでの重複書込みをDBレベルで防止します。
 ```
 
 ### 2-Extra. RLS強化（2025-09-30）
 ```sql
--- ファイル: supabase/migrations/20250930_rls_hardening.sql
+-- ファイル（v6 権威）: photo-rank/supabase/migrations/20250930_rls_hardening.sql（存在する場合）
 -- 概要: 
 -- 1) manufacturing_partners: 公開閲覧は approved のみ、所有者は全権限
 -- 2) factory_products: 公開閲覧は partnerがapproved かつ productがactive のみ
@@ -282,7 +282,7 @@ CREATE TRIGGER update_user_privacy_settings_updated_at BEFORE UPDATE ON user_pri
 ### 2-Extra. コンビニ/銀行振込の導入（2025-09-30）
 ```md
 1) DB拡張
-   - `supabase/migrations/20250930_payment_methods.sql` を適用
+   - `photo-rank/supabase/migrations/20250930_payment_methods.sql` を適用（存在する場合）
      - purchases に `payment_method`, `payment_status`, `payment_due_at`, `payment_instructions`, `konbini_*` などを追加
      - 返金用の `refund_status/amount/...` と `refund_requests` テーブルを追加
 
@@ -310,9 +310,9 @@ CREATE TRIGGER update_user_privacy_settings_updated_at BEFORE UPDATE ON user_pri
    - スケジュール: 毎分実行（`* * * * *`）
 
 3) 追加インデックス/OTカラム適用
-   - ファイル: `supabase/migrations/20250930_battle_indexes.sql`
+   - ファイル（v6 権威）: `photo-rank/supabase/migrations/20250930_battle_indexes.sql`（存在する場合）
    - 目的: `battles(status, start_time)`, `cheer_tickets(battle_id)` の参照高速化
-   - ファイル: `supabase/migrations/20250930_battle_overtime.sql`
+   - ファイル（v6 権威）: `photo-rank/supabase/migrations/20250930_battle_overtime.sql`（存在する場合）
    - 目的: `battles.overtime_count` を追加し、延長回数を追跡（最大2回）
 ```
 
