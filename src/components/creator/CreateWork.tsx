@@ -507,10 +507,10 @@ export function CreateWork() {
         setTimeout(() => {
           import('@/utils/navigation')
             .then(m => m.navigate('myworks'))
-            .catch(() => { try { window.location.hash = '#myworks' } catch {} })
+            .catch(() => { try { window.location.href = '/#myworks' } catch {} })
         }, 800)
       } catch {
-        try { window.location.hash = '#myworks' } catch {}
+        try { window.location.href = '/#myworks' } catch {}
       }
       // 簡易リセット（必要に応じて保持）
       setTitle('')

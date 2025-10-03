@@ -63,6 +63,8 @@ import InvoiceSettings from './pages/organizer/InvoiceSettings'
 import OrganizerRevenue from './pages/organizer/RevenueManagement'
 import OrganizerGuidelines from './pages/organizer/OrganizerGuidelines'
 import BattleInvitations from './pages/BattleInvitations'
+import PartnerApply from './pages/apply/PartnerApply'
+import OrganizerApply from './pages/apply/OrganizerApply'
 import { isDemoEnabled } from '@/utils/demo'
 
 type ViewKey = typeof ROUTES[number]
@@ -109,7 +111,10 @@ function App() {
 
   const navigate = (v: ViewKey) => {
     setView(v)
-    try { window.location.hash = viewToHash(v) } catch {}
+    try {
+      // ページをリロードして状態をリセット
+      window.location.href = `/#${viewToHash(v)}`
+    } catch {}
   }
 
   // 役割に応じた許可ビューを制限（ハッシュで不正なビューが来た場合も強制補正）
@@ -163,9 +168,9 @@ function App() {
     const navHandler = (e: any) => {
       if (e?.detail?.view) {
         setView(e.detail.view as ViewKey)
-        // persona パラメータがある場合、URLハッシュに追加
+        // persona パラメータがある場合、URLハッシュに追加してリロード
         if (e.detail.view === 'products-marketplace' && e.detail.persona) {
-          window.location.hash = viewToHash(e.detail.view, { persona: e.detail.persona })
+          window.location.href = `/#${viewToHash(e.detail.view, { persona: e.detail.persona })}`
         }
       }
     }
@@ -457,6 +462,16 @@ function App() {
               {view === 'battle-invitations' && (
                 <PartialErrorBoundary name="バトル招待一覧">
                   <BattleInvitations />
+                </PartialErrorBoundary>
+              )}
+              {view === 'apply-partner' && (
+                <PartialErrorBoundary name="製造パートナー申請">
+                  <PartnerApply />
+                </PartialErrorBoundary>
+              )}
+              {view === 'apply-organizer' && (
+                <PartialErrorBoundary name="オーガナイザー申請">
+                  <OrganizerApply />
                 </PartialErrorBoundary>
               )}
               {view === 'live-offers' && (

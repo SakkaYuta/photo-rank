@@ -26,8 +26,15 @@ export function parseHash(): { view: string; params: Record<string, string> } {
 
 export function navigate(view: string, params?: NavParams) {
   try {
-    window.location.hash = viewToHash(view, params)
-  } catch {}
+    const hash = viewToHash(view, params)
+    // ページをリロードして状態をリセット
+    window.location.href = `/#${hash}`
+  } catch {
+    // フォールバック: ハッシュのみ変更
+    try {
+      window.location.hash = viewToHash(view, params)
+    } catch {}
+  }
   try {
     window.dispatchEvent(new CustomEvent(NAV_EVENT, { detail: { view, ...(params || {}) } }))
   } catch {}

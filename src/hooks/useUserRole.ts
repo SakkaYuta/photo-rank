@@ -54,11 +54,11 @@ export const useUserRole = () => {
         setLoading(true);
         setError(null);
 
-        // Check if user just completed OAuth and has a pending user type
-        const pendingUserType = localStorage.getItem('pendingUserType');
+        // Check if user just completed OAuth as sign-up
+        const pendingSignUp = localStorage.getItem('pendingSignUp') === '1'
 
-        if (pendingUserType) {
-          // User just completed OAuth with a selected user type
+        if (pendingSignUp) {
+          // Only create profile on explicit sign-up flow
           const setupResult = await setupUserProfileAfterAuth();
           if (setupResult) {
             setUserProfile(setupResult);
@@ -68,11 +68,8 @@ export const useUserRole = () => {
               const redirect = localStorage.getItem('postLoginRedirect')
               if (redirect) {
                 localStorage.removeItem('postLoginRedirect')
-                if (redirect.startsWith('#')) {
-                  window.location.hash = redirect
-                } else {
-                  window.location.hash = `#${redirect}`
-                }
+                const hash = redirect.startsWith('#') ? redirect : `#${redirect}`
+                window.location.href = `/${hash}`
               }
             } catch {}
             setLoading(false);
@@ -88,22 +85,12 @@ export const useUserRole = () => {
           .single();
 
         if (userError) {
-          // If user doesn't exist in our users_vw, create user_profile
+          // v5/v6: 会員未登録の場合はここでは自動作成しない
           if (userError.code === 'PGRST116') {
-            const { data: newProfile, error: createError } = await supabase
-              .from('user_profiles')
-              .insert({
-                user_id: user.id,
-                display_name: user.user_metadata?.display_name || user.email?.split('@')[0],
-              })
-              .select()
-              .single();
-
-            if (createError) throw createError;
-            setUserProfile({ ...newProfile, id: user.id, email: user.email } as any);
-            setUserType('general');
+            setUserProfile(null)
+            setUserType('general')
           } else {
-            throw userError;
+            throw userError
           }
         } else {
           let profileData: UserWithProfiles = userData as any
