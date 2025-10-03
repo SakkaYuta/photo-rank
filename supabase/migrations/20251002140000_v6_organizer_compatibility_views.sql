@@ -3,12 +3,73 @@
 -- Purpose: Provide compatibility views for organizer dashboard functionality
 
 -- =============================================================================
+-- creator_organizers table (must be created first)
+-- =============================================================================
+-- Tracks creator-organizer relationships for revenue sharing and approvals
+-- Creates the missing link between creators and their managing organizers
+
+CREATE TABLE IF NOT EXISTS creator_organizers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  creator_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  organizer_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'inactive')),
+
+  -- Revenue share settings
+  creator_share_bps integer DEFAULT 7000 CHECK (creator_share_bps >= 0 AND creator_share_bps <= 10000),
+  organizer_share_bps integer DEFAULT 2000 CHECK (organizer_share_bps >= 0 AND organizer_share_bps <= 10000),
+  platform_share_bps integer DEFAULT 1000 CHECK (platform_share_bps >= 0 AND platform_share_bps <= 10000),
+
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+
+  UNIQUE(creator_id, organizer_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_creator_organizers_creator ON creator_organizers(creator_id, status);
+CREATE INDEX IF NOT EXISTS idx_creator_organizers_organizer ON creator_organizers(organizer_id, status);
+
+COMMENT ON TABLE creator_organizers IS 'v6: Creator-organizer relationships for management and revenue sharing';
+
+-- RLS Policies for creator_organizers
+ALTER TABLE creator_organizers ENABLE ROW LEVEL SECURITY;
+
+-- Organizers can view their creators
+DROP POLICY IF EXISTS organizer_can_view_creators ON creator_organizers;
+CREATE POLICY organizer_can_view_creators ON creator_organizers
+  FOR SELECT
+  USING (
+    organizer_id IN (
+      SELECT user_id FROM user_roles WHERE role = 'organizer'
+    )
+  );
+
+-- Creators can view their organizer relationships
+DROP POLICY IF EXISTS creator_can_view_organizers ON creator_organizers;
+CREATE POLICY creator_can_view_organizers ON creator_organizers
+  FOR SELECT
+  USING (
+    creator_id = auth.uid()
+  );
+
+-- Organizers can manage their creator relationships
+DROP POLICY IF EXISTS organizer_can_manage_creators ON creator_organizers;
+CREATE POLICY organizer_can_manage_creators ON creator_organizers
+  FOR ALL
+  USING (
+    organizer_id IN (
+      SELECT user_id FROM user_roles WHERE role = 'organizer'
+    )
+  );
+
+-- =============================================================================
 -- sales_vw: Sales data aggregated from orders + order_items
 -- =============================================================================
 -- Provides revenue tracking per creator/work/organizer relationship
 -- Maps v5 'sales' table concept to v6 normalized schema
 
-CREATE OR REPLACE VIEW sales_vw AS
+DROP VIEW IF EXISTS sales_vw;
+CREATE VIEW sales_vw AS
 SELECT
   oi.id,
   oi.creator_id,
@@ -20,8 +81,8 @@ SELECT
   oi.subtotal_excl_tax_jpy AS net_amount,
   oi.subtotal_tax_jpy AS tax_amount,
 
-  -- Organizer relationship (via creator's organizer_profile)
-  op.organizer_id,
+  -- Organizer relationship (via creator's organizer)
+  co.organizer_id,
 
   -- Timestamps
   o.created_at,
@@ -36,8 +97,7 @@ LEFT JOIN products pr ON pr.id = (
   SELECT product_id FROM product_variants WHERE id = oi.product_variant_id LIMIT 1
 )
 LEFT JOIN creator_organizers co ON co.creator_id = oi.creator_id AND co.status = 'active'
-LEFT JOIN organizer_profiles op ON op.user_id = co.organizer_id
-WHERE o.status NOT IN ('cancelled', 'refunded');  -- Only count successful sales
+WHERE o.status NOT IN ('cancelled') AND o.payment_state NOT IN ('refunded', 'failed', 'cancelled');  -- Only count successful sales
 
 CREATE INDEX idx_sales_vw_creator ON order_items(creator_id);
 CREATE INDEX idx_sales_vw_work ON order_items(product_variant_id); -- Indirect work lookup
@@ -51,7 +111,8 @@ COMMENT ON VIEW sales_vw IS 'v6 compatibility: Sales data from orders+order_item
 -- Provides pending/approved/rejected work status for organizer approval flow
 -- In v6, works.is_active serves as the approval flag
 
-CREATE OR REPLACE VIEW publishing_approvals_vw AS
+DROP VIEW IF EXISTS publishing_approvals_vw;
+CREATE VIEW publishing_approvals_vw AS
 SELECT
   w.id,
   w.id AS work_id,
@@ -80,68 +141,6 @@ LEFT JOIN creator_organizers co ON co.creator_id = w.creator_id
 WHERE co.status = 'active' OR co.status = 'pending';
 
 COMMENT ON VIEW publishing_approvals_vw IS 'v6 compatibility: Work approval workflow for organizer dashboard';
-
-
--- =============================================================================
--- creator_organizers table (if not exists)
--- =============================================================================
--- Tracks creator-organizer relationships for revenue sharing and approvals
--- Creates the missing link between creators and their managing organizers
-
-CREATE TABLE IF NOT EXISTS creator_organizers (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  creator_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  organizer_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-
-  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'inactive')),
-
-  -- Revenue share settings
-  creator_share_bps integer DEFAULT 7000 CHECK (creator_share_bps >= 0 AND creator_share_bps <= 10000),
-  organizer_share_bps integer DEFAULT 2000 CHECK (organizer_share_bps >= 0 AND organizer_share_bps <= 10000),
-  platform_share_bps integer DEFAULT 1000 CHECK (platform_share_bps >= 0 AND platform_share_bps <= 10000),
-
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now(),
-
-  UNIQUE(creator_id, organizer_id)
-);
-
-CREATE INDEX idx_creator_organizers_creator ON creator_organizers(creator_id, status);
-CREATE INDEX idx_creator_organizers_organizer ON creator_organizers(organizer_id, status);
-
-COMMENT ON TABLE creator_organizers IS 'v6: Creator-organizer relationships for management and revenue sharing';
-
-
--- =============================================================================
--- RLS Policies for creator_organizers
--- =============================================================================
-
-ALTER TABLE creator_organizers ENABLE ROW LEVEL SECURITY;
-
--- Organizers can view their creators
-CREATE POLICY organizer_can_view_creators ON creator_organizers
-  FOR SELECT
-  USING (
-    organizer_id IN (
-      SELECT user_id FROM user_roles WHERE role = 'organizer'
-    )
-  );
-
--- Creators can view their organizer relationships
-CREATE POLICY creator_can_view_organizers ON creator_organizers
-  FOR SELECT
-  USING (
-    creator_id = auth.uid()
-  );
-
--- Organizers can manage their creator relationships
-CREATE POLICY organizer_can_manage_creators ON creator_organizers
-  FOR ALL
-  USING (
-    organizer_id IN (
-      SELECT user_id FROM user_roles WHERE role = 'organizer'
-    )
-  );
 
 
 -- =============================================================================
@@ -195,7 +194,8 @@ COMMENT ON FUNCTION approve_publishing IS 'v6 compatibility: Approve or reject w
 -- Provides simplified factory order view for partner users
 -- Maps v6 fulfillments → order_items → orders for dashboard display
 
-CREATE OR REPLACE VIEW factory_orders_vw AS
+DROP VIEW IF EXISTS factory_orders_vw;
+CREATE VIEW factory_orders_vw AS
 SELECT
   f.id AS fulfillment_id,
   f.order_item_id,
@@ -214,9 +214,9 @@ SELECT
   -- Product info
   oi.product_variant_id,
   pv.sku,
-  pp.id AS partner_product_id,
-  pp.name AS product_name,
-  pp.base_price_jpy,
+  pv.manufacturing_partner_id,
+  mp.name AS partner_name,
+  pv.price_jpy AS product_price_jpy,
 
   -- Item details
   oi.quantity,
@@ -236,7 +236,7 @@ JOIN orders o ON o.id = oi.order_id
 LEFT JOIN product_variants pv ON pv.id = oi.product_variant_id
 LEFT JOIN products pr ON pr.id = pv.product_id
 LEFT JOIN works w ON w.id = pr.work_id
-LEFT JOIN partner_products pp ON pp.id = pv.partner_product_id
+LEFT JOIN manufacturing_partners mp ON mp.id = pv.manufacturing_partner_id
 WHERE o.status NOT IN ('cancelled');
 
 COMMENT ON VIEW factory_orders_vw IS 'v6 compatibility: Simplified factory order view for partner dashboard';

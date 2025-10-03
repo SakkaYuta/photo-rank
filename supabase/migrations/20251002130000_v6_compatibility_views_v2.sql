@@ -12,7 +12,10 @@ BEGIN;
 -- - 画像URLは works -> assets(primary_asset_id) を結合
 -- - LEFT JOIN で非公開/非参照でもNULLで落ちないようにする
 
-CREATE OR REPLACE VIEW purchases_vw AS
+-- Drop existing view first to avoid column name conflicts
+DROP VIEW IF EXISTS purchases_vw;
+
+CREATE VIEW purchases_vw AS
 SELECT
   o.id,
   o.user_id,

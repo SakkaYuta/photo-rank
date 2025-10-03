@@ -8,7 +8,8 @@
 BEGIN;
 
 -- factory_products_vw 拡張
-CREATE OR REPLACE VIEW factory_products_vw AS
+DROP VIEW IF EXISTS factory_products_vw;
+CREATE VIEW factory_products_vw AS
 SELECT
   pp.id,
   pp.partner_id AS factory_id,
@@ -27,7 +28,8 @@ FROM partner_products pp;
 COMMENT ON VIEW factory_products_vw IS 'v5互換: partner_products を factory_products として提供（互換列付き）。';
 
 -- manufacturing_orders_vw 拡張
-CREATE OR REPLACE VIEW manufacturing_orders_vw AS
+DROP VIEW IF EXISTS manufacturing_orders_vw;
+CREATE VIEW manufacturing_orders_vw AS
 WITH oi AS (
   SELECT id, order_id, product_variant_id, creator_id FROM order_items
 )
