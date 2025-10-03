@@ -92,9 +92,10 @@ export function AuthCallbackGate() {
             }
             localStorage.removeItem('postLoginRedirect')
             localStorage.removeItem('pendingSignUp')
+            localStorage.removeItem('pendingUserType')
           } catch {}
-          try { window.history.replaceState(null, '', '/auth/callback') } catch {}
-          window.location.hash = redirect
+          // ページをリロードしてリダイレクト（状態を完全にリセット）
+          window.location.href = `/${redirect}`
           return
         }
         setMessage('認証コードが見つかりません。リダイレクトURLの設定（Additional Redirect URLs）をご確認ください。')
@@ -113,32 +114,89 @@ export function AuthCallbackGate() {
         // サインアップかログインかを判定
         const isSignUp = localStorage.getItem('pendingSignUp') === '1'
 
-        // プロフィール作成/更新（サインアップモードやpendingUserTypeがある場合に実行）
+        // 会員情報の存在確認（users_vw 優先、なければ user_profiles）
+        const { data: userObj } = await supabase.auth.getUser()
+        const uid = userObj.user?.id
+        if (!uid) throw new Error('ユーザー情報の取得に失敗しました')
+
+        let exists = false
         try {
-          const pendingType = localStorage.getItem('pendingUserType')
-          const pendingSignUp = localStorage.getItem('pendingSignUp')
-          if (pendingType || pendingSignUp) {
-            await setupUserProfileAfterAuth()
-          }
-        } catch (e) {
-          // 続行するがメッセージ表示
-          console.warn('Profile setup failed after OAuth:', e)
-          setMessage('認証は成功しましたが、プロフィール作成に失敗しました。後でアカウント設定から情報を更新してください。')
-          showToast({
-            variant: 'warning',
-            title: '認証成功',
-            message: '認証は成功しましたが、プロフィール作成に失敗しました。後でアカウント設定から情報を更新してください。',
-            duration: 5000
-          })
+          const { data, error } = await supabase
+            .from('users_vw')
+            .select('id')
+            .eq('id', uid)
+            .maybeSingle()
+          if (error && error.code !== 'PGRST116') throw error
+          exists = !!data
+        } catch (e: any) {
+          // users_vw が無い場合は user_profiles を確認
+          const { data, error } = await supabase
+            .from('user_profiles')
+            .select('user_id')
+            .eq('user_id', uid)
+            .maybeSingle()
+          if (error && error.code !== 'PGRST116') throw error
+          exists = !!data
         }
 
-        // 成功トースト表示
-        showToast({
-          variant: 'success',
-          title: isSignUp ? '会員登録成功！' : 'ログイン成功！',
-          message: isSignUp ? '会員登録が完了しました。ようこそ！' : 'ログインが完了しました',
-          duration: 3000
-        })
+        if (isSignUp) {
+          // 新規登録フロー: 既存なら案内、なければ作成
+          if (exists) {
+            showToast({
+              variant: 'warning',
+              title: 'すでに会員登録済み',
+              message: '同じ情報の会員が存在するため、新規登録は行いませんでした。',
+              duration: 4000
+            })
+          } else {
+            try {
+              await setupUserProfileAfterAuth()
+              showToast({
+                variant: 'success',
+                title: '会員登録成功！',
+                message: '会員登録が完了しました。ようこそ！',
+                duration: 3000
+              })
+              exists = true
+            } catch (e) {
+              console.warn('Profile setup failed after OAuth (sign-up):', e)
+              setMessage('会員登録処理に失敗しました。時間を置いて再試行してください。')
+              showToast({
+                variant: 'error',
+                title: '登録失敗',
+                message: '会員登録処理に失敗しました。時間を置いて再試行してください。',
+                duration: 6000
+              })
+            }
+          }
+        } else {
+          // ログインフロー: 会員が無ければログイン失敗
+          if (!exists) {
+            await supabase.auth.signOut()
+            setMessage('会員情報が見つからないため、ログインできません。先に新規登録を行ってください。')
+            showToast({
+              variant: 'error',
+              title: 'ログイン失敗',
+              message: '会員情報が見つかりません。新規会員登録を行ってください。',
+              duration: 6000
+            })
+            try {
+              localStorage.removeItem('pendingSignUp')
+              localStorage.removeItem('pendingUserType')
+              localStorage.removeItem('postLoginRedirect')
+            } catch {}
+            // ページをリロードしてトップへ
+            window.location.href = '/#merch'
+            return
+          } else {
+            showToast({
+              variant: 'success',
+              title: 'ログイン成功！',
+              message: 'ログインが完了しました',
+              duration: 3000
+            })
+          }
+        }
 
         // 復帰先（ログイン直前に保存したハッシュまたはロール別ダッシュボード）
         let redirect = await getRoleBasedRedirect()
@@ -155,10 +213,10 @@ export function AuthCallbackGate() {
           // フラグをクリア
           localStorage.removeItem('postLoginRedirect')
           localStorage.removeItem('pendingSignUp')
+          localStorage.removeItem('pendingUserType')
         } catch {}
-        // クエリを消してからハッシュへ遷移
-        try { window.history.replaceState(null, '', '/auth/callback') } catch {}
-        window.location.hash = redirect
+        // ページをリロードしてリダイレクト（状態を完全にリセット）
+        window.location.href = `/${redirect}`
       } catch (e: any) {
         setMessage(`セッション確立に失敗しました: ${e?.message || '不明なエラー'}`)
         showToast({

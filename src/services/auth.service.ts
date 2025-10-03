@@ -114,15 +114,16 @@ export async function signOut() {
 
   const { error } = await supabase.auth.signOut()
   if (error) throw error
-  // ログアウト後はトップへ強制遷移
+
+  // localStorage をクリア
   try {
-    // ユーティリティがあればそれを使う
-    import('@/utils/navigation').then(m => m.navigate('merch')).catch(() => {
-      try { window.location.hash = '#merch' } catch {}
-    })
-  } catch {
-    try { window.location.hash = '#merch' } catch {}
-  }
+    localStorage.removeItem('pendingSignUp')
+    localStorage.removeItem('pendingUserType')
+    localStorage.removeItem('postLoginRedirect')
+  } catch {}
+
+  // ログアウト後はトップへ遷移してページをリロード
+  window.location.href = '/#merch'
 }
 
 // デモモード用のログイン機能
